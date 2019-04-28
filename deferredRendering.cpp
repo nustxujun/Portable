@@ -6,14 +6,41 @@
 #include "renderer.h"
 #include <memory>
 
+#include "Quad.h"
+#include "GBuffer.h"
+#include "Mesh.h"
+#include "Scene.h"
 #define MAX_LOADSTRING 100
 
-std::unique_ptr<Renderer> renderer;
+Renderer::Ptr renderer;
+std::shared_ptr<Quad> quad;
+std::shared_ptr<GBuffer> gbuffer;
+std::shared_ptr<Scene> scene;
+
+void initRenderer(HWND win)
+{
+	RECT rect;
+	GetClientRect(win, &rect);
+	renderer = std::move(std::unique_ptr<Renderer>(new Renderer));
+	renderer->init(win, rect.right, rect.bottom);
+	//auto ret = renderer->createBuffer(1024, D3D11_BIND_CONSTANT_BUFFER);
+	//const ID3D11Buffer* pt= *ret.lock();
+	
 
 
+	quad =  decltype(quad)(new Quad(renderer));
+	gbuffer = decltype(gbuffer)(new GBuffer(renderer));
+	scene = decltype(scene)(new Scene(renderer));
+
+	Scene::Parameters params;
+	params["file"] = "tiny.x";
+	scene->createEntity("tiny", params);
+}
 
 void framemove()
 {
+	gbuffer->render(scene);
+	quad->draw();
 	renderer->present();
 }
 
@@ -102,15 +129,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 }
 
 
-void initRenderer(HWND win)
-{
-	RECT rect;
-	GetClientRect(win, &rect);
-	renderer = std::move(std::unique_ptr<Renderer>(new Renderer));
-	renderer->init(win, rect.right, rect.bottom);
-	//auto ret = renderer->createBuffer(1024, D3D11_BIND_CONSTANT_BUFFER);
-	//const ID3D11Buffer* pt= *ret.lock();
-}
+
 
 //
 //   函数: InitInstance(HINSTANCE, int)

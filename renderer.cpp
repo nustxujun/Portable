@@ -4,6 +4,8 @@
 #include <fstream>
 #include <vector>
 
+#define ERROR(x) {MessageBox(NULL, TEXT(x), NULL, MB_ICONERROR); abort();}
+
 void Renderer::checkResult(HRESULT hr)
 {
 	if (hr == S_OK) return;
@@ -16,6 +18,8 @@ void Renderer::checkResult(HRESULT hr)
 
 void Renderer::init(HWND win, int width, int height)
 {
+	mWidth = width;
+	mHeight = height;
 	D3D_FEATURE_LEVEL featureLevels[] =
 	{
 		D3D_FEATURE_LEVEL_11_0,
@@ -64,10 +68,14 @@ void Renderer::init(HWND win, int width, int height)
 	
 
 	ID3D11Texture2D* backbuffer = NULL;
+	ID3D11RenderTargetView* bbv;
 	checkResult( mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backbuffer) );
 
-	checkResult(mDevice->CreateRenderTargetView(backbuffer, NULL, &mBackbufferView));
-	backbuffer->Release();
+	checkResult(mDevice->CreateRenderTargetView(backbuffer, NULL, &bbv));
+
+	auto shared = std::shared_ptr<RenderTarget>(new RenderTarget(backbuffer, bbv, nullptr));
+	mRenderTargets.insert(shared);
+	mBackbuffer = shared;
 
 	// Create depth stencil texture
 	D3D11_TEXTURE2D_DESC descDepth;
@@ -109,6 +117,15 @@ void Renderer::init(HWND win, int width, int height)
 	checkResult(mDevice->CreateRasterizerState(&rasterDesc, &mRasterizer));
 	mContext->RSSetState(mRasterizer);
 
+	D3D11_VIEWPORT vp;
+	vp.Width = (FLOAT)width;
+	vp.Height = (FLOAT)height;
+	vp.MinDepth = 0.0f;
+	vp.MaxDepth = 1.0f;
+	vp.TopLeftX = 0;
+	vp.TopLeftY = 0;
+	mContext->RSSetViewports(1, &vp);
+
 	initRenderTargets();
 }
 
@@ -122,6 +139,82 @@ void Renderer::present()
 	mSwapChain->Present(0,0);
 }
 
+void Renderer::clearDepth(float depth)
+{
+	mContext->ClearDepthStencilView(mDepthStencilView, D3D11_CLEAR_DEPTH, depth, 0);
+}
+
+void Renderer::clearStencil(int stencil)
+{
+	mContext->ClearDepthStencilView(mDepthStencilView, D3D11_CLEAR_STENCIL, 1.0f, stencil);
+}
+
+void Renderer::clearRenderTarget(RenderTarget::Ptr rt, const float color[4])
+{
+	auto ptr = rt.lock();
+	if (ptr == nullptr) return;
+	mContext->ClearRenderTargetView(*ptr, color);
+}
+
+void Renderer::setRenderTarget(RenderTarget::Ptr rt)
+{
+	auto ptr = rt.lock();
+	if (ptr == nullptr)
+	{
+		ERROR("invalied rendertarget")
+		return;
+	}
+	ID3D11RenderTargetView* rtv = *ptr;
+	mContext->OMSetRenderTargets(1, &rtv, mDepthStencilView);
+}
+
+void Renderer::setRenderTargets(std::vector<RenderTarget::Ptr>& rts)
+{
+	std::vector<ID3D11RenderTargetView*> list;
+	for (auto i : rts)
+		list.push_back(*i.lock());
+
+	mContext->OMSetRenderTargets(list.size(), list.data(), mDepthStencilView);
+}
+
+void Renderer::setLayout(Layout::Ptr layout)
+{
+	auto ptr = layout.lock();
+	if (ptr == nullptr) return;
+	mContext->IASetInputLayout(*ptr);
+}
+
+void Renderer::setPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY pri)
+{
+	mContext->IASetPrimitiveTopology(pri);
+}
+
+void Renderer::setIndexBuffer(Buffer::Ptr b, DXGI_FORMAT format, int offset)
+{
+	auto ptr = b.lock();
+	if (ptr == nullptr) return;
+	mContext->IASetIndexBuffer(*ptr, format, offset);
+}
+
+void Renderer::setVertexBuffer(Buffer::Ptr b, size_t stride, size_t offset)
+{
+	auto ptr = b.lock();
+	if (ptr == nullptr) return;
+
+	ID3D11Buffer* vb = *ptr;
+	mContext->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
+}
+
+void Renderer::setVertexBuffers( std::vector<Buffer::Ptr>& b, const size_t * stride, const size_t * offset)
+{
+	std::vector<ID3D11Buffer*> list;
+	for (auto i : b)
+		list.push_back(*i.lock());
+
+	mContext->IASetVertexBuffers(0, b.size(), list.data(), stride, offset);
+}
+
+
 void Renderer::uninit()
 {
 	mEffects.clear();
@@ -131,7 +224,6 @@ void Renderer::uninit()
 	mRasterizer->Release();
 	mDepthStencilView->Release();
 	mDepthStencil->Release();
-	mBackbufferView->Release();
 	mSwapChain->Release();
 	mContext->Release();
 	if (mDevice->Release() != 0)
@@ -197,7 +289,7 @@ Renderer::RenderTarget::Ptr Renderer::createRenderTarget(int width, int height, 
 	return RenderTarget::Ptr(*ret.first);
 }
 
-Renderer::Buffer::Ptr Renderer::createBuffer(int size, D3D11_BIND_FLAG flag, D3D11_USAGE usage, bool CPUaccess)
+Renderer::Buffer::Ptr Renderer::createBuffer(int size, D3D11_BIND_FLAG flag, const D3D11_SUBRESOURCE_DATA* initialdata, D3D11_USAGE usage, bool CPUaccess)
 {
 	ID3D11Buffer* buffer;
 
@@ -207,7 +299,7 @@ Renderer::Buffer::Ptr Renderer::createBuffer(int size, D3D11_BIND_FLAG flag, D3D
 	bd.ByteWidth = size;
 	bd.BindFlags = flag;
 	bd.CPUAccessFlags = CPUaccess;
-	checkResult(mDevice->CreateBuffer(&bd, NULL, &buffer));
+	checkResult(mDevice->CreateBuffer(&bd, initialdata, &buffer));
 	auto ret = mBuffers.emplace(new Buffer(buffer));
 	return Buffer::Ptr(*ret.first);
 }
@@ -224,26 +316,31 @@ Renderer::SharedCompiledData Renderer::compileFile(const std::string& filename, 
 	HRESULT hr = D3DX11CompileFromFileA(filename.c_str(), macro, NULL, entryPoint.c_str(), shaderModel.c_str(), flags, 0, NULL, &blob, &err, NULL);
 	if (hr != S_OK)
 	{
-		MessageBoxA(NULL, (LPCSTR)err->GetBufferPointer(), NULL, NULL);
-		err->Release();
-		abort();
+		if (err)
+		{
+			MessageBoxA(NULL, (LPCSTR)err->GetBufferPointer(), NULL, NULL);
+			err->Release();
+			abort();
+		}
+		else
+			checkResult(hr);
 	}
 	return SharedCompiledData(new CompiledData(blob));
 }
 
-Renderer::Effect::Ptr Renderer::createEffect(ID3DBlob* buffer)
+Renderer::Effect::Ptr Renderer::createEffect(void* data, size_t size)
 {
 	ID3DX11Effect* d3deffect;
-	checkResult(D3DX11CreateEffectFromMemory(buffer->GetBufferPointer(), buffer->GetBufferSize(), 0, mDevice, &d3deffect));
+	checkResult(D3DX11CreateEffectFromMemory(data, size, 0, mDevice, &d3deffect));
 
 	auto ret = mEffects.emplace( new Effect(d3deffect));
 	return Effect::Ptr(*ret.first);
 }
 
-Renderer::Layout::Ptr Renderer::createLayout(const D3D11_INPUT_ELEMENT_DESC * descarray, size_t count, ID3DBlob * buffer)
+Renderer::Layout::Ptr Renderer::createLayout(const D3D11_INPUT_ELEMENT_DESC * descarray, size_t count, void* data, size_t size)
 {
 	ID3D11InputLayout* layout;
-	checkResult(mDevice->CreateInputLayout(descarray, count, buffer->GetBufferPointer(), buffer->GetBufferSize(), &layout));
+	checkResult(mDevice->CreateInputLayout(descarray, count,data, size, &layout));
 	auto ret = mLayouts.emplace(new Layout(layout));
 	return Layout::Ptr(*ret.first);
 }
@@ -256,9 +353,11 @@ Renderer::RenderTarget::RenderTarget(ID3D11Texture2D * t, ID3D11RenderTargetView
 
 Renderer::RenderTarget::~RenderTarget()
 {
+
 	mTexture->Release();
 	mRTView->Release();
-	mSRView->Release();
+	if (mSRView )
+		mSRView->Release();
 }
 
 Renderer::Buffer::Buffer(ID3D11Buffer * b):mBuffer(b)
@@ -291,7 +390,7 @@ Renderer::Effect::~Effect()
 	mEffect->Release();
 }
 
-void Renderer::Effect::render(ID3D11DeviceContext* context, std::function<void(ID3DX11EffectTechnique*, int)> prepare, std::function<void(int)> draw)
+void Renderer::Effect::render(ID3D11DeviceContext* context, std::function<void(ID3DX11EffectTechnique*, int)> prepare, std::function<void(ID3D11DeviceContext*)> draw)
 {
 	if (!draw)
 	{
@@ -313,13 +412,21 @@ void Renderer::Effect::render(ID3D11DeviceContext* context, std::function<void(I
 		if (prepare)
 			prepare(tech, i);
 		tech->GetPassByIndex(i)->Apply(0, context);
-		draw(i);
+		draw(context);
 	}
 }
 
 void Renderer::Effect::setTech(const std::string & name)
 {
 	mSelectedTech = name;
+}
+
+ID3DX11EffectTechnique * Renderer::Effect::getTech(const std::string & name)
+{
+	auto ret = mTechs.find(name);
+	if (ret == mTechs.end())
+		return nullptr;
+	return ret->second;
 }
 
 ID3DX11EffectVariable * Renderer::Effect::getVariable(const std::string & name)
