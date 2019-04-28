@@ -1,4 +1,5 @@
 #include "GBuffer.h"
+#include <D3DX10math.h>
 
 GBuffer::GBuffer(Renderer::Ptr r):mRenderer(r)
 {
@@ -36,6 +37,18 @@ void GBuffer::render(Scene::Ptr scene)
 	auto e = mEffect.lock();
 	if (e == nullptr)
 		return;
+	
+	D3DXMATRIX mat;
+	D3DXMatrixIdentity(&mat);
+	auto world = e->getVariable("World")->AsMatrix();
+	auto view = e->getVariable("View")->AsMatrix();
+	auto proj = e->getVariable("Projection")->AsMatrix();
+	world->SetMatrix(mat);
+	view->SetMatrix(mat);
+
+	D3DXMatrixPerspectiveFovLH(&mat, 1.570796327f, mRenderer->getWidth() / mRenderer->getHeight(), 0.01f, 100.0f);
+	proj->SetMatrix(mat);
+	
 
 	mRenderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	mRenderer->setLayout(mLayout);
@@ -45,6 +58,7 @@ void GBuffer::render(Scene::Ptr scene)
 	{
 		mRenderer->clearRenderTarget(i, colors);
 	}
+	mRenderer->clearDepth(1.0f);
 	mRenderer->setRenderTargets(rts);
 
 	e->render(mRenderer->getContext(),nullptr,[scene,this](ID3D11DeviceContext* context)

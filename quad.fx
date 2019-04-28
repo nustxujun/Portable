@@ -1,3 +1,12 @@
+
+Texture2D colorTexture: register(t0);
+SamplerState sampLinear 
+{
+	Filter = MIN_MAG_MIP_LINEAR;
+	AddressU = Wrap;
+	AddressV = Wrap;
+};
+
 struct VS_INPUT
 {
 	float3 Pos: POSITION;
@@ -22,9 +31,10 @@ PS_INPUT vs(VS_INPUT input)
 
 
 
-float4 ps(PS_INPUT input):SV_Target
+
+float4 ps(PS_INPUT input) : SV_TARGET
 {
-	return float4(1,0,0,1);
+	return colorTexture.Sample(sampLinear, input.Tex);
 }
 
 technique11 quad

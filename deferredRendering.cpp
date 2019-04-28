@@ -23,9 +23,6 @@ void initRenderer(HWND win)
 	GetClientRect(win, &rect);
 	renderer = std::move(std::unique_ptr<Renderer>(new Renderer));
 	renderer->init(win, rect.right, rect.bottom);
-	//auto ret = renderer->createBuffer(1024, D3D11_BIND_CONSTANT_BUFFER);
-	//const ID3D11Buffer* pt= *ret.lock();
-	
 
 
 	quad =  decltype(quad)(new Quad(renderer));
@@ -40,7 +37,8 @@ void initRenderer(HWND win)
 void framemove()
 {
 	gbuffer->render(scene);
-	quad->draw();
+
+	quad->draw(gbuffer->getDiffuse().lock()->getShaderResourceView());
 	renderer->present();
 }
 

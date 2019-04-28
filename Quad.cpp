@@ -46,7 +46,7 @@ Quad::~Quad()
 {
 }
 
-void Quad::draw()
+void Quad::draw(ID3D11ShaderResourceView* texture)
 {
 	auto backbuffer = mRenderer->getBackbuffer();
 	mRenderer->clearDepth(1.0f);
@@ -55,6 +55,7 @@ void Quad::draw()
 	mRenderer->setRenderTarget(backbuffer);
 
 	auto context = mRenderer->getContext();
+	context->PSSetShaderResources(0, 1, &texture);
 	mRenderer->setLayout(mLayout);
 	mRenderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	mRenderer->setIndexBuffer(mIndexBuffer, DXGI_FORMAT_R16_UINT, 0);

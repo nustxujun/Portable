@@ -12,7 +12,7 @@ public:
 	Quad(Renderer::Ptr r);
 	~Quad();
 
-	void draw();
+	void draw(ID3D11ShaderResourceView* texture);
 private:
 	Renderer::Ptr mRenderer;
 	Renderer::Effect::Ptr mEffect;
