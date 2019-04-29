@@ -16,7 +16,7 @@ Quad::Quad(Renderer::Ptr r):mRenderer(r)
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
 		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
 	};
-	mLayout = mRenderer->createLayout(quadLayout, ARRAYSIZE(quadLayout),passDesc.pIAInputSignature, passDesc.IAInputSignatureSize);
+	mLayout = mRenderer->createLayout(quadLayout, ARRAYSIZE(quadLayout));
 
 
 	Vertex quadVertices[] =
@@ -56,16 +56,14 @@ void Quad::draw(ID3D11ShaderResourceView* texture)
 	mRenderer->setRenderTarget(backbuffer);
 
 	auto context = mRenderer->getContext();
-	mRenderer->setLayout(mLayout);
+	mRenderer->setLayout(mLayout.lock()->bind(mEffect));
 	mRenderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	mRenderer->setIndexBuffer(mIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
 	mRenderer->setVertexBuffer(mVertexBuffer, sizeof(Vertex), 0);
-	mEffect.lock()->render(context, nullptr, [texture](ID3D11DeviceContext* context) {
+	mEffect.lock()->render( mRenderer,[texture,context]() {
 		context->PSSetShaderResources(0, 1, &texture);
-
 		context->DrawIndexed(6, 0, 0);
 	});
 
-	ID3D11ShaderResourceView* srv[] = {0};
-	context->PSSetShaderResources(0, 1, srv);
+	mRenderer->setTexture(Renderer::Texture::Ptr());
 }

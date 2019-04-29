@@ -1,15 +1,12 @@
 #pragma once
-#include <memory>
-#include <string>
-#include <functional>
-#include <map>
+#include "Common.h"
 #include "Mesh.h"
 
 
 class Scene
 {
 public:
-	using Parameters = std::map<std::string, std::string>;
+	
 	using Ptr = std::shared_ptr<Scene>;
 
 	class Entity

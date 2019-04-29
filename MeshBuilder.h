@@ -18,10 +18,15 @@ public:
 			std::vector<size_t> indices;
 			std::vector<char> vertices;
 			size_t numVertex;
+			size_t materialIndex;
+		};
+
+		struct Material {
+			std::vector<std::string> texture_diffuses;
 		};
 
 		std::vector<Mesh> meshs;
-		std::vector<std::string> textures;
+		std::vector<Material> materials;
 		float aabb[6];
 	};
 public:

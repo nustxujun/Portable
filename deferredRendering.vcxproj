@@ -149,8 +149,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Common.h" />
     <ClInclude Include="deferredRendering.h" />
     <ClInclude Include="GBuffer.h" />
+    <ClInclude Include="Material.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="MeshBuilder.h" />
     <ClInclude Include="Quad.h" />
@@ -164,6 +166,7 @@
   <ItemGroup>
     <ClCompile Include="deferredRendering.cpp" />
     <ClCompile Include="GBuffer.cpp" />
+    <ClCompile Include="Material.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="MeshBuilder.cpp" />
     <ClCompile Include="Quad.cpp" />

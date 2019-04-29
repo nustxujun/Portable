@@ -5,6 +5,15 @@ cbuffer ConstantBuffer: register(b0)
 	matrix Projection;
 }
 
+Texture2D diffuseTex: register(t0);
+
+SamplerState sampLinear
+{
+	Filter = MIN_MAG_MIP_LINEAR;
+	AddressU = Wrap;
+	AddressV = Wrap;
+};
+
 struct GBufferVertexShaderInput
 {
 	float3 Position : POSITION0;
@@ -58,8 +67,8 @@ GBufferPixelShaderOutput ps(GBufferVertexShaderOutput input) : SV_TARGET
 {
 	GBufferPixelShaderOutput output;
 
-	output.Color = float4(1.0f, 1.0f, 1.0f, 1.0f);//tex2D(diffuseSampler, input.TexCoord);
-
+	//output.Color = float4(1.0f, 1.0f, 1.0f, 1.0f);//tex2D(diffuseSampler, input.TexCoord);
+	output.Color = diffuseTex.Sample(sampLinear, input.TexCoord);
 	//float4 specularAttributes = tex2D(specularSampler, input.TexCoord);
 
 	// Specular intensity.

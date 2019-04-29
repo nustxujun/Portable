@@ -21,6 +21,8 @@ MeshBuilder::Data MeshBuilder::build(const std::string & filename)
 		Data::Mesh mesh;
 		mesh.layout.push_back(POSITION);
 		auto m = meshs[i];
+		mesh.materialIndex = m->mMaterialIndex;
+		mesh.numVertex = m->mNumVertices;
 
 		size_t size = 4 * 3;
 		if (m->HasNormals())
@@ -34,7 +36,6 @@ MeshBuilder::Data MeshBuilder::build(const std::string & filename)
 			size += 4 * 2;
 		}
 
-		mesh.numVertex = m->mNumVertices;
 		mesh.vertices.resize(mesh.numVertex * size);
 		char* begin = mesh.vertices.data();
 		auto copy = [](char*& buffer, const void* cont, size_t size) {
@@ -74,14 +75,17 @@ MeshBuilder::Data MeshBuilder::build(const std::string & filename)
 		for (int i = 0; i < scene->mNumMaterials; ++i)
 		{
 			auto m = scene->mMaterials[i];
+			Data::Material mat;
 			for (int j = 0; j < m->GetTextureCount(aiTextureType_DIFFUSE); ++j)
 			{
 				aiString path;
 				aiTextureMapping mapping;
 				size_t index;
 				m->GetTexture(aiTextureType_DIFFUSE, j, &path,&mapping, &index);
-				ret.textures.push_back(path.C_Str());
+				mat.texture_diffuses.push_back(path.C_Str());
 			}
+
+			ret.materials.push_back(mat);
 		}
 	}
 	return ret;

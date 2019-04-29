@@ -3,6 +3,7 @@
 #include <D3Dcompiler.h>
 #include <fstream>
 #include <vector>
+#include <algorithm>
 
 #define ERROR(x) {MessageBox(NULL, TEXT(x), NULL, MB_ICONERROR); abort();}
 
@@ -156,16 +157,52 @@ void Renderer::clearRenderTarget(RenderTarget::Ptr rt, const float color[4])
 	mContext->ClearRenderTargetView(*ptr, color);
 }
 
+void Renderer::setTexture(const Texture::Ptr tex)
+{
+	auto ptr= tex.lock();
+	if (ptr == nullptr)
+	{
+		ID3D11ShaderResourceView* srv[1] = { nullptr };
+		mContext->PSSetShaderResources(0, 1, srv);
+	}
+	else
+	{
+		ID3D11ShaderResourceView* srv = *ptr;
+		mContext->PSSetShaderResources(0, 1, &srv);
+	}
+}
+
+void Renderer::setTextures(const std::vector<Texture::Ptr>& texs)
+{
+	std::vector<ID3D11ShaderResourceView*> list;
+	for (auto i : texs)
+	{
+		if (i.lock() != NULL)
+			list.push_back( *i.lock());
+	}
+
+	if (list.size() == 0)
+	{
+		ID3D11ShaderResourceView* srv[1] = { nullptr };
+		mContext->PSSetShaderResources(0, 1, srv);
+	}
+	else
+		mContext->PSSetShaderResources(0, list.size(), list.data());
+}
+
 void Renderer::setRenderTarget(RenderTarget::Ptr rt)
 {
 	auto ptr = rt.lock();
 	if (ptr == nullptr)
 	{
-		//ERROR("invalied rendertarget")
-		return;
+		ID3D11RenderTargetView* nil[1] = { NULL };
+		mContext->OMSetRenderTargets( 1, nil, mDepthStencilView);
 	}
-	ID3D11RenderTargetView* rtv = *ptr;
-	mContext->OMSetRenderTargets(1, &rtv, mDepthStencilView);
+	else
+	{
+		ID3D11RenderTargetView* rtv = *ptr;
+		mContext->OMSetRenderTargets(1, &rtv, mDepthStencilView);
+	}
 }
 
 void Renderer::setRenderTargets(std::vector<RenderTarget::Ptr>& rts)
@@ -174,14 +211,18 @@ void Renderer::setRenderTargets(std::vector<RenderTarget::Ptr>& rts)
 	for (auto i : rts)
 		list.push_back(*i.lock());
 
-	mContext->OMSetRenderTargets(list.size(), list.data(), mDepthStencilView);
+	if (list.size() == 0)
+	{
+		ID3D11RenderTargetView* nil[1] = { NULL };
+		mContext->OMSetRenderTargets(1, nil, mDepthStencilView);
+	}
+	else
+		mContext->OMSetRenderTargets(list.size(), list.data(), mDepthStencilView);
 }
 
-void Renderer::setLayout(Layout::Ptr layout)
+void Renderer::setLayout(ID3D11InputLayout*  layout)
 {
-	auto ptr = layout.lock();
-	if (ptr == nullptr) return;
-	mContext->IASetInputLayout(*ptr);
+	mContext->IASetInputLayout(layout);
 }
 
 void Renderer::setPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY pri)
@@ -361,18 +402,13 @@ Renderer::SharedCompiledData Renderer::compileFile(const std::string& filename, 
 
 Renderer::Effect::Ptr Renderer::createEffect(void* data, size_t size)
 {
-	ID3DX11Effect* d3deffect;
-	checkResult(D3DX11CreateEffectFromMemory(data, size, 0, mDevice, &d3deffect));
-
-	auto ret = mEffects.emplace( new Effect(d3deffect));
+	auto ret = mEffects.emplace( new Effect(mDevice,data, size));
 	return Effect::Ptr(*ret.first);
 }
 
-Renderer::Layout::Ptr Renderer::createLayout(const D3D11_INPUT_ELEMENT_DESC * descarray, size_t count, void* data, size_t size)
+Renderer::Layout::Ptr Renderer::createLayout(const D3D11_INPUT_ELEMENT_DESC * descarray, size_t count)
 {
-	ID3D11InputLayout* layout;
-	checkResult(mDevice->CreateInputLayout(descarray, count,data, size, &layout));
-	auto ret = mLayouts.emplace(new Layout(layout));
+	auto ret = mLayouts.emplace(new Layout(mDevice, descarray, count));
 	return Layout::Ptr(*ret.first);
 }
 
@@ -402,14 +438,17 @@ Renderer::Buffer::~Buffer()
 
 
 
-Renderer::Effect::Effect(ID3DX11Effect * eff) :mEffect(eff)
+Renderer::Effect::Effect(ID3D11Device * d,const void* compiledshader, size_t size) :D3DObject(d)
 {
-	int index = 0;
-	while (true)
+	mCompiledShader.resize(size);
+	memcpy(mCompiledShader.data(), compiledshader, size);
+	checkResult(D3DX11CreateEffectFromMemory(compiledshader, size, 0, getDevice(), &mEffect));
+
+	D3DX11_EFFECT_DESC desc;
+	checkResult(mEffect->GetDesc(&desc));
+	for (int i = 0; i < desc.Techniques; ++i)
 	{
-		auto tech = mEffect->GetTechniqueByIndex(index++);
-		if (tech == NULL || !tech->IsValid())
-			break;
+		auto tech = mEffect->GetTechniqueByIndex(i);
 		D3DX11_TECHNIQUE_DESC desc;
 		tech->GetDesc(&desc);
 		mTechs.emplace(desc.Name, tech);
@@ -421,7 +460,7 @@ Renderer::Effect::~Effect()
 	mEffect->Release();
 }
 
-void Renderer::Effect::render(ID3D11DeviceContext* context, std::function<void(ID3DX11EffectTechnique*, int)> prepare, std::function<void(ID3D11DeviceContext*)> draw)
+void Renderer::Effect::render(Renderer::Ptr renderer, std::function<void(ID3DX11EffectPass*)> draw)
 {
 	if (!draw)
 	{
@@ -438,12 +477,13 @@ void Renderer::Effect::render(ID3D11DeviceContext* context, std::function<void(I
 	auto tech = best->second;
 	D3DX11_TECHNIQUE_DESC desc;
 	best->second->GetDesc(&desc);
+
+	auto context = renderer->getContext();
 	for (size_t i = 0; i < desc.Passes; ++i)
 	{
-		if (prepare)
-			prepare(tech, i);
-		tech->GetPassByIndex(i)->Apply(0, context);
-		draw(context);
+		auto pass = tech->GetPassByIndex(i);
+		pass->Apply(0, context);
+		draw(pass);
 	}
 }
 
@@ -470,3 +510,25 @@ ID3DX11EffectConstantBuffer * Renderer::Effect::getConstantBuffer(const std::str
 	return mEffect->GetConstantBufferByName(name.c_str());
 }
 
+Renderer::Layout::Layout(ID3D11Device * device, const D3D11_INPUT_ELEMENT_DESC * descarray, size_t count): D3DObject(device)
+{
+	mElements.resize(count);
+	memcpy(mElements.data(), descarray, count * sizeof(D3D11_INPUT_ELEMENT_DESC));
+}
+
+ID3D11InputLayout * Renderer::Layout::bind(const char* data, size_t size)
+{
+	std::hash<std::string> hash;
+	auto key = hash(std::string(data, size));
+
+	auto ret = mBindedLayouts.find(key);
+	if (ret != mBindedLayouts.end())
+		return *ret->second;
+
+	ID3D11InputLayout* layout;
+	checkResult(getDevice()->CreateInputLayout(mElements.data(), mElements.size(), data, size, &layout));
+
+	auto insert = mBindedLayouts.emplace(layout, new Interface<ID3D11InputLayout>(layout));
+
+	return *insert.first->second;
+}

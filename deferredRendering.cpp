@@ -32,8 +32,8 @@ void initRenderer(HWND win)
 	gbuffer = decltype(gbuffer)(new GBuffer(renderer));
 	scene = decltype(scene)(new Scene(renderer));
 
-	Scene::Parameters params;
-	params["file"] = "tiny.x";
+	Parameters params;
+	params["file"] = "sponza.obj";
 	scene->createEntity("test", params);
 }
 
@@ -42,7 +42,7 @@ void framemove()
 	gbuffer->render(scene);
 	//test->draw(nullptr);
 	//quad->draw(test->mRenderTarget.lock()->getShaderResourceView());
-	quad->draw(gbuffer->getNormal().lock()->getShaderResourceView());
+	quad->draw(gbuffer->getDiffuse().lock()->getShaderResourceView());
 	renderer->present();
 }
 

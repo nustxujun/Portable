@@ -20,7 +20,7 @@ GBuffer::GBuffer(Renderer::Ptr r):mRenderer(r)
 		//{"TANGENT", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 44, D3D11_INPUT_PER_VERTEX_DATA, 0},
 	};
 
-	mLayout = mRenderer->createLayout(modelLayout, ARRAYSIZE(modelLayout), passDesc.pIAInputSignature, passDesc.IAInputSignatureSize);
+	mLayout = mRenderer->createLayout(modelLayout, ARRAYSIZE(modelLayout));
 
 	int w = mRenderer->getWidth();
 	int h = mRenderer->getHeight();
@@ -45,7 +45,7 @@ void GBuffer::render(Scene::Ptr scene)
 	auto view = e->getVariable("View")->AsMatrix();
 	auto proj = e->getVariable("Projection")->AsMatrix();
 
-	D3DXVECTOR3 eye(0, 2000,  -3000);
+	D3DXVECTOR3 eye(0, 3000,  -1000);
 	D3DXVECTOR3 at(0, 0, 0);
 	D3DXVECTOR3 up(0, 1, 0);
 	D3DXMatrixLookAtLH(&mat, &eye, &at, &up);
@@ -60,7 +60,7 @@ void GBuffer::render(Scene::Ptr scene)
 	
 
 	mRenderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	mRenderer->setLayout(mLayout);
+	mRenderer->setLayout(mLayout.lock()->bind(mEffect));
 	std::vector<Renderer::RenderTarget::Ptr> rts = {mDiffuse, mNormal, mDepth};
 	float colors[4] = { 0,0,0,0 };
 	for (auto i : rts)
@@ -70,18 +70,19 @@ void GBuffer::render(Scene::Ptr scene)
 	mRenderer->clearDepth(1.0f);
 	mRenderer->setRenderTargets(rts);
 
-	e->render(mRenderer->getContext(),nullptr,[scene,this](ID3D11DeviceContext* context)
+	e->render(mRenderer,[scene,this]()
 	{
-		scene->visit([context,this](Scene::Entity::Ptr e) 
+		scene->visit([this](Scene::Entity::Ptr e) 
 		{
 			auto mesh = e->getMesh();
 			for (size_t i = 0; i < mesh->getNumMesh(); ++i)
 			{
 				auto submesh = mesh->getMesh(i);
+				mRenderer->setTextures(submesh.material->mTextures);
 				
 				mRenderer->setIndexBuffer(submesh.indices, DXGI_FORMAT_R32_UINT, 0);
-				mRenderer->setVertexBuffer(submesh.vertices, 4 * 3, 0);
-				context->DrawIndexed(submesh.numIndices, 0, 0);
+				mRenderer->setVertexBuffer(submesh.vertices, submesh.strideVertex, 0);
+				mRenderer->getContext()->DrawIndexed(submesh.numIndices, 0, 0);
 			}
 		});
 

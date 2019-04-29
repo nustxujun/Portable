@@ -30,13 +30,10 @@ void Scene::visit(std::function<void(Entity::Ptr)> callback)
 
 Scene::Entity::Entity(const Parameters & params, Renderer::Ptr r)
 {
-	auto endi = params.end();
-	auto ret = params.find("file");
-	if (ret != endi)
-	{
-		Mesh* mesh = new Mesh(ret->second, r);
-		mMesh = decltype(mMesh)(mesh);
-	}
+	
+	Mesh* mesh = new Mesh(params, r);
+	mMesh = decltype(mMesh)(mesh);
+	
 }
 
 Scene::Entity::~Entity()
