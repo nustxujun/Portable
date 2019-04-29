@@ -10,12 +10,14 @@
 #include "GBuffer.h"
 #include "Mesh.h"
 #include "Scene.h"
+#include "test.h"
 #define MAX_LOADSTRING 100
 
 Renderer::Ptr renderer;
 std::shared_ptr<Quad> quad;
 std::shared_ptr<GBuffer> gbuffer;
 std::shared_ptr<Scene> scene;
+std::shared_ptr<Test> test;
 
 void initRenderer(HWND win)
 {
@@ -25,20 +27,22 @@ void initRenderer(HWND win)
 	renderer->init(win, rect.right, rect.bottom);
 
 
+	test = decltype(test)(new Test(renderer));
 	quad =  decltype(quad)(new Quad(renderer));
 	gbuffer = decltype(gbuffer)(new GBuffer(renderer));
 	scene = decltype(scene)(new Scene(renderer));
 
 	Scene::Parameters params;
 	params["file"] = "tiny.x";
-	scene->createEntity("tiny", params);
+	scene->createEntity("test", params);
 }
 
 void framemove()
 {
 	gbuffer->render(scene);
-
-	quad->draw(gbuffer->getDiffuse().lock()->getShaderResourceView());
+	//test->draw(nullptr);
+	//quad->draw(test->mRenderTarget.lock()->getShaderResourceView());
+	quad->draw(gbuffer->getNormal().lock()->getShaderResourceView());
 	renderer->present();
 }
 

@@ -100,6 +100,38 @@ public:
 		std::map<std::string, ID3DX11EffectTechnique*> mTechs;
 	};
 
+	class Texture final : public NODefault
+	{
+	public:
+		using Ptr = std::weak_ptr<Texture>;
+	public:
+		Texture(ID3D11ShaderResourceView* srv) :mSRV(srv) {};
+		~Texture() { mSRV->Release(); };
+
+		operator ID3D11ShaderResourceView*()const
+		{
+			return mSRV;
+		}
+	private:
+		ID3D11ShaderResourceView* mSRV;
+	};
+
+	class Sampler final : public NODefault
+	{
+	public :
+		using Ptr = std::weak_ptr<Sampler>;
+	public:
+		Sampler(ID3D11SamplerState* s): mSampler(s){}
+		~Sampler() { mSampler->Release(); }
+
+		operator ID3D11SamplerState*()const
+		{
+			return mSampler;
+		}
+	private:
+		ID3D11SamplerState* mSampler;
+	};
+
 	using Layout = Interface<ID3D11InputLayout>;
 	using CompiledData = Interface<ID3D10Blob>;
 	using SharedCompiledData = std::shared_ptr<CompiledData> ;
@@ -125,6 +157,9 @@ public:
 	void setVertexBuffer(Buffer::Ptr b, size_t stride, size_t offset);
 	void setVertexBuffers( std::vector<Buffer::Ptr>& b, const size_t* stride, const size_t* offset);
 
+	Sampler::Ptr createSampler(D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV,
+		D3D11_TEXTURE_ADDRESS_MODE addrW = D3D11_TEXTURE_ADDRESS_WRAP, D3D11_COMPARISON_FUNC cmpfunc = D3D11_COMPARISON_NEVER, float minlod = 0, float maxlod = D3D11_FLOAT32_MAX);
+	Texture::Ptr createTexture(const std::string& filename);
 	RenderTarget::Ptr createRenderTarget(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage = D3D11_USAGE_DEFAULT);
 	Buffer::Ptr createBuffer(int size, D3D11_BIND_FLAG flag, const D3D11_SUBRESOURCE_DATA* initialdata = NULL,D3D11_USAGE usage = D3D11_USAGE_DEFAULT, bool CPUaccess = false);
 	SharedCompiledData compileFile(const std::string& filename, const std::string& entryPoint, const std::string& shaderModel, const D3D10_SHADER_MACRO* macro = NULL);
@@ -148,14 +183,13 @@ private:
 	ID3D11RasterizerState* mRasterizer;
 
 	RenderTarget::Ptr mBackbuffer;
-	std::vector<ID3D11RenderTargetView*> mCurrentTargets;
-
-
 
 	std::set<std::shared_ptr<RenderTarget>> mRenderTargets;
 	std::set<std::shared_ptr<Buffer>> mBuffers;
 	std::set<std::shared_ptr<Effect>> mEffects;
 	std::set<std::shared_ptr<Layout>> mLayouts;
+	std::map<std::string,std::shared_ptr<Texture>> mTextures;
+	std::set<std::shared_ptr<Sampler>> mSamplers;
 
 };
 

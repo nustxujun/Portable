@@ -152,17 +152,20 @@
     <ClInclude Include="deferredRendering.h" />
     <ClInclude Include="GBuffer.h" />
     <ClInclude Include="Mesh.h" />
+    <ClInclude Include="MeshBuilder.h" />
     <ClInclude Include="Quad.h" />
     <ClInclude Include="renderer.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="test.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="deferredRendering.cpp" />
     <ClCompile Include="GBuffer.cpp" />
     <ClCompile Include="Mesh.cpp" />
+    <ClCompile Include="MeshBuilder.cpp" />
     <ClCompile Include="Quad.cpp" />
     <ClCompile Include="renderer.cpp" />
     <ClCompile Include="Scene.cpp" />
@@ -172,6 +175,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="deferredRendering.rc" />

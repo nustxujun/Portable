@@ -161,7 +161,7 @@ void Renderer::setRenderTarget(RenderTarget::Ptr rt)
 	auto ptr = rt.lock();
 	if (ptr == nullptr)
 	{
-		ERROR("invalied rendertarget")
+		//ERROR("invalied rendertarget")
 		return;
 	}
 	ID3D11RenderTargetView* rtv = *ptr;
@@ -217,6 +217,8 @@ void Renderer::setVertexBuffers( std::vector<Buffer::Ptr>& b, const size_t * str
 
 void Renderer::uninit()
 {
+	mSamplers.clear();
+	mTextures.clear();
 	mEffects.clear();
 	mLayouts.clear();
 	mRenderTargets.clear();
@@ -239,6 +241,35 @@ void Renderer::uninit()
 		MessageBox(NULL, TEXT("some objects were not released."), NULL, NULL);
 	}
 
+}
+
+Renderer::Sampler::Ptr Renderer::createSampler(D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV, D3D11_TEXTURE_ADDRESS_MODE addrW, D3D11_COMPARISON_FUNC cmpfunc, float minlod, float maxlod)
+{
+	D3D11_SAMPLER_DESC sampPointDesc;
+	ZeroMemory(&sampPointDesc, sizeof(sampPointDesc));
+	sampPointDesc.Filter = filter;
+	sampPointDesc.AddressU = addrU;
+	sampPointDesc.AddressV = addrV;
+	sampPointDesc.AddressW = addrW;
+	sampPointDesc.ComparisonFunc = cmpfunc;
+	sampPointDesc.MinLOD = minlod;
+	sampPointDesc.MaxLOD = maxlod;
+	ID3D11SamplerState* sampler;
+	checkResult(mDevice->CreateSamplerState(&sampPointDesc, &sampler));
+	auto ret = mSamplers.emplace(new Sampler(sampler));
+	return Sampler::Ptr(*ret.first);
+}
+
+Renderer::Texture::Ptr Renderer::createTexture(const std::string & filename)
+{
+	auto exist = mTextures.find(filename);
+	if (exist != mTextures.end())
+		return exist->second;
+
+	ID3D11ShaderResourceView* srv;
+	checkResult( D3DX11CreateShaderResourceViewFromFileA(mDevice, filename.c_str(), NULL, NULL, &srv, NULL));
+	auto ret = mTextures.emplace(filename, new Texture(srv));
+	return Texture::Ptr(ret.first->second);
 }
 
 Renderer::RenderTarget::Ptr Renderer::createRenderTarget(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage)

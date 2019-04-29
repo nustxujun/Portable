@@ -5,6 +5,7 @@ GBuffer::GBuffer(Renderer::Ptr r):mRenderer(r)
 {
 	auto blob = mRenderer->compileFile("gbuffer.fx", "", "fx_5_0");
 	mEffect = mRenderer->createEffect((**blob).GetBufferPointer(), (**blob).GetBufferSize());
+	mEffect.lock()->setTech("gbuffer");
 	auto tech = mEffect.lock()->getTech("gbuffer");
 
 	D3DX11_PASS_DESC passDesc;
@@ -43,10 +44,18 @@ void GBuffer::render(Scene::Ptr scene)
 	auto world = e->getVariable("World")->AsMatrix();
 	auto view = e->getVariable("View")->AsMatrix();
 	auto proj = e->getVariable("Projection")->AsMatrix();
-	world->SetMatrix(mat);
+
+	D3DXVECTOR3 eye(0, 2000,  -3000);
+	D3DXVECTOR3 at(0, 0, 0);
+	D3DXVECTOR3 up(0, 1, 0);
+	D3DXMatrixLookAtLH(&mat, &eye, &at, &up);
 	view->SetMatrix(mat);
 
-	D3DXMatrixPerspectiveFovLH(&mat, 1.570796327f, mRenderer->getWidth() / mRenderer->getHeight(), 0.01f, 100.0f);
+	D3DXMatrixTranslation(&mat, 0, 0, 0);
+	world->SetMatrix(mat);
+
+
+	D3DXMatrixPerspectiveFovLH(&mat, 1.570796327f, mRenderer->getWidth() / mRenderer->getHeight(), 0.01f, 10000);
 	proj->SetMatrix(mat);
 	
 
@@ -77,6 +86,6 @@ void GBuffer::render(Scene::Ptr scene)
 		});
 
 	});
-
+	mRenderer->setRenderTarget(Renderer::RenderTarget::Ptr());
 }
 

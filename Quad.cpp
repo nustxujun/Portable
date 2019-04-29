@@ -5,6 +5,7 @@ Quad::Quad(Renderer::Ptr r):mRenderer(r)
 {
 	auto blob = mRenderer->compileFile("quad.fx", "", "fx_5_0");
 	mEffect = mRenderer->createEffect((**blob).GetBufferPointer(), (**blob).GetBufferSize());
+	mEffect.lock()->setTech("quad");
 	auto tech = mEffect.lock()->getTech("quad");
 	
 	D3DX11_PASS_DESC passDesc;
@@ -55,12 +56,16 @@ void Quad::draw(ID3D11ShaderResourceView* texture)
 	mRenderer->setRenderTarget(backbuffer);
 
 	auto context = mRenderer->getContext();
-	context->PSSetShaderResources(0, 1, &texture);
 	mRenderer->setLayout(mLayout);
 	mRenderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	mRenderer->setIndexBuffer(mIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
 	mRenderer->setVertexBuffer(mVertexBuffer, sizeof(Vertex), 0);
-	mEffect.lock()->render(context, nullptr, [](ID3D11DeviceContext* context) {
+	mEffect.lock()->render(context, nullptr, [texture](ID3D11DeviceContext* context) {
+		context->PSSetShaderResources(0, 1, &texture);
+
 		context->DrawIndexed(6, 0, 0);
 	});
+
+	ID3D11ShaderResourceView* srv[] = {0};
+	context->PSSetShaderResources(0, 1, srv);
 }
