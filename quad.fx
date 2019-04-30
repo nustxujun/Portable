@@ -1,4 +1,3 @@
-
 Texture2D colorTexture: register(t0);
 SamplerState sampLinear 
 {
@@ -36,6 +35,7 @@ float4 ps(PS_INPUT input) : SV_TARGET
 {
 	return colorTexture.Sample(sampLinear, input.Tex);
 }
+
 
 technique11 quad
 {

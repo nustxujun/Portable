@@ -150,8 +150,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Common.h" />
+    <ClInclude Include="D3D11Helper.h" />
     <ClInclude Include="deferredRendering.h" />
     <ClInclude Include="GBuffer.h" />
+    <ClInclude Include="Lighting.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="MeshBuilder.h" />
@@ -166,6 +168,7 @@
   <ItemGroup>
     <ClCompile Include="deferredRendering.cpp" />
     <ClCompile Include="GBuffer.cpp" />
+    <ClCompile Include="Lighting.cpp" />
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="MeshBuilder.cpp" />
@@ -195,6 +198,7 @@
     <Import Project="packages\fx11_desktop_2015.2018.9.7.1\build\native\fx11_desktop_2015.targets" Condition="Exists('packages\fx11_desktop_2015.2018.9.7.1\build\native\fx11_desktop_2015.targets')" />
     <Import Project="packages\Assimp.redist.3.0.0\build\native\Assimp.redist.targets" Condition="Exists('packages\Assimp.redist.3.0.0\build\native\Assimp.redist.targets')" />
     <Import Project="packages\Assimp.3.0.0\build\native\Assimp.targets" Condition="Exists('packages\Assimp.3.0.0\build\native\Assimp.targets')" />
+    <Import Project="packages\directxtex_desktop_2015.2019.4.26.1\build\native\directxtex_desktop_2015.targets" Condition="Exists('packages\directxtex_desktop_2015.2019.4.26.1\build\native\directxtex_desktop_2015.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
@@ -203,5 +207,6 @@
     <Error Condition="!Exists('packages\fx11_desktop_2015.2018.9.7.1\build\native\fx11_desktop_2015.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\fx11_desktop_2015.2018.9.7.1\build\native\fx11_desktop_2015.targets'))" />
     <Error Condition="!Exists('packages\Assimp.redist.3.0.0\build\native\Assimp.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Assimp.redist.3.0.0\build\native\Assimp.redist.targets'))" />
     <Error Condition="!Exists('packages\Assimp.3.0.0\build\native\Assimp.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Assimp.3.0.0\build\native\Assimp.targets'))" />
+    <Error Condition="!Exists('packages\directxtex_desktop_2015.2019.4.26.1\build\native\directxtex_desktop_2015.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\directxtex_desktop_2015.2019.4.26.1\build\native\directxtex_desktop_2015.targets'))" />
   </Target>
 </Project>

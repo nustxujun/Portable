@@ -3,13 +3,12 @@
 
 Quad::Quad(Renderer::Ptr r):mRenderer(r)
 {
-	auto blob = mRenderer->compileFile("quad.fx", "", "fx_5_0");
-	mEffect = mRenderer->createEffect((**blob).GetBufferPointer(), (**blob).GetBufferSize());
-	mEffect.lock()->setTech("quad");
-	auto tech = mEffect.lock()->getTech("quad");
+	auto vsblob = mRenderer->compileFile("quad_vs.hlsl", "main", "vs_5_0");
+	mVS = mRenderer->createVertexShader((**vsblob).GetBufferPointer(), (**vsblob).GetBufferSize());
 	
-	D3DX11_PASS_DESC passDesc;
-	tech->GetPassByIndex(0)->GetDesc(&passDesc);
+
+	auto psblob = mRenderer->compileFile("drawTexture_ps.hlsl", "main", "ps_5_0");
+	mPS = mRenderer->createPixelShader((*psblob)->GetBufferPointer(), (*psblob)->GetBufferSize());
 
 	D3D11_INPUT_ELEMENT_DESC quadLayout[] =
 	{
@@ -47,23 +46,27 @@ Quad::~Quad()
 {
 }
 
-void Quad::draw(ID3D11ShaderResourceView* texture)
+void Quad::draw(Renderer::RenderTarget::Ptr rt, std::vector<ID3D11ShaderResourceView*>& srvs, Renderer::PixelShader::Weak ps)
 {
-	auto backbuffer = mRenderer->getBackbuffer();
+	if (ps.lock() == nullptr)
+		ps = mPS;
 	mRenderer->clearDepth(1.0f);
 	const float colors[4] = { 0.f,0.f,0.f,1.f };
-	mRenderer->clearRenderTarget(backbuffer, colors);
-	mRenderer->setRenderTarget(backbuffer);
+	mRenderer->clearRenderTarget(rt, colors);
+	mRenderer->setRenderTarget(rt);
 
 	auto context = mRenderer->getContext();
-	mRenderer->setLayout(mLayout.lock()->bind(mEffect));
 	mRenderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	mRenderer->setIndexBuffer(mIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
 	mRenderer->setVertexBuffer(mVertexBuffer, sizeof(Vertex), 0);
-	mEffect.lock()->render( mRenderer,[texture,context]() {
-		context->PSSetShaderResources(0, 1, &texture);
-		context->DrawIndexed(6, 0, 0);
-	});
+
+	context->VSSetShader(*mVS.lock(), NULL, 0);
+	context->PSSetShader(*ps.lock(), NULL, 0);
+
+	mRenderer->setLayout(mLayout.lock()->bind(mVS));
+	context->PSSetShaderResources(0, srvs.size(), srvs.data());
+	context->DrawIndexed(6, 0, 0);
+
 
 	mRenderer->setTexture(Renderer::Texture::Ptr());
 }

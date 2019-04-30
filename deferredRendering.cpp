@@ -11,6 +11,7 @@
 #include "Mesh.h"
 #include "Scene.h"
 #include "test.h"
+#include "Lighting.h"
 #define MAX_LOADSTRING 100
 
 Renderer::Ptr renderer;
@@ -18,6 +19,7 @@ std::shared_ptr<Quad> quad;
 std::shared_ptr<GBuffer> gbuffer;
 std::shared_ptr<Scene> scene;
 std::shared_ptr<Test> test;
+std::shared_ptr<Lighting> lighting;
 
 void initRenderer(HWND win)
 {
@@ -27,22 +29,38 @@ void initRenderer(HWND win)
 	renderer->init(win, rect.right, rect.bottom);
 
 
-	test = decltype(test)(new Test(renderer));
+	//test = decltype(test)(new Test(renderer));
 	quad =  decltype(quad)(new Quad(renderer));
 	gbuffer = decltype(gbuffer)(new GBuffer(renderer));
 	scene = decltype(scene)(new Scene(renderer));
+	lighting = decltype(lighting)(new Lighting(renderer));
 
 	Parameters params;
-	params["file"] = "sponza.obj";
-	scene->createEntity("test", params);
+	params["file"] = "tiny.x";
+	auto model = scene->createModel("test", params);
+	model->attach(scene->getRoot());
+	model->getNode()->setPosition(0.0f, 0.0f, 0.0f);
+
+	auto cam = scene->createOrGetCamera("main");
+	D3DXVECTOR3 eye(0, 0, -500);
+	D3DXVECTOR3 at(0, 0, 0);
+	cam->lookat(eye, at);
 }
 
 void framemove()
 {
+	std::vector<ID3D11ShaderResourceView*> srvs;
 	gbuffer->render(scene);
+	//lighting->prepare();
+	//srvs.push_back(gbuffer->getDiffuse().lock()->getShaderResourceView());
+	//quad->draw(lighting->getRenderTarget(), srvs, lighting->getEffect());
+	//srvs.clear();
+	srvs.push_back(lighting->getRenderTarget().lock()->getShaderResourceView());
+
+	quad->draw(renderer->getBackbuffer(), srvs, Renderer::PixelShader::Weak());
+
 	//test->draw(nullptr);
 	//quad->draw(test->mRenderTarget.lock()->getShaderResourceView());
-	quad->draw(gbuffer->getDiffuse().lock()->getShaderResourceView());
 	renderer->present();
 }
 

@@ -8,9 +8,6 @@ GBuffer::GBuffer(Renderer::Ptr r):mRenderer(r)
 	mEffect.lock()->setTech("gbuffer");
 	auto tech = mEffect.lock()->getTech("gbuffer");
 
-	D3DX11_PASS_DESC passDesc;
-	tech->GetPassByIndex(0)->GetDesc(&passDesc);
-
 	D3D11_INPUT_ELEMENT_DESC modelLayout[] =
 	{
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -45,22 +42,13 @@ void GBuffer::render(Scene::Ptr scene)
 	auto view = e->getVariable("View")->AsMatrix();
 	auto proj = e->getVariable("Projection")->AsMatrix();
 
-	D3DXVECTOR3 eye(0, 3000,  -1000);
-	D3DXVECTOR3 at(0, 0, 0);
-	D3DXVECTOR3 up(0, 1, 0);
-	D3DXMatrixLookAtLH(&mat, &eye, &at, &up);
-	view->SetMatrix(mat);
-
-	D3DXMatrixTranslation(&mat, 0, 0, 0);
-	world->SetMatrix(mat);
-
+	auto cam = scene->createOrGetCamera("main");
+	view->SetMatrix(cam->getViewMatrix());
 
 	D3DXMatrixPerspectiveFovLH(&mat, 1.570796327f, mRenderer->getWidth() / mRenderer->getHeight(), 0.01f, 10000);
 	proj->SetMatrix(mat);
-	
 
 	mRenderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	mRenderer->setLayout(mLayout.lock()->bind(mEffect));
 	std::vector<Renderer::RenderTarget::Ptr> rts = {mDiffuse, mNormal, mDepth};
 	float colors[4] = { 0,0,0,0 };
 	for (auto i : rts)
@@ -70,20 +58,18 @@ void GBuffer::render(Scene::Ptr scene)
 	mRenderer->clearDepth(1.0f);
 	mRenderer->setRenderTargets(rts);
 
-	e->render(mRenderer,[scene,this]()
+	e->render(mRenderer,[world,scene,this](ID3DX11EffectPass* pass)
 	{
-		scene->visit([this](Scene::Entity::Ptr e) 
+		mRenderer->setLayout(mLayout.lock()->bind(pass));
+
+		scene->visitRenderables([world, this](Renderable r)
 		{
-			auto mesh = e->getMesh();
-			for (size_t i = 0; i < mesh->getNumMesh(); ++i)
-			{
-				auto submesh = mesh->getMesh(i);
-				mRenderer->setTextures(submesh.material->mTextures);
+			world->SetMatrix(r.tranformation);
+			mRenderer->setTextures(r.material->mTextures);
 				
-				mRenderer->setIndexBuffer(submesh.indices, DXGI_FORMAT_R32_UINT, 0);
-				mRenderer->setVertexBuffer(submesh.vertices, submesh.strideVertex, 0);
-				mRenderer->getContext()->DrawIndexed(submesh.numIndices, 0, 0);
-			}
+			mRenderer->setIndexBuffer(r.indices, DXGI_FORMAT_R32_UINT, 0);
+			mRenderer->setVertexBuffer(r.vertices, r.layout.lock()->getSize(), 0);
+			mRenderer->getContext()->DrawIndexed(r.numIndices, 0, 0);
 		});
 
 	});

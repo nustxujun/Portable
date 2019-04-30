@@ -12,10 +12,11 @@ public:
 	Quad(Renderer::Ptr r);
 	~Quad();
 
-	void draw(ID3D11ShaderResourceView* texture);
+	void draw(Renderer::RenderTarget::Ptr rt, std::vector<ID3D11ShaderResourceView*>& srvs, Renderer::PixelShader::Weak ps);
 private:
 	Renderer::Ptr mRenderer;
-	Renderer::Effect::Ptr mEffect;
+	Renderer::VertexShader::Weak mVS;
+	Renderer::PixelShader::Weak mPS;
 	Renderer::Layout::Ptr mLayout;
 	Renderer::Buffer::Ptr mVertexBuffer;
 	Renderer::Buffer::Ptr mIndexBuffer;

@@ -83,13 +83,13 @@ void Test::draw(ID3D11ShaderResourceView* texture)
 
 	auto context = mRenderer->getContext();
 
-	mRenderer->setLayout(mLayout.lock()->bind(mEffect));
 	mRenderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	mRenderer->setIndexBuffer(mIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
 	mRenderer->setVertexBuffer(mVertexBuffer, sizeof(Vertex), 0);
-	mEffect.lock()->render(mRenderer, [this, context]() {
-		ID3D11ShaderResourceView* srv = *(mTexture.lock());
-		context->PSSetShaderResources(0, 1, &srv);
+	mEffect.lock()->render(mRenderer, [this, context](ID3DX11EffectPass* pass) {
+		mRenderer->setLayout(mLayout.lock()->bind(pass));
+
+		//mRenderer->setTexture(texture);
 		//ID3D11SamplerState* ss = *(mSampler.lock());
 		//context->PSSetSamplers(0, 1, &ss);
 		context->DrawIndexed(6, 0, 0);

@@ -4,12 +4,7 @@
 #include "d3dx11effect.h"
 #include <D3D11.h>
 #include <D3DX11.h>
-#include <memory>
-#include <set>
-#include <string>
-#include <map>
-#include <functional>
-#include <vector>
+#include "Common.h"
 
 #undef min
 #undef max
@@ -48,11 +43,12 @@ public:
 	class Interface final : public NODefault
 	{
 	public:
-		using Ptr = std::shared_ptr<Interface<T>>;
+		using Shared = std::shared_ptr<Interface<T>>;
+		using Weak = std::weak_ptr<Interface<T>>;
 
 		Interface(T* t) : mInterface(t) {}
 		~Interface() { if (mInterface) mInterface->Release(); }
-
+		T* operator->() { return mInterface; }
 		operator T*() { return mInterface; }
 	private:
 		T* mInterface;
@@ -144,6 +140,26 @@ public:
 		ID3D11SamplerState* mSampler;
 	};
 
+	class VertexShader :public NODefault
+	{
+	public:
+		using Shared = std::shared_ptr<VertexShader>;
+		using Weak = std::weak_ptr<VertexShader>;
+
+	public:
+		VertexShader(ID3D11VertexShader* vs, const void* data, size_t size) :mVS(vs) {
+			mCompiledShader.resize(size);
+			memcpy(mCompiledShader.data(), data, size);
+		}
+		~VertexShader() { mVS->Release(); }
+
+		operator ID3D11VertexShader*() const { return mVS; }
+		const std::vector<char>& getCompiledShader() { return mCompiledShader; }
+	private:
+		ID3D11VertexShader* mVS;
+		std::vector<char> mCompiledShader;
+	};
+
 	class Layout final : public NODefault, public D3DObject
 	{
 	public:
@@ -152,14 +168,21 @@ public:
 		Layout(ID3D11Device* device, const D3D11_INPUT_ELEMENT_DESC * descarray, size_t count);
 		~Layout(){}
 
-		ID3D11InputLayout* bind(const char* data, size_t size);
+		ID3D11InputLayout* bind(ID3DX11EffectPass* pass);
+		ID3D11InputLayout* bind(VertexShader::Weak vs);
+
+		size_t getSize()const { return mSize; };
 	private:
-		std::map<size_t, Interface<ID3D11InputLayout>::Ptr> mBindedLayouts;
+		std::map<const void*, Interface<ID3D11InputLayout>::Shared> mBindedLayouts;
 		std::vector<D3D11_INPUT_ELEMENT_DESC> mElements;
+		size_t mSize;
 	};
 
+
+
 	using CompiledData = Interface<ID3D10Blob>;
-	using SharedCompiledData = std::shared_ptr<CompiledData> ;
+	using SharedCompiledData = CompiledData::Shared ;
+	using PixelShader = Interface<ID3D11PixelShader>;
 public:
 	void init(HWND win, int width, int height);
 	void uninit();
@@ -173,9 +196,14 @@ public:
 	void clearDepth(float depth);
 	void clearStencil(int stencil);
 	void clearRenderTarget(RenderTarget::Ptr rt, const float color[4]);
+	void clearRenderTargets(std::vector<RenderTarget::Ptr>& rts, const float color[4]);
 
 	void setTexture(const Texture::Ptr tex);
 	void setTextures(const std::vector<Texture::Ptr>& texs);
+	void setShaderResourceView(ID3D11ShaderResourceView* srv);
+	void setShaderResourceViews(const std::vector<ID3D11ShaderResourceView*>& srvs);
+
+
 
 	void setRenderTarget(RenderTarget::Ptr rt);
 	void setRenderTargets(std::vector<RenderTarget::Ptr>& rts);
@@ -193,6 +221,8 @@ public:
 	Buffer::Ptr createBuffer(int size, D3D11_BIND_FLAG flag, const D3D11_SUBRESOURCE_DATA* initialdata = NULL,D3D11_USAGE usage = D3D11_USAGE_DEFAULT, bool CPUaccess = false);
 	SharedCompiledData compileFile(const std::string& filename, const std::string& entryPoint, const std::string& shaderModel, const D3D10_SHADER_MACRO* macro = NULL);
 	Effect::Ptr createEffect(void* data, size_t size);
+	VertexShader::Weak createVertexShader(const void* data, size_t size);
+	PixelShader::Weak createPixelShader(const void* data, size_t size);
 	Layout::Ptr createLayout(const D3D11_INPUT_ELEMENT_DESC* descarray, size_t count);
 
 private:
@@ -219,6 +249,8 @@ private:
 	std::set<std::shared_ptr<Layout>> mLayouts;
 	std::map<std::string,std::shared_ptr<Texture>> mTextures;
 	std::set<std::shared_ptr<Sampler>> mSamplers;
+	std::vector<VertexShader::Shared> mVSs;
+	std::vector<PixelShader::Shared> mPSs;
 
 };
 

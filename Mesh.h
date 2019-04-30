@@ -2,6 +2,7 @@
 #include "Common.h"
 #include "renderer.h"
 #include "Material.h"
+#include <D3DX10math.h>
 struct Renderable
 {
 	Renderer::Buffer::Ptr vertices;
@@ -9,8 +10,8 @@ struct Renderable
 	size_t numVertices = 0;
 	size_t numIndices = 0;
 	Material::Ptr material;
-	size_t strideVertex = 0;
-
+	Renderer::Layout::Ptr layout;
+	D3DXMATRIX tranformation;
 };
 
 class Mesh

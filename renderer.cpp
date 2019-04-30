@@ -2,8 +2,8 @@
 #include <array>
 #include <D3Dcompiler.h>
 #include <fstream>
-#include <vector>
-#include <algorithm>
+#include "D3D11Helper.h"
+#include "DirectXTex.h"
 
 #define ERROR(x) {MessageBox(NULL, TEXT(x), NULL, MB_ICONERROR); abort();}
 
@@ -157,6 +157,15 @@ void Renderer::clearRenderTarget(RenderTarget::Ptr rt, const float color[4])
 	mContext->ClearRenderTargetView(*ptr, color);
 }
 
+void Renderer::clearRenderTargets(std::vector<RenderTarget::Ptr>& rts, const float color[4])
+{
+	for (auto& i : rts)
+	{
+		mContext->ClearRenderTargetView(*i.lock(), color);
+	}
+}
+
+
 void Renderer::setTexture(const Texture::Ptr tex)
 {
 	auto ptr= tex.lock();
@@ -167,8 +176,7 @@ void Renderer::setTexture(const Texture::Ptr tex)
 	}
 	else
 	{
-		ID3D11ShaderResourceView* srv = *ptr;
-		mContext->PSSetShaderResources(0, 1, &srv);
+		setShaderResourceView(*ptr);
 	}
 }
 
@@ -181,13 +189,18 @@ void Renderer::setTextures(const std::vector<Texture::Ptr>& texs)
 			list.push_back( *i.lock());
 	}
 
-	if (list.size() == 0)
-	{
-		ID3D11ShaderResourceView* srv[1] = { nullptr };
-		mContext->PSSetShaderResources(0, 1, srv);
-	}
-	else
-		mContext->PSSetShaderResources(0, list.size(), list.data());
+	setShaderResourceViews(list);
+
+}
+
+void Renderer::setShaderResourceView(ID3D11ShaderResourceView * srv)
+{
+	mContext->PSSetShaderResources(0, 1, &srv);
+}
+
+void Renderer::setShaderResourceViews(const std::vector<ID3D11ShaderResourceView*>& srvs)
+{
+	mContext->PSSetShaderResources(0, srvs.size(), srvs.data());
 }
 
 void Renderer::setRenderTarget(RenderTarget::Ptr rt)
@@ -258,6 +271,8 @@ void Renderer::setVertexBuffers( std::vector<Buffer::Ptr>& b, const size_t * str
 
 void Renderer::uninit()
 {
+	mVSs.clear();
+	mPSs.clear();
 	mSamplers.clear();
 	mTextures.clear();
 	mEffects.clear();
@@ -406,6 +421,22 @@ Renderer::Effect::Ptr Renderer::createEffect(void* data, size_t size)
 	return Effect::Ptr(*ret.first);
 }
 
+Renderer::VertexShader::Weak Renderer::createVertexShader(const void * data, size_t size)
+{
+	ID3D11VertexShader* vs;
+	checkResult(mDevice->CreateVertexShader(data, size, NULL, &vs));
+	mVSs.emplace_back(new VertexShader(vs, data, size));
+	return mVSs.back();
+}
+
+Renderer::PixelShader::Weak Renderer::createPixelShader(const void * data, size_t size)
+{
+	ID3D11PixelShader* ps;
+	checkResult(mDevice->CreatePixelShader(data, size, NULL, &ps));
+	mPSs.emplace_back(new PixelShader(ps));
+	return mPSs.back();
+}
+
 Renderer::Layout::Ptr Renderer::createLayout(const D3D11_INPUT_ELEMENT_DESC * descarray, size_t count)
 {
 	auto ret = mLayouts.emplace(new Layout(mDevice, descarray, count));
@@ -514,21 +545,47 @@ Renderer::Layout::Layout(ID3D11Device * device, const D3D11_INPUT_ELEMENT_DESC *
 {
 	mElements.resize(count);
 	memcpy(mElements.data(), descarray, count * sizeof(D3D11_INPUT_ELEMENT_DESC));
+
+	mSize = 0;
+	for (int i = 0; i < count; ++i)
+	{
+		auto& d = descarray[i];
+		mSize += D3D11Helper::sizeof_DXGI_FORMAT(d.Format);
+	}
 }
 
-ID3D11InputLayout * Renderer::Layout::bind(const char* data, size_t size)
+ID3D11InputLayout * Renderer::Layout::bind(ID3DX11EffectPass* pass)
 {
-	std::hash<std::string> hash;
-	auto key = hash(std::string(data, size));
+	auto ret = mBindedLayouts.find(pass);
+	if (ret != mBindedLayouts.end())
+		return *ret->second;
 
-	auto ret = mBindedLayouts.find(key);
+	D3DX11_PASS_DESC desc;
+	pass->GetDesc(&desc);
+
+	ID3D11InputLayout* layout;
+	checkResult(getDevice()->CreateInputLayout(mElements.data(), mElements.size(), desc.pIAInputSignature, desc.IAInputSignatureSize, &layout));
+
+	auto insert = mBindedLayouts.emplace(pass, new Interface<ID3D11InputLayout>(layout));
+
+	return *insert.first->second;
+}
+
+ID3D11InputLayout * Renderer::Layout::bind(VertexShader::Weak vs)
+{
+	auto ptr = vs.lock();
+	if (ptr == nullptr)
+		return nullptr;
+	
+	const auto& shader = ptr->getCompiledShader();
+	auto ret = mBindedLayouts.find(shader.data());
 	if (ret != mBindedLayouts.end())
 		return *ret->second;
 
 	ID3D11InputLayout* layout;
-	checkResult(getDevice()->CreateInputLayout(mElements.data(), mElements.size(), data, size, &layout));
+	checkResult(getDevice()->CreateInputLayout(mElements.data(), mElements.size(), shader.data(), shader.size(), &layout));
 
-	auto insert = mBindedLayouts.emplace(layout, new Interface<ID3D11InputLayout>(layout));
+	auto insert = mBindedLayouts.emplace(shader.data(), new Interface<ID3D11InputLayout>(layout));
 
 	return *insert.first->second;
 }

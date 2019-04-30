@@ -42,8 +42,8 @@ PS_INPUT vs(VS_INPUT input)
 
 float4 ps(PS_INPUT input) : SV_TARGET
 {
-	//return float4(input.Tex,0,0);
-	return colorTexture.Sample(sampLinear, input.Tex);
+	return float4(input.Tex,0,0);
+	//return colorTexture.Sample(sampLinear, input.Tex);
 }
 
 technique11 test

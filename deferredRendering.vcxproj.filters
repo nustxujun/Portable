@@ -54,6 +54,12 @@
     <ClInclude Include="Common.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="D3D11Helper.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Lighting.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -84,6 +90,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Material.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Lighting.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

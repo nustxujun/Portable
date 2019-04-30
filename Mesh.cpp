@@ -1,6 +1,7 @@
 
 #include "Mesh.h"
 #include "MeshBuilder.h"
+#include "D3D11Helper.h"
 
 Mesh::Mesh(const Parameters& params, Renderer::Ptr r)
 {
@@ -10,9 +11,7 @@ Mesh::Mesh(const Parameters& params, Renderer::Ptr r)
 	if (filename == end)
 		return;
 
-
 	auto data = MeshBuilder::build(filename->second);
-	
 
 	std::vector<Material::Ptr> materials;
 	for (int i = 0; i < data.materials.size(); ++i)
@@ -21,7 +20,7 @@ Mesh::Mesh(const Parameters& params, Renderer::Ptr r)
 		Material* mat = new Material();
 		for (int j = 0; j < mraw.texture_diffuses.size(); ++j)
 		{
-			mat->setTexture(j, r->createTexture(mraw.texture_diffuses[j]));
+			mat->setTexture(j, r->createTexture( mraw.texture_diffuses[j]));
 		}
 		materials.emplace_back(mat);
 	}
@@ -38,21 +37,27 @@ Mesh::Mesh(const Parameters& params, Renderer::Ptr r)
 		InitQuadData.pSysMem = mesh.indices.data();
 		auto ib = r->createBuffer(mesh.indices.size() * sizeof(int), D3D11_BIND_INDEX_BUFFER, &InitQuadData);
 
-		size_t stride = 0;
-		for (auto & i : mesh.layout)
+		std::vector<D3D11_INPUT_ELEMENT_DESC> desc;
+		size_t offset = 0;
+		for (auto& e : mesh.layout)
 		{
-			switch (i)
+			D3D11_INPUT_ELEMENT_DESC d = {0};
+			switch (e)
 			{
-			case MeshBuilder::POSITION: stride += 4 * 3; break;
-			case MeshBuilder::NORMAL: stride += 4 * 3; break;
-			case MeshBuilder::TEXCOORD0: stride += 4 * 2; break;
-
+			case MeshBuilder::POSITION: d = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offset, D3D11_INPUT_PER_VERTEX_DATA, 0 }; break;
+			case MeshBuilder::NORMAL: d = { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offset, D3D11_INPUT_PER_VERTEX_DATA, 0 }; break;
+			case MeshBuilder::TEXCOORD0: d = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offset, D3D11_INPUT_PER_VERTEX_DATA, 0 }; break;
 			default:
 				break;
-			}
+			};
+
+			offset += D3D11Helper::sizeof_DXGI_FORMAT(d.Format);
+			if (d.Format != 0)
+				desc.push_back(d);
 		}
 
-		mMeshs.push_back({ vb, ib, mesh.numVertex, mesh.indices.size(), materials[mesh.materialIndex],stride });
+		auto layout = r->createLayout(desc.data(), desc.size());
+		mMeshs.push_back({ vb, ib, mesh.numVertex, mesh.indices.size(), materials[mesh.materialIndex] , layout });
 	}
 
 

@@ -6,5 +6,14 @@
 #include <set>
 #include <string>
 #include <memory>
+#include <algorithm>
 
 using Parameters = std::map<std::string, std::string>;
+
+
+
+class Common
+{
+public:
+	
+};
