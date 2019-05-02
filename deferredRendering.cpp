@@ -9,19 +9,17 @@
 #include "Quad.h"
 #include "Mesh.h"
 #include "Scene.h"
-#include "test.h"
 
 #include "DeferredRenderer.h"
 #include "Input.h"
 
-
+#include <sstream>
 
 #define MAX_LOADSTRING 100
 
 Renderer::Ptr renderer;
 std::shared_ptr<Quad> quad;
 std::shared_ptr<Scene> scene;
-std::shared_ptr<Test> test;
 std::shared_ptr< DeferredRenderer> deferred;
 std::shared_ptr<Input> input;
 void initRenderer(HWND win)
@@ -49,47 +47,71 @@ void initRenderer(HWND win)
 	DirectX::XMFLOAT3 at(0, 0, 0);
 	cam->lookat(eye, at);
 	cam->setViewport(0, 0, rect.right, rect.bottom);
-	cam->setNearFar(0.01, 1000);
+	cam->setNearFar(0.01, 10000);
+	cam->setFOVy(0.785398185);
 
 	input->listen([cam](const Input::Mouse& m, const Input::Keyboard& k) {
 		auto node = cam->getNode();
-		if (k.W)
+		auto pos = node->getPosition();
+		auto dir = cam->getDirection();
+		Vector3 up(0, 1, 0);
+		Vector3 r = up.Cross(dir);
+		r.Normalize();
+
+		Vector2 cur = Vector2(m.x, m.y);
+		static Vector2 last = cur;
+		Vector2 d = cur - last;
+		last = cur;
+		std::stringstream ss;
+		if (k.W )
 		{
-			auto pos = node->getPosition();
-			node->setPosition(pos.x, pos.y, pos.z + 1);
+			pos = dir * 1 + pos;
 		}
-	
+		else if (k.S)
+		{
+			pos = dir * -1 + pos;
+		}
+		else if (k.A)
+		{
+			pos = r * -1 + pos;
+		}
+		else if (k.D)
+		{
+			pos = r * 1 + pos;
+		}
+
+		if (m.leftButton)
+		{
+			float pi = 3.14159265358;
+			d.y = std::max(-pi / 2.0f, d.y);
+			d.y = std::min(+pi / 2.0f, d.y);
+			Quaternion rot = Quaternion::CreateFromYawPitchRoll(d.x * 0.005, d.y * 0.005, 0);
+
+			rot *= node->getOrientation();
+			dir = Vector3::Transform(Vector3(0, 0, 1), rot);
+			cam->setDirection(dir);
+		}
+
+		node->setPosition(pos);
 	});
-
-
+	cam->getViewMatrix();
 	//cam->setProjectType(Scene::Camera::PT_ORTHOGRAPHIC);
+
+
 }
 
 void framemove()
 {
 	input->update();
-	/*auto cam = scene->createOrGetCamera("main");
-	float len = 300;
-	auto time = GetTickCount() * 0.0005f;
-	auto x = cos(time) * len;
-	auto z = sin(time) * len;
-	cam->lookat(DirectX::XMFLOAT3(x,0,z), DirectX::XMFLOAT3(0,0,0));*/
+	//auto cam = scene->createOrGetCamera("main");
+	//float len = 300;
+	//auto time = GetTickCount() * 0.0005f;
+	//auto x = cos(time) * len;
+	//auto z = sin(time) * len;
+	//auto y = sin(time) * len;
+	//
+	//cam->lookat(DirectX::XMFLOAT3(x,y,z), DirectX::XMFLOAT3(0,0,0));
 	deferred->render();
-	//std::vector<ID3D11ShaderResourceView*> srvs;
-	//gbuffer->render(scene);
-	//lighting->prepare(scene->createOrGetCamera("main"));
-	//srvs.push_back(gbuffer->getDiffuse().lock()->getShaderResourceView());
-	//srvs.push_back(gbuffer->getNormal().lock()->getShaderResourceView());
-	//srvs.push_back(gbuffer->getDepth().lock()->getShaderResourceView());
-
-	//quad->draw(lighting->getRenderTarget(), srvs, lighting->getPS());
-	//srvs.clear();
-	//srvs.push_back(lighting->getRenderTarget().lock()->getShaderResourceView());
-
-	//quad->draw(renderer->getBackbuffer(), srvs, Renderer::PixelShader::Weak());
-
-	//test->draw(nullptr);
-	//quad->draw(test->mRenderTarget.lock()->getShaderResourceView());
 	renderer->present();
 }
 

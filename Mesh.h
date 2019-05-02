@@ -2,7 +2,7 @@
 #include "Common.h"
 #include "renderer.h"
 #include "Material.h"
-#include <DirectXMath.h>
+#include "SimpleMath.h"
 struct Renderable
 {
 	Renderer::Buffer::Ptr vertices;

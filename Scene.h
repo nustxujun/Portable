@@ -1,46 +1,60 @@
 #pragma once
 #include "Common.h"
 #include "Mesh.h"
-#include <DirectXMath.h>
+#include "SimpleMath.h"
 
-
+using namespace DirectX::SimpleMath;
 class Scene
 {
+
 public:
 	using Ptr = std::shared_ptr<Scene>;
 	class Entity;
 	class Node
 	{
 		friend class Scene;
+
+		enum DIRTY_TYPE{
+			DT_POSITION			= 1,
+			DT_ORIENTATION		= 2,
+			DT_PARENT			= 4,
+
+
+			DT_ALL				= DT_POSITION | DT_ORIENTATION | DT_PARENT,
+		};
 	public:
 		using Ptr = std::shared_ptr<Node>;
 	public:
 		Node() :mPosition(0, 0, 0), mOrientation(0, 0, 0, 1) {};
 
-		const DirectX::XMFLOAT4X4& getTransformation();
+		const Matrix& getTransformation();
 
 		template<class ... Args>
-		void setPosition(const Args& ... args) { dirty(); mPosition = { args... }; }
-		const DirectX::XMFLOAT3& getPosition() { return mPosition; }
+		void setPosition(const Args& ... args) { dirty(DT_POSITION); mPosition = { args... }; }
+		const Vector3& getPosition() { return mPosition; }
+		const Vector3& getRealPosition();
 
 		template<class ... Args>
-		void setOrientation(const Args& ... args) { dirty(); mOrientation = { args... }; }
-		const DirectX::XMFLOAT4& getOrientation() { return mOrientation; }
+		void setOrientation(const Args& ... args) { dirty(DT_ORIENTATION); mOrientation = { args... }; }
+		const Quaternion& getOrientation() { return mOrientation; }
+		const Quaternion& getRealOrientation();
+		
 
-
-		void addChild(Ptr p) { mChildren.insert(p); p->mParent = this; p->dirty(); }
-		void removeChild(Ptr p) { mChildren.erase(p); p->mParent = nullptr; p->dirty(); }
+		void addChild(Ptr p) { mChildren.insert(p); p->mParent = this; p->dirty(DT_PARENT); }
+		void removeChild(Ptr p) { mChildren.erase(p); p->mParent = nullptr; p->dirty(DT_PARENT); }
 	private:
-		void dirty();
-
+		void dirty(size_t s);
+		bool isDirty(size_t s = DT_ALL);
 	private:
 		Node* mParent;
 		std::set<Ptr> mChildren;
 		std::shared_ptr<Entity> mEntity;
-		DirectX::XMFLOAT3 mPosition;
-		DirectX::XMFLOAT4 mOrientation;
-		DirectX::XMFLOAT4X4 mTranformation;
-		bool mDirty = true;
+		Vector3 mPosition;
+		Vector3 mRealPosition;
+		Quaternion mOrientation;
+		Quaternion mRealOrientation;
+		Matrix mTranformation;
+		size_t mDirty = DT_ALL;
 	};
 
 	class Entity
@@ -93,23 +107,24 @@ public:
 
 		void visitRenderable(std::function<void(Renderable)>)override {};
 
-		const DirectX::XMFLOAT4X4& getViewMatrix();
-		void lookat(const DirectX::XMFLOAT3& eye, const DirectX::XMFLOAT3& at, const DirectX::XMFLOAT3& up = DirectX::XMFLOAT3(0, 1, 0));
+		Matrix getViewMatrix();
+		void lookat(const Vector3& eye, const Vector3& at);
 		void setViewport(float left, float top, float width, float height);
 		void setFOVy(float fovy);
 		void setNearFar(float n, float f);
 		void setProjectType(ProjectionType type) { mProjectionType = type; };
-		const DirectX::XMFLOAT4X4 & getProjectionMatrix();
+		const Matrix & getProjectionMatrix();
 		const D3D11_VIEWPORT& getViewport()const { return mViewport; }
 
-		DirectX::XMFLOAT4 getDirection();
+		Vector3 getDirection();
+		void setDirection(const Vector3& dir);
 	private:
 		D3D11_VIEWPORT mViewport;
 		float mFOVy;
 		float mNear;
 		float mFar;
 		ProjectionType mProjectionType;
-		DirectX::XMFLOAT4X4 mProjection;
+		Matrix mProjection;
 		bool mDirty;
 	};
 public:

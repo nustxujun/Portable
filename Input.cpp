@@ -14,7 +14,6 @@ void Input::update()
 {
 	auto keystate = mKeyboard->GetState();
 	auto mousestate = mMouse->GetState();
-
 	for (auto& i : mListeners)
 	{
 		i(mousestate, keystate);
