@@ -3,9 +3,7 @@
 #include <D3Dcompiler.h>
 #include <fstream>
 #include "D3D11Helper.h"
-#include "DirectXTex.h"
 
-#define ERROR(x) {MessageBox(NULL, TEXT(x), NULL, MB_ICONERROR); abort();}
 
 void Renderer::checkResult(HRESULT hr)
 {
@@ -74,7 +72,7 @@ void Renderer::init(HWND win, int width, int height)
 
 	checkResult(mDevice->CreateRenderTargetView(backbuffer, NULL, &bbv));
 
-	auto shared = std::shared_ptr<RenderTarget>(new RenderTarget(backbuffer, bbv, nullptr));
+	auto shared = std::shared_ptr<RenderTarget>(new RenderTarget(mDevice, backbuffer, bbv, nullptr));
 	mRenderTargets.insert(shared);
 	mBackbuffer = shared;
 
@@ -118,22 +116,17 @@ void Renderer::init(HWND win, int width, int height)
 	checkResult(mDevice->CreateRasterizerState(&rasterDesc, &mRasterizer));
 	mContext->RSSetState(mRasterizer);
 
-	D3D11_VIEWPORT vp;
-	vp.Width = (FLOAT)width;
-	vp.Height = (FLOAT)height;
-	vp.MinDepth = 0.0f;
-	vp.MaxDepth = 1.0f;
-	vp.TopLeftX = 0;
-	vp.TopLeftY = 0;
-	mContext->RSSetViewports(1, &vp);
-
-	initRenderTargets();
-}
-
-void Renderer::initRenderTargets()
-{
+	//D3D11_VIEWPORT vp;
+	//vp.Width = (FLOAT)width;
+	//vp.Height = (FLOAT)height;
+	//vp.MinDepth = 0.0f;
+	//vp.MaxDepth = 1.0f;
+	//vp.TopLeftX = 0;
+	//vp.TopLeftY = 0;
+	//mContext->RSSetViewports(1, &vp);
 
 }
+
 
 void Renderer::present()
 {
@@ -157,11 +150,11 @@ void Renderer::clearRenderTarget(RenderTarget::Ptr rt, const float color[4])
 	mContext->ClearRenderTargetView(*ptr, color);
 }
 
-void Renderer::clearRenderTargets(std::vector<RenderTarget::Ptr>& rts, const float color[4])
+void Renderer::clearRenderTargets(std::vector<RenderTarget::Ptr>& rts, const std::array<float, 4>& color)
 {
 	for (auto& i : rts)
 	{
-		mContext->ClearRenderTargetView(*i.lock(), color);
+		mContext->ClearRenderTargetView(*i.lock(), color.data());
 	}
 }
 
@@ -169,12 +162,7 @@ void Renderer::clearRenderTargets(std::vector<RenderTarget::Ptr>& rts, const flo
 void Renderer::setTexture(const Texture::Ptr tex)
 {
 	auto ptr= tex.lock();
-	if (ptr == nullptr)
-	{
-		ID3D11ShaderResourceView* srv[1] = { nullptr };
-		mContext->PSSetShaderResources(0, 1, srv);
-	}
-	else
+	if (ptr != nullptr)
 	{
 		setShaderResourceView(*ptr);
 	}
@@ -190,17 +178,92 @@ void Renderer::setTextures(const std::vector<Texture::Ptr>& texs)
 	}
 
 	setShaderResourceViews(list);
+}
 
+void Renderer::setTexture(const RenderTarget::Ptr tex)
+{
+	auto ptr = tex.lock();
+	if (ptr != nullptr)
+	{
+		setShaderResourceView((*ptr).getShaderResourceView());
+	}
+}
+
+void Renderer::setTextures(const std::vector<RenderTarget::Ptr>& texs)
+{
+	std::vector<ID3D11ShaderResourceView*> list;
+	for (auto i : texs)
+	{
+		if (i.lock() != NULL)
+			list.push_back((*i.lock()).getShaderResourceView());
+	}
+
+	setShaderResourceViews(list);
 }
 
 void Renderer::setShaderResourceView(ID3D11ShaderResourceView * srv)
 {
+	removeShaderResourceViews();
+	mSRVState = 1;
 	mContext->PSSetShaderResources(0, 1, &srv);
 }
 
 void Renderer::setShaderResourceViews(const std::vector<ID3D11ShaderResourceView*>& srvs)
 {
+	removeShaderResourceViews();
+	mSRVState = srvs.size();
 	mContext->PSSetShaderResources(0, srvs.size(), srvs.data());
+}
+
+void Renderer::removeShaderResourceViews()
+{
+	ID3D11ShaderResourceView* nil = 0;
+	for (int i = 0; i < mSRVState; ++i)
+		mContext->PSSetShaderResources(i, 1, &nil);
+	mSRVState = 0;
+}
+
+void Renderer::setSampler(Sampler::Ptr s)
+{
+	removeSamplers();
+	mSamplersState = 1;
+	auto ptr = s.lock();
+	if (ptr != NULL)
+	{
+		ID3D11SamplerState* ss = *ptr;
+		mContext->PSSetSamplers(0, 1, &ss);
+	}
+}
+
+void Renderer::setSamplers(const std::vector<Sampler::Ptr> ss)
+{
+	removeSamplers();
+	std::vector<ID3D11SamplerState*> list;
+	for (auto& i : ss)
+	{
+		list.push_back(*i.lock());
+	}
+	mSamplersState = list.size();
+	mContext->PSSetSamplers(0, list.size(), list.data());
+
+
+}
+
+void Renderer::removeSamplers()
+{
+	ID3D11SamplerState* nil = 0;
+	for (int i = 0; i < mSamplersState; ++i)
+		mContext->PSSetSamplers(i, 1, &nil);
+	mSamplersState = 0;
+}
+
+Renderer::Sampler::Ptr Renderer::getSampler(const std::string & name)
+{
+	auto ret = mSamplers.find(name);
+	if (ret == mSamplers.end())
+		return Sampler::Ptr();
+	else
+		return ret->second;
 }
 
 void Renderer::setRenderTarget(RenderTarget::Ptr rt)
@@ -208,8 +271,7 @@ void Renderer::setRenderTarget(RenderTarget::Ptr rt)
 	auto ptr = rt.lock();
 	if (ptr == nullptr)
 	{
-		ID3D11RenderTargetView* nil[1] = { NULL };
-		mContext->OMSetRenderTargets( 1, nil, mDepthStencilView);
+		mContext->OMSetRenderTargets(1, 0, 0);
 	}
 	else
 	{
@@ -218,19 +280,50 @@ void Renderer::setRenderTarget(RenderTarget::Ptr rt)
 	}
 }
 
-void Renderer::setRenderTargets(std::vector<RenderTarget::Ptr>& rts)
+void Renderer::setRenderTargets(const std::vector<RenderTarget::Ptr>& rts)
 {
 	std::vector<ID3D11RenderTargetView*> list;
 	for (auto i : rts)
 		list.push_back(*i.lock());
+	
+	mContext->OMSetRenderTargets(list.size(), list.data(), mDepthStencilView);
+}
 
-	if (list.size() == 0)
+void Renderer::removeRenderTargets()
+{
+	mContext->OMSetRenderTargets(0, 0, 0);
+}
+
+void Renderer::setConstantBuffer(Buffer::Ptr b)
+{
+	removeConstantBuffers();
+	auto ptr = b.lock();
+	if (ptr != nullptr)
 	{
-		ID3D11RenderTargetView* nil[1] = { NULL };
-		mContext->OMSetRenderTargets(1, nil, mDepthStencilView);
+		mConstantState = 1;
+		ID3D11Buffer* b = *ptr;
+		mContext->PSSetConstantBuffers(0, 1, &b);
 	}
-	else
-		mContext->OMSetRenderTargets(list.size(), list.data(), mDepthStencilView);
+}
+
+void Renderer::setConstantsBuffer(const std::vector<Buffer::Ptr>& bs)
+{
+	std::vector<ID3D11Buffer*> list;
+	for (auto i : bs)
+	{
+		list.push_back(*(i.lock()));
+	}
+
+	mConstantState = list.size();
+	mContext->PSSetConstantBuffers(0, list.size(), list.data());
+}
+
+void Renderer::removeConstantBuffers()
+{
+	ID3D11Buffer* nil = 0;
+	for (size_t i = 0; i < mConstantState; ++i)
+		mContext->PSSetConstantBuffers(i, 1, &nil);
+	mConstantState = 0;
 }
 
 void Renderer::setLayout(ID3D11InputLayout*  layout)
@@ -268,6 +361,11 @@ void Renderer::setVertexBuffers( std::vector<Buffer::Ptr>& b, const size_t * str
 	mContext->IASetVertexBuffers(0, b.size(), list.data(), stride, offset);
 }
 
+void Renderer::setViewport(const D3D11_VIEWPORT & vp)
+{
+	mContext->RSSetViewports(1, &vp);
+}
+
 
 void Renderer::uninit()
 {
@@ -299,7 +397,7 @@ void Renderer::uninit()
 
 }
 
-Renderer::Sampler::Ptr Renderer::createSampler(D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV, D3D11_TEXTURE_ADDRESS_MODE addrW, D3D11_COMPARISON_FUNC cmpfunc, float minlod, float maxlod)
+Renderer::Sampler::Ptr Renderer::createSampler(const std::string& name, D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV, D3D11_TEXTURE_ADDRESS_MODE addrW, D3D11_COMPARISON_FUNC cmpfunc, float minlod, float maxlod)
 {
 	D3D11_SAMPLER_DESC sampPointDesc;
 	ZeroMemory(&sampPointDesc, sizeof(sampPointDesc));
@@ -312,8 +410,8 @@ Renderer::Sampler::Ptr Renderer::createSampler(D3D11_FILTER filter, D3D11_TEXTUR
 	sampPointDesc.MaxLOD = maxlod;
 	ID3D11SamplerState* sampler;
 	checkResult(mDevice->CreateSamplerState(&sampPointDesc, &sampler));
-	auto ret = mSamplers.emplace(new Sampler(sampler));
-	return Sampler::Ptr(*ret.first);
+	auto ret = mSamplers.emplace(name, new Sampler(sampler));
+	return Sampler::Ptr(ret.first->second);
 }
 
 Renderer::Texture::Ptr Renderer::createTexture(const std::string & filename)
@@ -330,49 +428,8 @@ Renderer::Texture::Ptr Renderer::createTexture(const std::string & filename)
 
 Renderer::RenderTarget::Ptr Renderer::createRenderTarget(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage)
 {
-	ID3D11Texture2D* texture;
-	ID3D11RenderTargetView* rtv;
-	ID3D11ShaderResourceView* srv;
 
-
-	// Create the final texture.
-	D3D11_TEXTURE2D_DESC descFinalTexture;
-	ZeroMemory(&descFinalTexture, sizeof(descFinalTexture));
-	descFinalTexture.Width = width;
-	descFinalTexture.Height = height;
-	descFinalTexture.MipLevels = 1;
-	descFinalTexture.ArraySize = 1;
-	descFinalTexture.Format = format;
-	descFinalTexture.SampleDesc.Count = 1;
-	descFinalTexture.SampleDesc.Quality = 0;
-	descFinalTexture.Usage = usage;
-	descFinalTexture.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	descFinalTexture.CPUAccessFlags = 0;
-	descFinalTexture.MiscFlags = 0;
-
-	checkResult( mDevice->CreateTexture2D(&descFinalTexture, NULL, &texture));
-
-	// Create the final render target.
-	D3D11_RENDER_TARGET_VIEW_DESC finalRTVDesc;
-	ZeroMemory(&finalRTVDesc, sizeof(finalRTVDesc));
-	finalRTVDesc.Format = descFinalTexture.Format;
-	finalRTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-	finalRTVDesc.Texture2D.MipSlice = 0;
-
-	checkResult( mDevice->CreateRenderTargetView(texture, &finalRTVDesc, &rtv));
-
-
-	// Create the final shader resource view
-	D3D11_SHADER_RESOURCE_VIEW_DESC finalSRVDesc;
-	finalSRVDesc.Format = descFinalTexture.Format;
-	finalSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	finalSRVDesc.Texture2D.MostDetailedMip = 0;
-	finalSRVDesc.Texture2D.MipLevels = 1;
-
-	checkResult( mDevice->CreateShaderResourceView(texture, &finalSRVDesc, &srv) );
-
-	auto ret = mRenderTargets.emplace(new RenderTarget(texture, rtv, srv));
-
+	auto ret = mRenderTargets.emplace(new RenderTarget(mDevice,  width,  height,  format,  usage));
 	return RenderTarget::Ptr(*ret.first);
 }
 
@@ -386,8 +443,7 @@ Renderer::Buffer::Ptr Renderer::createBuffer(int size, D3D11_BIND_FLAG flag, con
 	bd.ByteWidth = size;
 	bd.BindFlags = flag;
 	bd.CPUAccessFlags = CPUaccess;
-	checkResult(mDevice->CreateBuffer(&bd, initialdata, &buffer));
-	auto ret = mBuffers.emplace(new Buffer(buffer));
+	auto ret = mBuffers.emplace(new Buffer(mDevice, bd, initialdata));
 	return Buffer::Ptr(*ret.first);
 }
 
@@ -443,28 +499,91 @@ Renderer::Layout::Ptr Renderer::createLayout(const D3D11_INPUT_ELEMENT_DESC * de
 	return Layout::Ptr(*ret.first);
 }
 
-Renderer::RenderTarget::RenderTarget(ID3D11Texture2D * t, ID3D11RenderTargetView * rtv, ID3D11ShaderResourceView * srv):
-	mTexture(t), mRTView(rtv), mSRView(srv)
+Renderer::RenderTarget::RenderTarget(ID3D11Device* d, int width, int height, DXGI_FORMAT format, D3D11_USAGE usage):D3DObject(d)
 {
+	// Create the final texture.
+	D3D11_TEXTURE2D_DESC descFinalTexture;
+	ZeroMemory(&descFinalTexture, sizeof(descFinalTexture));
+	descFinalTexture.Width = width;
+	descFinalTexture.Height = height;
+	descFinalTexture.MipLevels = 1;
+	descFinalTexture.ArraySize = 1;
+	descFinalTexture.Format = format;
+	descFinalTexture.SampleDesc.Count = 1;
+	descFinalTexture.SampleDesc.Quality = 0;
+	descFinalTexture.Usage = usage;
+	descFinalTexture.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	descFinalTexture.CPUAccessFlags = 0;
+	descFinalTexture.MiscFlags = 0;
+
+	checkResult(d->CreateTexture2D(&descFinalTexture, NULL, &mTexture));
+
+	// Create the final render target.
+	D3D11_RENDER_TARGET_VIEW_DESC finalRTVDesc;
+	ZeroMemory(&finalRTVDesc, sizeof(finalRTVDesc));
+	finalRTVDesc.Format = descFinalTexture.Format;
+	finalRTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+	finalRTVDesc.Texture2D.MipSlice = 0;
+
+	checkResult(d->CreateRenderTargetView(mTexture, &finalRTVDesc, &mRTView));
+
+
+	// Create the final shader resource view
+	D3D11_SHADER_RESOURCE_VIEW_DESC finalSRVDesc;
+	finalSRVDesc.Format = descFinalTexture.Format;
+	finalSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	finalSRVDesc.Texture2D.MostDetailedMip = 0;
+	finalSRVDesc.Texture2D.MipLevels = 1;
+
+	checkResult(d->CreateShaderResourceView(mTexture, &finalSRVDesc, &mSRView));
 
 }
+
+Renderer::RenderTarget::RenderTarget(ID3D11Device* d, ID3D11Texture2D* t, ID3D11RenderTargetView* rt, ID3D11ShaderResourceView* srv):D3DObject(d)
+{
+	mTexture = t;
+	mRTView = rt;
+	mSRView = nullptr;
+}
+
 
 Renderer::RenderTarget::~RenderTarget()
 {
-
 	mTexture->Release();
 	mRTView->Release();
-	if (mSRView )
+	if (mSRView)
 		mSRView->Release();
 }
 
-Renderer::Buffer::Buffer(ID3D11Buffer * b):mBuffer(b)
+void Renderer::RenderTarget::clear(const std::array<float, 4> c)
 {
+	getContext()->ClearRenderTargetView(mRTView, c.data());
+}
+
+
+Renderer::Buffer::Buffer(ID3D11Device * d, const D3D11_BUFFER_DESC& desc, const D3D11_SUBRESOURCE_DATA* data):D3DObject(d)
+{
+	mDesc = desc;
+	checkResult(d->CreateBuffer(&desc, data, &mBuffer));
 }
 
 Renderer::Buffer::~Buffer()
 {
 	mBuffer->Release();
+}
+
+void Renderer::Buffer::blit(const void * data, size_t size)
+{
+	if (mDesc.Usage & D3D11_USAGE_DYNAMIC)
+	{
+		abort();
+	}
+	else
+	{
+		ID3D11DeviceContext* context;
+		getDevice()->GetImmediateContext(&context);
+		context->UpdateSubresource(mBuffer, 0, NULL, data, 0, 0);
+	}
 }
 
 

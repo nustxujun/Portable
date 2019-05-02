@@ -7,8 +7,6 @@ Quad::Quad(Renderer::Ptr r):mRenderer(r)
 	mVS = mRenderer->createVertexShader((**vsblob).GetBufferPointer(), (**vsblob).GetBufferSize());
 	
 
-	auto psblob = mRenderer->compileFile("drawTexture_ps.hlsl", "main", "ps_5_0");
-	mPS = mRenderer->createPixelShader((*psblob)->GetBufferPointer(), (*psblob)->GetBufferSize());
 
 	D3D11_INPUT_ELEMENT_DESC quadLayout[] =
 	{
@@ -46,27 +44,48 @@ Quad::~Quad()
 {
 }
 
-void Quad::draw(Renderer::RenderTarget::Ptr rt, std::vector<ID3D11ShaderResourceView*>& srvs, Renderer::PixelShader::Weak ps)
+void Quad::draw(const std::array<float, 4>& color)
 {
-	if (ps.lock() == nullptr)
-		ps = mPS;
 	mRenderer->clearDepth(1.0f);
-	const float colors[4] = { 0.f,0.f,0.f,1.f };
-	mRenderer->clearRenderTarget(rt, colors);
-	mRenderer->setRenderTarget(rt);
 
-	auto context = mRenderer->getContext();
+	mRenderTarget.lock()->clear(color);
+	mRenderer->setRenderTarget(mRenderTarget);
+
 	mRenderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	mRenderer->setIndexBuffer(mIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
 	mRenderer->setVertexBuffer(mVertexBuffer, sizeof(Vertex), 0);
-
+	
+	auto context = mRenderer->getContext();
 	context->VSSetShader(*mVS.lock(), NULL, 0);
-	context->PSSetShader(*ps.lock(), NULL, 0);
+	context->PSSetShader(*mPS.lock(), NULL, 0);
 
 	mRenderer->setLayout(mLayout.lock()->bind(mVS));
-	context->PSSetShaderResources(0, srvs.size(), srvs.data());
+	mRenderer->setShaderResourceViews(mSRVs);
+	mRenderer->setSamplers(mSamplers);
+	mRenderer->setConstantBuffer(mConstant);
+
 	context->DrawIndexed(6, 0, 0);
 
+	mRenderer->removeRenderTargets();
+	mRenderer->removeShaderResourceViews();
+	mRenderer->removeSamplers();
+}
 
-	mRenderer->setTexture(Renderer::Texture::Ptr());
+void Quad::setTextures(const std::vector<Renderer::RenderTarget::Ptr>& rts)
+{
+	mSRVs.clear();
+	for (auto i : rts)
+	{
+		if (i.lock())
+			mSRVs.push_back((*i.lock()).getShaderResourceView());
+	}
+}
+
+void Quad::setTextures(const std::vector<Renderer::Texture::Ptr>& ts)
+{
+	mSRVs.clear();
+	for (auto i : ts)
+	{
+		mSRVs.push_back(*i.lock());
+	}
 }

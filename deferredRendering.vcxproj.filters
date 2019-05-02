@@ -33,9 +33,6 @@
     <ClInclude Include="Quad.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="GBuffer.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="Mesh.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -57,8 +54,11 @@
     <ClInclude Include="D3D11Helper.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Lighting.h">
-      <Filter>源文件</Filter>
+    <ClInclude Include="DeferredRenderer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Input.h">
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -72,9 +72,6 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Quad.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="GBuffer.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Mesh.cpp">
@@ -92,7 +89,10 @@
     <ClCompile Include="Material.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Lighting.cpp">
+    <ClCompile Include="DeferredRenderer.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Input.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

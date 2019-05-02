@@ -95,17 +95,25 @@ void Scene::Node::dirty()
 	}
 }
 
-const D3DXMATRIX & Scene::Node::getTransformation() 
+const DirectX::XMFLOAT4X4 & Scene::Node::getTransformation()
 {
+	using namespace DirectX;
 	if (mDirty)
 	{
 		mDirty = false;
-		D3DXVECTOR3 scaling(1, 1, 1);
-		D3DXMatrixTransformation(&mTranformation, NULL, NULL, &scaling, NULL, &mOrientation, &mPosition);
+		FXMVECTOR scaling = XMVectorSet(1, 1, 1, 0);
+		FXMVECTOR o = XMVectorSet(0, 0, 0, 0);
+		FXMVECTOR rot = XMLoadFloat4(&mOrientation);
+		GXMVECTOR pos = XMLoadFloat3(&mPosition);
+		XMMATRIX mat = DirectX::XMMatrixAffineTransformation(scaling,o,rot,pos);
 		if (mParent)
 		{
-			D3DXMatrixMultiply(&mTranformation, &mTranformation, &mParent->getTransformation());
+			XMMATRIX pmat = XMLoadFloat4x4(&mParent->getTransformation());
+			mat = mat * pmat;
+			//DirectX::XMMatrixMultiply(&mTranformation, &mTranformation, &mParent->getTransformation());
 		}
+
+		XMStoreFloat4x4(&mTranformation, mat);
 	
 	}
 	return mTranformation;
@@ -129,7 +137,12 @@ void Scene::Model::visitRenderable(std::function<void(Renderable)> v)
 	}
 }
 
-Scene::Camera::Camera()
+Scene::Camera::Camera():
+	mFOVy(1.570796327f),
+	mNear(0.01f), 
+	mFar(10000.f),
+	mProjectionType(PT_PERSPECTIVE), 
+	mDirty(true)
 {
 }
 
@@ -137,20 +150,77 @@ Scene::Camera::~Camera()
 {
 }
 
-const D3DXMATRIX& Scene::Camera::getViewMatrix()
+const DirectX::XMFLOAT4X4& Scene::Camera::getViewMatrix()
 {
 	return mNode->getTransformation();
 }
 
-void Scene::Camera::lookat(const D3DXVECTOR3 & eye, const D3DXVECTOR3 & at, const D3DXVECTOR3 & up)
+void Scene::Camera::lookat(const DirectX::XMFLOAT3 & eye, const DirectX::XMFLOAT3 & at, const DirectX::XMFLOAT3 & up)
 {
-	D3DXMATRIX mat;
-	D3DXMatrixLookAtLH(&mat, &eye, &at, &up);
+	using namespace DirectX;
+	
+	XMMATRIX mat = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3( &at), XMLoadFloat3(&up));
 
-	D3DXVECTOR3 pos, scaling;
-	D3DXQUATERNION rot;
-	D3DXMatrixDecompose(&scaling, &rot, &pos, &mat);
-	mNode->setPosition(pos);
-	mNode->setOrientation(rot);
+
+	XMVECTOR pos, scale, rot;
+	DirectX::XMMatrixDecompose(&scale, &rot, &pos, mat);
+	XMStoreFloat3(&mNode->mPosition, pos);
+	XMStoreFloat4(&mNode->mOrientation, rot);
+	mNode->dirty();
+	//mNode->setPosition(pos);
+	//mNode->setOrientation(rot);
 }
 
+void Scene::Camera::setViewport(float left, float top, float width, float height)
+{
+	mDirty = true;
+	mViewport.Width = width;
+	mViewport.Height = height;
+	mViewport.TopLeftX = left;
+	mViewport.TopLeftY = top;
+	mViewport.MinDepth = 0.f;
+	mViewport.MaxDepth = 1.0f;
+}
+
+void Scene::Camera::setFOVy(float fovy)
+{
+	if (mProjectionType == PT_PERSPECTIVE)
+		mDirty = true;
+	mFOVy = fovy;
+}
+
+void Scene::Camera::setNearFar(float n, float f)
+{
+	mDirty = true;
+	mNear = n;
+	mFar = f;
+}
+
+const DirectX::XMFLOAT4X4 & Scene::Camera::getProjectionMatrix() 
+{
+	if (mDirty)
+	{
+		using namespace DirectX;
+		XMMATRIX mat;
+		if (mProjectionType == PT_ORTHOGRAPHIC)
+		{
+			mat = XMMatrixOrthographicLH(mViewport.Width, mViewport.Height, mNear, mFar);
+		}
+		else
+		{
+			mat = XMMatrixPerspectiveFovLH(mFOVy, mViewport.Width / mViewport.Height, mNear, mFar);
+		}
+		XMStoreFloat4x4(&mProjection, mat);
+	}
+	return mProjection;
+}
+
+//DirectX::XMFLOAT4 Scene::Camera::getDirection()
+//{
+//	DirectX::SimpleMath::Vector3 dir;
+//	DirectX::SimpleMath::Quaternion q = mNode->getOrientation();
+//
+//
+//	return DirectX::XMFLOAT4();
+//}
+//

@@ -35,6 +35,11 @@ private:
 		D3DObject(ID3D11Device* device): mDevice(device){}
 	protected:
 		ID3D11Device* getDevice()const { return mDevice; }
+		ID3D11DeviceContext* getContext()const {
+			ID3D11DeviceContext* c;
+			mDevice->GetImmediateContext(&c);
+			return c;
+		}
 	private:
 		ID3D11Device* mDevice;
 	};
@@ -54,34 +59,42 @@ public:
 		T* mInterface;
 	};
 
-	class RenderTarget final : public NODefault
+	class RenderTarget final : public NODefault, public D3DObject
 	{
 	public:
 		using Ptr = std::weak_ptr<RenderTarget>;
 	public:
-		RenderTarget(ID3D11Texture2D* t, ID3D11RenderTargetView* rtv, ID3D11ShaderResourceView* srv);
+		RenderTarget(ID3D11Device* d, int width, int height, DXGI_FORMAT format, D3D11_USAGE usage);
+		RenderTarget(ID3D11Device* d, ID3D11Texture2D* t, ID3D11RenderTargetView* rt, ID3D11ShaderResourceView* srv);
 		~RenderTarget();
 		operator ID3D11RenderTargetView*() { return mRTView; }
 		
-		ID3D11Texture2D* getTexture() { return mTexture; }
-		ID3D11ShaderResourceView* getShaderResourceView() { return mSRView; }
+		ID3D11Texture2D* getTexture() const{ return mTexture; }
+		ID3D11ShaderResourceView* getShaderResourceView()const { return mSRView; }
+		ID3D11RenderTargetView* getRenderTargetView() const{ return mRTView; }
+
+		void clear(const std::array<float,4> c);
 	private:
 		ID3D11Texture2D* mTexture;
 		ID3D11RenderTargetView* mRTView;
 		ID3D11ShaderResourceView* mSRView;
 	};
 
-	class Buffer final : public NODefault
+	class Buffer final : public NODefault, public D3DObject
 	{
 	public: 
 		using Ptr = std::weak_ptr<Buffer>;
 	public:
-		Buffer(ID3D11Buffer* b);
+		Buffer(ID3D11Device * d, const D3D11_BUFFER_DESC& desc, const D3D11_SUBRESOURCE_DATA* data);
 		~Buffer();
+
+		void blit(const void* data, size_t size);
+
 
 		operator ID3D11Buffer* ()const {return mBuffer;}
 	private:
 		ID3D11Buffer* mBuffer;
+		D3D11_BUFFER_DESC mDesc;
 	};
 
 	class Effect final: public NODefault, public D3DObject
@@ -196,25 +209,36 @@ public:
 	void clearDepth(float depth);
 	void clearStencil(int stencil);
 	void clearRenderTarget(RenderTarget::Ptr rt, const float color[4]);
-	void clearRenderTargets(std::vector<RenderTarget::Ptr>& rts, const float color[4]);
+	void clearRenderTargets(std::vector<RenderTarget::Ptr>& rts, const std::array<float,4>& color);
 
 	void setTexture(const Texture::Ptr tex);
 	void setTextures(const std::vector<Texture::Ptr>& texs);
+	void setTexture(const RenderTarget::Ptr tex);
+	void setTextures(const std::vector<RenderTarget::Ptr>& texs);
 	void setShaderResourceView(ID3D11ShaderResourceView* srv);
 	void setShaderResourceViews(const std::vector<ID3D11ShaderResourceView*>& srvs);
+	void removeShaderResourceViews();
 
-
-
+	void setSampler(Sampler::Ptr s);
+	void setSamplers(const std::vector<Sampler::Ptr> ss);
+	void removeSamplers();
+	Sampler::Ptr getSampler(const std::string&name);
 	void setRenderTarget(RenderTarget::Ptr rt);
-	void setRenderTargets(std::vector<RenderTarget::Ptr>& rts);
+	void setRenderTargets(const std::vector<RenderTarget::Ptr>& rts);
+	void removeRenderTargets();
+	void setConstantBuffer(Buffer::Ptr b);
+	void setConstantsBuffer(const std::vector<Buffer::Ptr>& bs);
+	void removeConstantBuffers();
+
 	RenderTarget::Ptr getBackbuffer() { return mBackbuffer; }
 	void setLayout(ID3D11InputLayout* layout);
 	void setPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY pri);
 	void setIndexBuffer(Buffer::Ptr b, DXGI_FORMAT format, int offset);
 	void setVertexBuffer(Buffer::Ptr b, size_t stride, size_t offset);
 	void setVertexBuffers( std::vector<Buffer::Ptr>& b, const size_t* stride, const size_t* offset);
+	void setViewport(const D3D11_VIEWPORT& vp);
 
-	Sampler::Ptr createSampler(D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV,
+	Sampler::Ptr createSampler(const std::string& name, D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV,
 		D3D11_TEXTURE_ADDRESS_MODE addrW = D3D11_TEXTURE_ADDRESS_WRAP, D3D11_COMPARISON_FUNC cmpfunc = D3D11_COMPARISON_NEVER, float minlod = 0, float maxlod = D3D11_FLOAT32_MAX);
 	Texture::Ptr createTexture(const std::string& filename);
 	RenderTarget::Ptr createRenderTarget(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage = D3D11_USAGE_DEFAULT);
@@ -226,7 +250,6 @@ public:
 	Layout::Ptr createLayout(const D3D11_INPUT_ELEMENT_DESC* descarray, size_t count);
 
 private:
-	void initRenderTargets();
 	static void checkResult(HRESULT hr);
 
 private:
@@ -243,12 +266,16 @@ private:
 
 	RenderTarget::Ptr mBackbuffer;
 
+	size_t mSamplersState = 0;
+	size_t mSRVState = 0;
+	size_t mConstantState = 0;
+
 	std::set<std::shared_ptr<RenderTarget>> mRenderTargets;
 	std::set<std::shared_ptr<Buffer>> mBuffers;
 	std::set<std::shared_ptr<Effect>> mEffects;
 	std::set<std::shared_ptr<Layout>> mLayouts;
 	std::map<std::string,std::shared_ptr<Texture>> mTextures;
-	std::set<std::shared_ptr<Sampler>> mSamplers;
+	std::map<std::string,std::shared_ptr<Sampler>> mSamplers;
 	std::vector<VertexShader::Shared> mVSs;
 	std::vector<PixelShader::Shared> mPSs;
 

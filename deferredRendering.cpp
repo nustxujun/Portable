@@ -7,20 +7,23 @@
 #include <memory>
 
 #include "Quad.h"
-#include "GBuffer.h"
 #include "Mesh.h"
 #include "Scene.h"
 #include "test.h"
-#include "Lighting.h"
+
+#include "DeferredRenderer.h"
+#include "Input.h"
+
+
+
 #define MAX_LOADSTRING 100
 
 Renderer::Ptr renderer;
 std::shared_ptr<Quad> quad;
-std::shared_ptr<GBuffer> gbuffer;
 std::shared_ptr<Scene> scene;
 std::shared_ptr<Test> test;
-std::shared_ptr<Lighting> lighting;
-
+std::shared_ptr< DeferredRenderer> deferred;
+std::shared_ptr<Input> input;
 void initRenderer(HWND win)
 {
 	RECT rect;
@@ -31,9 +34,9 @@ void initRenderer(HWND win)
 
 	//test = decltype(test)(new Test(renderer));
 	quad =  decltype(quad)(new Quad(renderer));
-	gbuffer = decltype(gbuffer)(new GBuffer(renderer));
 	scene = decltype(scene)(new Scene(renderer));
-	lighting = decltype(lighting)(new Lighting(renderer));
+	deferred = decltype(deferred)(new DeferredRenderer(renderer, scene));
+	input = decltype(input)(new Input());
 
 	Parameters params;
 	params["file"] = "tiny.x";
@@ -42,22 +45,48 @@ void initRenderer(HWND win)
 	model->getNode()->setPosition(0.0f, 0.0f, 0.0f);
 
 	auto cam = scene->createOrGetCamera("main");
-	D3DXVECTOR3 eye(0, 0, -500);
-	D3DXVECTOR3 at(0, 0, 0);
+	DirectX::XMFLOAT3 eye(0, 0, -300);
+	DirectX::XMFLOAT3 at(0, 0, 0);
 	cam->lookat(eye, at);
+	cam->setViewport(0, 0, rect.right, rect.bottom);
+	cam->setNearFar(0.01, 1000);
+
+	input->listen([cam](const Input::Mouse& m, const Input::Keyboard& k) {
+		auto node = cam->getNode();
+		if (k.W)
+		{
+			auto pos = node->getPosition();
+			node->setPosition(pos.x, pos.y, pos.z + 1);
+		}
+	
+	});
+
+
+	//cam->setProjectType(Scene::Camera::PT_ORTHOGRAPHIC);
 }
 
 void framemove()
 {
-	std::vector<ID3D11ShaderResourceView*> srvs;
-	gbuffer->render(scene);
-	//lighting->prepare();
+	input->update();
+	/*auto cam = scene->createOrGetCamera("main");
+	float len = 300;
+	auto time = GetTickCount() * 0.0005f;
+	auto x = cos(time) * len;
+	auto z = sin(time) * len;
+	cam->lookat(DirectX::XMFLOAT3(x,0,z), DirectX::XMFLOAT3(0,0,0));*/
+	deferred->render();
+	//std::vector<ID3D11ShaderResourceView*> srvs;
+	//gbuffer->render(scene);
+	//lighting->prepare(scene->createOrGetCamera("main"));
 	//srvs.push_back(gbuffer->getDiffuse().lock()->getShaderResourceView());
-	//quad->draw(lighting->getRenderTarget(), srvs, lighting->getEffect());
-	//srvs.clear();
-	srvs.push_back(lighting->getRenderTarget().lock()->getShaderResourceView());
+	//srvs.push_back(gbuffer->getNormal().lock()->getShaderResourceView());
+	//srvs.push_back(gbuffer->getDepth().lock()->getShaderResourceView());
 
-	quad->draw(renderer->getBackbuffer(), srvs, Renderer::PixelShader::Weak());
+	//quad->draw(lighting->getRenderTarget(), srvs, lighting->getPS());
+	//srvs.clear();
+	//srvs.push_back(lighting->getRenderTarget().lock()->getShaderResourceView());
+
+	//quad->draw(renderer->getBackbuffer(), srvs, Renderer::PixelShader::Weak());
 
 	//test->draw(nullptr);
 	//quad->draw(test->mRenderTarget.lock()->getShaderResourceView());
@@ -225,6 +254,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         PostQuitMessage(0);
         break;
     default:
+		
+		DirectX::Mouse::ProcessMessage(message, wParam, lParam);
+		DirectX::Keyboard::ProcessMessage(message, wParam, lParam);
+
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return 0;

@@ -1,5 +1,5 @@
 #include "Test.h"
-#include <D3DX10math.h>
+#include <DirectXMath.h>
 
 Test::Test(Renderer::Ptr r) :mRenderer(r)
 {
@@ -44,7 +44,7 @@ Test::Test(Renderer::Ptr r) :mRenderer(r)
 
 	mRenderTarget = mRenderer->createRenderTarget(mRenderer->getWidth(), mRenderer->getHeight(), DXGI_FORMAT_R8G8B8A8_UNORM);
 	mTexture = mRenderer->createTexture("Tiny_skin.dds");
-	mSampler = mRenderer->createSampler(D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
+	//mSampler = mRenderer->createSampler(D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
 }
 
 Test::~Test()
@@ -53,45 +53,45 @@ Test::~Test()
 
 void Test::draw(ID3D11ShaderResourceView* texture)
 {
-	auto e = mEffect.lock();
-	if (e == nullptr) return;
+	//auto e = mEffect.lock();
+	//if (e == nullptr) return;
 
-	auto world = e->getVariable("World")->AsMatrix();
-	auto view = e->getVariable("View")->AsMatrix();
-	auto proj = e->getVariable("Projection")->AsMatrix();
-	
-	D3DXMATRIX mat;
-	D3DXMatrixIdentity(&mat);
-	D3DXMatrixTranslation(&mat, 0, 0, 5);
-	world->SetMatrix(mat);
+	//auto world = e->getVariable("World")->AsMatrix();
+	//auto view = e->getVariable("View")->AsMatrix();
+	//auto proj = e->getVariable("Projection")->AsMatrix();
+	//
+	//D3DXMATRIX mat;
+	//D3DXMatrixIdentity(&mat);
+	//D3DXMatrixTranslation(&mat, 0, 0, 5);
+	//world->SetMatrix(mat);
 
-	D3DXVECTOR3 eye(0,0,0);
-	D3DXVECTOR3 at(0,0,1);
-	D3DXVECTOR3 up(0,1,0);
-	D3DXMatrixLookAtLH(&mat, &eye, &at, &up);
-	view->SetMatrix(mat);
+	//D3DXVECTOR3 eye(0,0,0);
+	//D3DXVECTOR3 at(0,0,1);
+	//D3DXVECTOR3 up(0,1,0);
+	//D3DXMatrixLookAtLH(&mat, &eye, &at, &up);
+	//view->SetMatrix(mat);
 
-	D3DXMatrixPerspectiveFovLH(&mat, 1.570796327f, mRenderer->getWidth() / mRenderer->getHeight(), 0.01f, 100.0f);
-	proj->SetMatrix(mat);
+	//D3DXMatrixPerspectiveFovLH(&mat, 1.570796327f, mRenderer->getWidth() / mRenderer->getHeight(), 0.01f, 100.0f);
+	//proj->SetMatrix(mat);
 
-	auto backbuffer = mRenderer->getBackbuffer();
-	mRenderer->clearDepth(1.0f);
-	const float colors[4] = { 0.f,0.f,0.f,1.f };
-	//mRenderer->clearRenderTarget(backbuffer, colors);
-	//mRenderer->setRenderTarget(backbuffer);
-	mRenderer->setRenderTarget(mRenderTarget);
+	//auto backbuffer = mRenderer->getBackbuffer();
+	//mRenderer->clearDepth(1.0f);
+	//const float colors[4] = { 0.f,0.f,0.f,1.f };
+	////mRenderer->clearRenderTarget(backbuffer, colors);
+	////mRenderer->setRenderTarget(backbuffer);
+	//mRenderer->setRenderTarget(mRenderTarget);
 
-	auto context = mRenderer->getContext();
+	//auto context = mRenderer->getContext();
 
-	mRenderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	mRenderer->setIndexBuffer(mIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
-	mRenderer->setVertexBuffer(mVertexBuffer, sizeof(Vertex), 0);
-	mEffect.lock()->render(mRenderer, [this, context](ID3DX11EffectPass* pass) {
-		mRenderer->setLayout(mLayout.lock()->bind(pass));
+	//mRenderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	//mRenderer->setIndexBuffer(mIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
+	//mRenderer->setVertexBuffer(mVertexBuffer, sizeof(Vertex), 0);
+	//mEffect.lock()->render(mRenderer, [this, context](ID3DX11EffectPass* pass) {
+	//	mRenderer->setLayout(mLayout.lock()->bind(pass));
 
-		//mRenderer->setTexture(texture);
-		//ID3D11SamplerState* ss = *(mSampler.lock());
-		//context->PSSetSamplers(0, 1, &ss);
-		context->DrawIndexed(6, 0, 0);
-	});
+	//	//mRenderer->setTexture(texture);
+	//	//ID3D11SamplerState* ss = *(mSampler.lock());
+	//	//context->PSSetSamplers(0, 1, &ss);
+	//	context->DrawIndexed(6, 0, 0);
+	//});
 }

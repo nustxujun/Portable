@@ -2,7 +2,7 @@
 #include "Common.h"
 #include "renderer.h"
 #include "Material.h"
-#include <D3DX10math.h>
+#include <DirectXMath.h>
 struct Renderable
 {
 	Renderer::Buffer::Ptr vertices;
@@ -11,7 +11,7 @@ struct Renderable
 	size_t numIndices = 0;
 	Material::Ptr material;
 	Renderer::Layout::Ptr layout;
-	D3DXMATRIX tranformation;
+	DirectX::XMFLOAT4X4 tranformation;
 };
 
 class Mesh
