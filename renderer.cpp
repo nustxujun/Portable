@@ -76,54 +76,10 @@ void Renderer::init(HWND win, int width, int height)
 	mRenderTargets.insert(shared);
 	mBackbuffer = shared;
 
-	// Create depth stencil texture
-	D3D11_TEXTURE2D_DESC descDepth;
-	ZeroMemory(&descDepth, sizeof(descDepth));
-	descDepth.Width = width;
-	descDepth.Height = height;
-	descDepth.MipLevels = 1;
-	descDepth.ArraySize = 1;
-	descDepth.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	descDepth.SampleDesc.Count = 1;
-	descDepth.SampleDesc.Quality = 0;
-	descDepth.Usage = D3D11_USAGE_DEFAULT;
-	descDepth.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-	descDepth.CPUAccessFlags = 0;
-	descDepth.MiscFlags = 0;
-	checkResult(mDevice->CreateTexture2D(&descDepth, NULL, &mDepthStencil));
-	
-
-	D3D11_DEPTH_STENCIL_VIEW_DESC descDSV;
-	ZeroMemory(&descDSV, sizeof(descDSV));
-	descDSV.Format = descDepth.Format;
-	descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-	descDSV.Texture2D.MipSlice = 0;
-	checkResult(mDevice->CreateDepthStencilView(mDepthStencil, &descDSV, &mDepthStencilView));
+	mDefaultDepthStencil = createDepthStencil(width, height, DXGI_FORMAT_D24_UNORM_S8_UINT);
 
 
-	D3D11_RASTERIZER_DESC rasterDesc;
-	rasterDesc.AntialiasedLineEnable = false;
-	rasterDesc.CullMode = D3D11_CULL_BACK;
-	rasterDesc.DepthBias = 0;
-	rasterDesc.DepthBiasClamp = 0.0f;
-	rasterDesc.DepthClipEnable = true;
-	rasterDesc.FillMode = D3D11_FILL_SOLID;
-	rasterDesc.FrontCounterClockwise = false;
-	rasterDesc.MultisampleEnable = false;
-	rasterDesc.ScissorEnable = false;
-	rasterDesc.SlopeScaledDepthBias = 0.0f;
-
-	checkResult(mDevice->CreateRasterizerState(&rasterDesc, &mRasterizer));
-	mContext->RSSetState(mRasterizer);
-
-	//D3D11_VIEWPORT vp;
-	//vp.Width = (FLOAT)width;
-	//vp.Height = (FLOAT)height;
-	//vp.MinDepth = 0.0f;
-	//vp.MaxDepth = 1.0f;
-	//vp.TopLeftX = 0;
-	//vp.TopLeftY = 0;
-	//mContext->RSSetViewports(1, &vp);
+	createOrGetRasterizer("default",D3D11_CULL_BACK);
 
 }
 
@@ -131,16 +87,6 @@ void Renderer::init(HWND win, int width, int height)
 void Renderer::present()
 {
 	mSwapChain->Present(0,0);
-}
-
-void Renderer::clearDepth(float depth)
-{
-	mContext->ClearDepthStencilView(mDepthStencilView, D3D11_CLEAR_DEPTH, depth, 0);
-}
-
-void Renderer::clearStencil(int stencil)
-{
-	mContext->ClearDepthStencilView(mDepthStencilView, D3D11_CLEAR_STENCIL, 1.0f, stencil);
 }
 
 void Renderer::clearRenderTarget(RenderTarget::Ptr rt, const float color[4])
@@ -158,6 +104,13 @@ void Renderer::clearRenderTargets(std::vector<RenderTarget::Ptr>& rts, const std
 	}
 }
 
+void Renderer::clearDefaultStencil(float d, int s)
+{
+	auto ptr = mDefaultDepthStencil.lock();
+	ptr->clearDepth(d);
+	ptr->clearStencil(0);
+}
+
 
 void Renderer::setTexture(const Texture::Ptr tex)
 {
@@ -171,6 +124,7 @@ void Renderer::setTexture(const Texture::Ptr tex)
 void Renderer::setTextures(const std::vector<Texture::Ptr>& texs)
 {
 	std::vector<ID3D11ShaderResourceView*> list;
+	list.reserve(texs.size());
 	for (auto i : texs)
 	{
 		if (i.lock() != NULL)
@@ -192,6 +146,8 @@ void Renderer::setTexture(const RenderTarget::Ptr tex)
 void Renderer::setTextures(const std::vector<RenderTarget::Ptr>& texs)
 {
 	std::vector<ID3D11ShaderResourceView*> list;
+	list.reserve(texs.size());
+
 	for (auto i : texs)
 	{
 		if (i.lock() != NULL)
@@ -235,10 +191,12 @@ void Renderer::setSampler(Sampler::Ptr s)
 	}
 }
 
-void Renderer::setSamplers(const std::vector<Sampler::Ptr> ss)
+void Renderer::setSamplers(const std::vector<Sampler::Ptr>& ss)
 {
 	removeSamplers();
 	std::vector<ID3D11SamplerState*> list;
+	list.reserve(ss.size());
+
 	for (auto& i : ss)
 	{
 		list.push_back(*i.lock());
@@ -266,8 +224,10 @@ Renderer::Sampler::Ptr Renderer::getSampler(const std::string & name)
 		return ret->second;
 }
 
-void Renderer::setRenderTarget(RenderTarget::Ptr rt)
+void Renderer::setRenderTarget(RenderTarget::Ptr rt, DepthStencil::Ptr ds)
 {
+
+
 	auto ptr = rt.lock();
 	if (ptr == nullptr)
 	{
@@ -275,18 +235,27 @@ void Renderer::setRenderTarget(RenderTarget::Ptr rt)
 	}
 	else
 	{
+		auto dsv = ds.lock();
+		if (dsv == nullptr)
+			dsv = mDefaultDepthStencil.lock();
 		ID3D11RenderTargetView* rtv = *ptr;
-		mContext->OMSetRenderTargets(1, &rtv, mDepthStencilView);
+		mContext->OMSetRenderTargets(1, &rtv, *dsv);
 	}
 }
 
-void Renderer::setRenderTargets(const std::vector<RenderTarget::Ptr>& rts)
+void Renderer::setRenderTargets(const std::vector<RenderTarget::Ptr>& rts, DepthStencil::Ptr ds)
 {
+	auto dsv = ds.lock();
+	if (dsv == nullptr)
+		dsv = mDefaultDepthStencil.lock();
+
 	std::vector<ID3D11RenderTargetView*> list;
+	list.reserve(rts.size());
+
 	for (auto i : rts)
 		list.push_back(*i.lock());
 	
-	mContext->OMSetRenderTargets(list.size(), list.data(), mDepthStencilView);
+	mContext->OMSetRenderTargets(list.size(), list.data(), *dsv);
 }
 
 void Renderer::removeRenderTargets()
@@ -309,6 +278,8 @@ void Renderer::setConstantBuffer(Buffer::Ptr b)
 void Renderer::setConstantsBuffer(const std::vector<Buffer::Ptr>& bs)
 {
 	std::vector<ID3D11Buffer*> list;
+	list.reserve(bs.size());
+
 	for (auto i : bs)
 	{
 		list.push_back(*(i.lock()));
@@ -324,6 +295,15 @@ void Renderer::removeConstantBuffers()
 	for (size_t i = 0; i < mConstantState; ++i)
 		mContext->PSSetConstantBuffers(i, 1, &nil);
 	mConstantState = 0;
+}
+
+void Renderer::setRasterizer(Rasterizer::Ptr r)
+{
+	auto ptr = r.lock();
+	if (ptr == nullptr)
+		return;
+
+	mContext->RSSetState(*ptr);
 }
 
 void Renderer::setLayout(ID3D11InputLayout*  layout)
@@ -355,6 +335,8 @@ void Renderer::setVertexBuffer(Buffer::Ptr b, size_t stride, size_t offset)
 void Renderer::setVertexBuffers( std::vector<Buffer::Ptr>& b, const size_t * stride, const size_t * offset)
 {
 	std::vector<ID3D11Buffer*> list;
+	list.reserve(b.size());
+
 	for (auto i : b)
 		list.push_back(*i.lock());
 
@@ -366,9 +348,54 @@ void Renderer::setViewport(const D3D11_VIEWPORT & vp)
 	mContext->RSSetViewports(1, &vp);
 }
 
+void Renderer::setDepthStencilState(const D3D11_DEPTH_STENCIL_DESC & desc)
+{
+	size_t hash = Common::hash(desc);
+	auto ret = mDepthStencilStates.find(hash);
+	if (ret == mDepthStencilStates.end())
+	{
+		ID3D11DepthStencilState* state;
+		checkResult(mDevice->CreateDepthStencilState(&desc, &state));
+		auto newstate = mDepthStencilStates.emplace(hash, new DepthStencilState(state));
+		ret = newstate.first;
+	}
+
+	mContext->OMSetDepthStencilState(*ret->second, 0);
+}
+
+void Renderer::setBlendState(const D3D11_BLEND_DESC& desc, const std::array<float, 4>& factor , size_t mask )
+{
+	size_t hash = Common::hash(desc);
+	auto ret = mBlendStates.find(hash);
+	if (ret == mBlendStates.end())
+	{
+		ID3D11BlendState* state;
+		checkResult(mDevice->CreateBlendState(&desc, &state));
+		auto newstate = mBlendStates.emplace(hash, new BlendState(state));
+		ret = newstate.first;
+	}
+
+	mContext->OMSetBlendState(*ret->second, factor.data(), mask);
+}
+
+void Renderer::setDefaultBlendState()
+{
+	float factor[4] = { 1,1,1,1 };
+	size_t mask = 0xffffffff;
+	mContext->OMSetBlendState(NULL, factor, mask);
+}
+
+void Renderer::setDefaultDepthStencilState()
+{
+	mContext->OMSetDepthStencilState(NULL, 0);
+}
 
 void Renderer::uninit()
 {
+	mDepthStencils.clear();
+	mDepthStencilStates.clear();
+	mRasterizers.clear();
+	mFonts.clear();
 	mVSs.clear();
 	mPSs.clear();
 	mSamplers.clear();
@@ -377,9 +404,6 @@ void Renderer::uninit()
 	mLayouts.clear();
 	mRenderTargets.clear();
 	mBuffers.clear();
-	mRasterizer->Release();
-	mDepthStencilView->Release();
-	mDepthStencil->Release();
 	mSwapChain->Release();
 	mContext->Release();
 	if (mDevice->Release() != 0)
@@ -390,7 +414,9 @@ void Renderer::uninit()
 		{
 			hr = d3dDebug->ReportLiveDeviceObjects(D3D11_RLDO_SUMMARY | D3D11_RLDO_DETAIL);
 		}
-		d3dDebug->Release();
+		if (d3dDebug)
+			d3dDebug->Release();
+
 
 		MessageBox(NULL, TEXT("some objects were not released."), NULL, NULL);
 	}
@@ -499,6 +525,67 @@ Renderer::Layout::Ptr Renderer::createLayout(const D3D11_INPUT_ELEMENT_DESC * de
 	return Layout::Ptr(*ret.first);
 }
 
+Renderer::Font::Ptr Renderer::createOrGetFont(const std::wstring & font)
+{
+	auto ret = mFonts.find(font);
+	if (ret != mFonts.end())
+		return ret->second;
+
+	std::shared_ptr<Font> shared (new Font(mDevice,font));
+	mFonts.emplace(font, shared);
+	return Font::Ptr(shared);
+}
+
+Renderer::Rasterizer::Ptr Renderer::createOrGetRasterizer(const std::string & name, D3D11_CULL_MODE cull, D3D11_FILL_MODE fill, bool multisample)
+{
+	auto ret = mRasterizers.find(name);
+	if (ret != mRasterizers.end())
+		return ret->second;
+
+	D3D11_RASTERIZER_DESC rasterDesc;
+	rasterDesc.AntialiasedLineEnable = false;
+	rasterDesc.CullMode = cull;
+	rasterDesc.DepthBias = 0;
+	rasterDesc.DepthBiasClamp = 0.0f;
+	rasterDesc.DepthClipEnable = true;
+	rasterDesc.FillMode = fill;
+	rasterDesc.FrontCounterClockwise = false;
+	rasterDesc.MultisampleEnable = multisample;
+	rasterDesc.ScissorEnable = false;
+	rasterDesc.SlopeScaledDepthBias = 0.0f;
+
+	std::shared_ptr<Rasterizer> shared(new Rasterizer(mDevice, rasterDesc));
+	mRasterizers.emplace(name, shared);
+
+	return Rasterizer::Ptr(shared);
+}
+
+Renderer::DepthStencil::Ptr Renderer::createDepthStencil(int width, int height, DXGI_FORMAT format)
+{
+	D3D11_TEXTURE2D_DESC descDepth;
+	ZeroMemory(&descDepth, sizeof(descDepth));
+	descDepth.Width = width;
+	descDepth.Height = height;
+	descDepth.MipLevels = 1;
+	descDepth.ArraySize = 1;
+	descDepth.Format = format;
+	descDepth.SampleDesc.Count = 1;
+	descDepth.SampleDesc.Quality = 0;
+	descDepth.Usage = D3D11_USAGE_DEFAULT;
+	descDepth.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	descDepth.CPUAccessFlags = 0;
+	descDepth.MiscFlags = 0;
+
+	size_t key = Common::hash(descDepth);
+	auto ret = mDepthStencils.find(key);
+	if (ret != mDepthStencils.end())
+		return ret->second;
+
+	auto ins = mDepthStencils.emplace(key, std::shared_ptr<DepthStencil>(new DepthStencil(mDevice, descDepth)));
+	
+	return ins.first->second;
+}
+
 Renderer::RenderTarget::RenderTarget(ID3D11Device* d, int width, int height, DXGI_FORMAT format, D3D11_USAGE usage):D3DObject(d)
 {
 	// Create the final texture.
@@ -601,7 +688,10 @@ Renderer::Effect::Effect(ID3D11Device * d,const void* compiledshader, size_t siz
 		auto tech = mEffect->GetTechniqueByIndex(i);
 		D3DX11_TECHNIQUE_DESC desc;
 		tech->GetDesc(&desc);
-		mTechs.emplace(desc.Name, tech);
+		std::string name;
+		if (desc.Name != NULL)
+			name = desc.Name;
+		mTechs.emplace(name, tech);
 	}
 }
 
@@ -707,4 +797,79 @@ ID3D11InputLayout * Renderer::Layout::bind(VertexShader::Weak vs)
 	auto insert = mBindedLayouts.emplace(shader.data(), new Interface<ID3D11InputLayout>(layout));
 
 	return *insert.first->second;
+}
+
+Renderer::Font::Font(ID3D11Device * d, const std::wstring & font):D3DObject(d)
+{
+	try {
+		mFont = std::make_unique<DirectX::SpriteFont>(d, font.c_str());
+		mBatch = std::make_unique<DirectX::SpriteBatch>(getContext());
+	}
+	catch (std::exception& e)
+	{
+		MessageBoxA(NULL, e.what(), NULL, NULL);
+		abort();
+	}
+}
+
+Renderer::Font::~Font()
+{
+}
+
+void Renderer::Font::drawText(const std::string & text, const DirectX::SimpleMath::Vector2 & pos, const DirectX::SimpleMath::Color & color, float rotation, const DirectX::SimpleMath::Vector2 & origin, float scale, DirectX::SpriteEffects effect, float layerdepth)
+{
+	try {
+
+		ID3D11DepthStencilState* dss;
+		UINT ref = 0;
+		getContext()->OMGetDepthStencilState(&dss,&ref);
+
+		mBatch->Begin();
+		mFont->DrawString(mBatch.get(), text.c_str(), pos, color, rotation, origin, scale, effect, layerdepth);
+		mBatch->End();
+
+		getContext()->OMSetDepthStencilState(dss, ref);
+	}
+	catch (std::exception& e)
+	{
+		MessageBoxA(NULL, e.what(), NULL, NULL);
+		abort();
+	}
+}
+
+Renderer::Rasterizer::Rasterizer(ID3D11Device * d, const D3D11_RASTERIZER_DESC & desc):D3DObject(d)
+{
+	checkResult(d->CreateRasterizerState(&desc, &mRasterizer));
+}
+
+Renderer::Rasterizer::~Rasterizer()
+{
+}
+
+Renderer::DepthStencil::DepthStencil(ID3D11Device * d, const D3D11_TEXTURE2D_DESC & desc):D3DObject(d)
+{
+	checkResult(d->CreateTexture2D(&desc, NULL, &mTexture));
+	
+	D3D11_DEPTH_STENCIL_VIEW_DESC descDSV;
+	ZeroMemory(&descDSV, sizeof(descDSV));
+	descDSV.Format = desc.Format;
+	descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	descDSV.Texture2D.MipSlice = 0;
+	checkResult(d->CreateDepthStencilView(mTexture, &descDSV, &mDSView));
+}
+
+Renderer::DepthStencil::~DepthStencil()
+{
+	mTexture->Release();
+	mDSView->Release();
+}
+
+void Renderer::DepthStencil::clearDepth(float d)
+{
+	getContext()->ClearDepthStencilView(mDSView, D3D11_CLEAR_DEPTH, d, 0);
+}
+
+void Renderer::DepthStencil::clearStencil(int s)
+{
+	getContext()->ClearDepthStencilView(mDSView, D3D11_CLEAR_STENCIL, 1.0f, s);
 }

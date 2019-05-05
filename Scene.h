@@ -66,11 +66,12 @@ public:
 		Entity();
 		~Entity();
 
-		virtual void visitRenderable(std::function<void(Renderable)>) = 0;
+		virtual void visitRenderable(std::function<void(const Renderable&)>) = 0;
+		virtual std::pair<Vector3, Vector3> getWorldAABB()const = 0;
 		void attach(Node::Ptr n) { n->addChild(mNode); };
 		void detach() { if (!mNode->mParent) return; mNode->mParent->removeChild(mNode); }
 
-		Node::Ptr getNode() { return mNode; }
+		Node::Ptr getNode()const { return mNode; }
 	private:
 		Node::Ptr mNode;
 	};
@@ -83,7 +84,8 @@ public:
 		Model(const Parameters& params, Renderer::Ptr r);
 		~Model();
 		Mesh::Ptr getMesh() { return mMesh; };
-		virtual void visitRenderable(std::function<void(Renderable)>) override;
+		virtual void visitRenderable(std::function<void(const Renderable&)>) override;
+		virtual std::pair<Vector3, Vector3> getWorldAABB()const;
 
 	private:
 		Mesh::Ptr mMesh;
@@ -100,12 +102,13 @@ public:
 			PT_PERSPECTIVE,
 		};
 	public:
-		Camera();
+		Camera(Scene* s);
 		~Camera();
 
 		//void render(Renderer::Ptr renderer);
 
-		void visitRenderable(std::function<void(Renderable)>)override {};
+		void visitRenderable(std::function<void(const Renderable&)>)override {};
+		virtual std::pair<Vector3, Vector3> getWorldAABB()const override { return std::pair<Vector3, Vector3>(); };
 
 		Matrix getViewMatrix();
 		void lookat(const Vector3& eye, const Vector3& at);
@@ -118,6 +121,8 @@ public:
 
 		Vector3 getDirection();
 		void setDirection(const Vector3& dir);
+
+		void visitVisibleObject(std::function<void(Entity::Ptr)> visit);
 	private:
 		D3D11_VIEWPORT mViewport;
 		float mFOVy;
@@ -126,6 +131,7 @@ public:
 		ProjectionType mProjectionType;
 		Matrix mProjection;
 		bool mDirty;
+		Scene* mScene;
 	};
 public:
 	Scene(Renderer::Ptr renderer);
@@ -134,14 +140,14 @@ public:
 	Model::Ptr createModel(const std::string& name, const Parameters& params);
 	Camera::Ptr createOrGetCamera(const std::string& name);
 
-	void visitRenderables(std::function<void(Renderable)> callback);
+	void visitRenderables(std::function<void(const Renderable&)> callback);
 
 	Node::Ptr getRoot() { return mRoot; }
 	Node::Ptr createNode();
 private:
 	Renderer::Ptr mRenderer;
-	std::map<std::string, Model::Ptr> mModels;
+	std::unordered_map<std::string, Model::Ptr> mModels;
 	Node::Ptr mRoot;
 
-	std::map<std::string, Camera::Ptr> mCameras;
+	std::unordered_map<std::string, Camera::Ptr> mCameras;
 };

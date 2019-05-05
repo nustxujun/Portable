@@ -13,6 +13,8 @@ Mesh::Mesh(const Parameters& params, Renderer::Ptr r)
 
 	auto data = MeshBuilder::build(filename->second);
 
+	memcpy(&mAABB, &data.aabb, sizeof(mAABB));
+
 	std::vector<Material::Ptr> materials;
 	for (int i = 0; i < data.materials.size(); ++i)
 	{
@@ -57,7 +59,10 @@ Mesh::Mesh(const Parameters& params, Renderer::Ptr r)
 		}
 
 		auto layout = r->createLayout(desc.data(), desc.size());
-		mMeshs.push_back({ vb, ib, mesh.numVertex, mesh.indices.size(), materials[mesh.materialIndex] , layout });
+		DirectX::SimpleMath::Matrix trans = (DirectX::XMFLOAT4X4)(mesh.tranfromation);
+		trans.Transpose(trans);
+
+		mMeshs.push_back({ vb, ib, mesh.numVertex, mesh.indices.size(), materials[mesh.materialIndex] , layout , trans });
 	}
 
 

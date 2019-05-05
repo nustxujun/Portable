@@ -2,73 +2,115 @@
 #include "assimp/Importer.hpp"
 #include "assimp/scene.h"
 #include "assimp/postprocess.h"
-
+#include <regex>
+#include <functional>
 MeshBuilder::Data MeshBuilder::build(const std::string & filename)
 {
 	Data ret;
-	//ret.aabb = { FLT_MAX,FLT_MAX,FLT_MAX,FLT_MIN, FLT_MIN,FLT_MIN };
+	ret.aabb = { FLT_MAX,FLT_MAX,FLT_MAX,FLT_MIN, FLT_MIN,FLT_MIN };
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(filename, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_JoinIdenticalVertices);
 	if (!scene)
 	{
+		abort();
 		return ret;
 	}
-	auto meshs = scene->mMeshes;
 
 
-	for (int i = 0; i < scene->mNumMeshes; ++i)
+	std::regex reg("^(.+)[/\\\\].+\\..+$");
+	std::smatch match;
+	std::string totalpath;
+	if (std::regex_match(filename, match, reg))
 	{
-		Data::Mesh mesh;
-		mesh.layout.push_back(POSITION);
-		auto m = meshs[i];
-		mesh.materialIndex = m->mMaterialIndex;
-		mesh.numVertex = m->mNumVertices;
+		totalpath = std::string(match[1]) + "/";
+	}
 
-		size_t size = 4 * 3;
-		if (m->HasNormals())
+	std::function<void(const aiNode*, const aiMatrix4x4* ,std::vector<Data::Mesh>&)> process;
+	process = [&process,scene,&ret](const aiNode* node, const aiMatrix4x4*  pm, std::vector<Data::Mesh>& rets)
+	{
+		aiMatrix4x4 trans = node->mTransformation;
+		if (pm)
 		{
-			mesh.layout.push_back(NORMAL);
-			size += 4 * 3;
+			trans = *pm * trans;
 		}
-		if (m->HasTextureCoords(0))
+		for (int i = 0; i < node->mNumChildren; ++i)
 		{
-			mesh.layout.push_back(TEXCOORD0);
-			size += 4 * 2;
+			process(node->mChildren[i], &trans, rets);
 		}
+		auto meshs = node->mMeshes;
 
-		mesh.vertices.resize(mesh.numVertex * size);
-		char* begin = mesh.vertices.data();
-		auto copy = [](char*& buffer, const void* cont, size_t size) {
-			memcpy(buffer, cont, size);
-			buffer += size;
-		};
-		for (int j = 0; j < m->mNumVertices; ++j)
+		for (int i = 0; i < node->mNumMeshes; ++i)
 		{
-			copy(begin, m->mVertices + j , sizeof(aiVector3D));
+			Data::Mesh mesh;
+			mesh.layout.push_back(POSITION);
+			auto m = scene->mMeshes[ meshs[i] ];
+			mesh.materialIndex = m->mMaterialIndex;
+			mesh.numVertex = m->mNumVertices;
+			memcpy(&mesh.tranfromation, &trans, sizeof(mesh.tranfromation));
 
+			size_t size = 4 * 3;
 			if (m->HasNormals())
 			{
-				copy(begin, m->mNormals + j , sizeof(aiVector3D) );
+				mesh.layout.push_back(NORMAL);
+				size += 4 * 3;
 			}
-
 			if (m->HasTextureCoords(0))
 			{
-				copy(begin, m->mTextureCoords[0] + j, 4 * 2);
+				mesh.layout.push_back(TEXCOORD0);
+				size += 4 * 2;
 			}
-		}
 
-		if (m->HasFaces())
-		{
-			for (int j = 0; j < m->mNumFaces; ++j)
+			mesh.vertices.resize(mesh.numVertex * size);
+			char* begin = mesh.vertices.data();
+			auto copy = [](char*& buffer, const void* cont, size_t size) {
+				memcpy(buffer, cont, size);
+				buffer += size;
+			};
+			for (int j = 0; j < m->mNumVertices; ++j)
 			{
-				for (int k = 0; k < 3; ++k)
-					mesh.indices.push_back(m->mFaces[j].mIndices[k]);
+				aiVector3D pos = *(m->mVertices + j);
+				pos = trans * pos;
+				copy(begin, &pos, sizeof(aiVector3D));
+
+				ret.aabb[0] = std::min(ret.aabb[0], pos.x);
+				ret.aabb[1] = std::min(ret.aabb[1], pos.y);
+				ret.aabb[2] = std::min(ret.aabb[2], pos.z);
+
+				ret.aabb[3] = std::max(ret.aabb[3], pos.x);
+				ret.aabb[4] = std::max(ret.aabb[4], pos.y);
+				ret.aabb[5] = std::max(ret.aabb[5], pos.z);
+
+
+				if (m->HasNormals())
+				{
+					copy(begin, m->mNormals + j, sizeof(aiVector3D));
+				}
+
+				if (m->HasTextureCoords(0))
+				{
+					copy(begin, m->mTextureCoords[0] + j, 4 * 2);
+				}
 			}
+
+			if (m->HasFaces())
+			{
+				for (int j = 0; j < m->mNumFaces; ++j)
+				{
+					for (int k = 0; k < 3; ++k)
+						mesh.indices.push_back(m->mFaces[j].mIndices[k]);
+				}
+			}
+
+			rets.push_back(std::move(mesh));
 		}
 
-		
-		ret.meshs.push_back(std::move(mesh));
-	}
+	};
+
+	process(scene->mRootNode,nullptr, ret.meshs);
+
+
+
+
 
 	if (scene->HasMaterials())
 	{
@@ -82,7 +124,8 @@ MeshBuilder::Data MeshBuilder::build(const std::string & filename)
 				aiTextureMapping mapping;
 				size_t index;
 				m->GetTexture(aiTextureType_DIFFUSE, j, &path,&mapping, &index);
-				mat.texture_diffuses.push_back(path.C_Str());
+				std::string realpath = totalpath + path.C_Str();
+				mat.texture_diffuses.push_back(realpath);
 			}
 
 			ret.materials.push_back(mat);

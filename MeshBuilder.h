@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <string>
+#include <array>
 class MeshBuilder
 {
 public:
@@ -19,6 +20,7 @@ public:
 			std::vector<char> vertices;
 			size_t numVertex;
 			size_t materialIndex;
+			float tranfromation[16];
 		};
 
 		struct Material {
@@ -27,7 +29,7 @@ public:
 
 		std::vector<Mesh> meshs;
 		std::vector<Material> materials;
-		float aabb[6];
+		std::array<float,6> aabb;
 	};
 public:
 	static Data build(const std::string& filename);

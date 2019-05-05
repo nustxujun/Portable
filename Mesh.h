@@ -11,7 +11,7 @@ struct Renderable
 	size_t numIndices = 0;
 	Material::Ptr material;
 	Renderer::Layout::Ptr layout;
-	DirectX::XMFLOAT4X4 tranformation;
+	DirectX::SimpleMath::Matrix tranformation;
 };
 
 class Mesh
@@ -21,15 +21,16 @@ public:
 	using Ptr = std::shared_ptr<Mesh>;
 	struct AABB
 	{
-		float min[3];
-		float max[3];
+		DirectX::SimpleMath::Vector3 min;
+		DirectX::SimpleMath::Vector3 max;
 	};
 public:
 	Mesh(const Parameters& params, Renderer::Ptr r);
 	~Mesh();
 
 	size_t getNumMesh() { return mMeshs.size(); }
-	Renderable getMesh(size_t index) { return mMeshs[index]; }
+	const Renderable& getMesh(size_t index) { return mMeshs[index]; }
+	const AABB & getAABB() const{ return mAABB; }
 private:
 	AABB mAABB;
 	Meshs mMeshs;

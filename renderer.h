@@ -5,7 +5,8 @@
 #include <D3D11.h>
 #include <D3DX11.h>
 #include "Common.h"
-
+#include "SpriteFont.h"
+#include "SimpleMath.h"
 #undef min
 #undef max
 
@@ -118,7 +119,7 @@ public:
 		std::vector<char> mCompiledShader;
 		ID3DX11Effect* mEffect;
 		std::string mSelectedTech;
-		std::map<std::string, ID3DX11EffectTechnique*> mTechs;
+		std::unordered_map<std::string, ID3DX11EffectTechnique*> mTechs;
 	};
 
 	class Texture final : public NODefault
@@ -186,16 +187,74 @@ public:
 
 		size_t getSize()const { return mSize; };
 	private:
-		std::map<const void*, Interface<ID3D11InputLayout>::Shared> mBindedLayouts;
+		std::unordered_map<const void*, Interface<ID3D11InputLayout>::Shared> mBindedLayouts;
 		std::vector<D3D11_INPUT_ELEMENT_DESC> mElements;
 		size_t mSize;
 	};
 
+	class Font final :public NODefault, public D3DObject
+	{
+	public :
+		using Ptr = std::weak_ptr<Font>;
+
+	public:
+		Font(ID3D11Device* d, const std::wstring& font);
+		~Font();
+
+		void drawText(
+			const std::string& text, 
+			const DirectX::SimpleMath::Vector2& pos, 
+			const DirectX::SimpleMath::Color& color = (DirectX::FXMVECTOR)DirectX::Colors::White, 
+			float rotation = 0, 
+			const DirectX::SimpleMath::Vector2& origin = DirectX::SimpleMath::Vector2::Zero,
+			float scale = 1,
+			DirectX::SpriteEffects effect = DirectX::SpriteEffects_None,
+			float layerdepth = 0);
+	private:
+		std::unique_ptr<DirectX::SpriteFont> mFont;
+		std::unique_ptr<DirectX::SpriteBatch> mBatch;
+		float x = 0;
+		float y = 0;
+
+	};
+
+	class Rasterizer:public NODefault, public D3DObject
+	{
+	public:
+		using Ptr = std::weak_ptr<Rasterizer>;
+	public:
+		Rasterizer(ID3D11Device* d, const D3D11_RASTERIZER_DESC& desc);
+		~Rasterizer();
+
+		operator ID3D11RasterizerState*()const { return mRasterizer; }
+	private:
+		D3D11_RASTERIZER_DESC mDesc;
+		ID3D11RasterizerState* mRasterizer;
+	};
+
+	class DepthStencil:public NODefault, public D3DObject
+	{
+	public:
+		using Ptr = std::weak_ptr<DepthStencil>;
+	public:
+		DepthStencil(ID3D11Device* d, const D3D11_TEXTURE2D_DESC& desc);
+		~DepthStencil();
+
+		operator ID3D11DepthStencilView* () const { return mDSView; }
+		void clearDepth(float d);
+		void clearStencil(int s);
+	private:
+		ID3D11Texture2D* mTexture;
+		ID3D11DepthStencilView* mDSView;
+	};
 
 
 	using CompiledData = Interface<ID3D10Blob>;
 	using SharedCompiledData = CompiledData::Shared ;
 	using PixelShader = Interface<ID3D11PixelShader>;
+	using DepthStencilState = Interface<ID3D11DepthStencilState>;
+	using BlendState = Interface<ID3D11BlendState>;
+
 public:
 	void init(HWND win, int width, int height);
 	void uninit();
@@ -206,10 +265,9 @@ public:
 	ID3D11DeviceContext* getContext() { return mContext; };
 
 	void present();
-	void clearDepth(float depth);
-	void clearStencil(int stencil);
 	void clearRenderTarget(RenderTarget::Ptr rt, const float color[4]);
 	void clearRenderTargets(std::vector<RenderTarget::Ptr>& rts, const std::array<float,4>& color);
+	void clearDefaultStencil(float d, int s = 0);
 
 	void setTexture(const Texture::Ptr tex);
 	void setTextures(const std::vector<Texture::Ptr>& texs);
@@ -220,15 +278,16 @@ public:
 	void removeShaderResourceViews();
 
 	void setSampler(Sampler::Ptr s);
-	void setSamplers(const std::vector<Sampler::Ptr> ss);
+	void setSamplers(const std::vector<Sampler::Ptr>& ss);
 	void removeSamplers();
 	Sampler::Ptr getSampler(const std::string&name);
-	void setRenderTarget(RenderTarget::Ptr rt);
-	void setRenderTargets(const std::vector<RenderTarget::Ptr>& rts);
+	void setRenderTarget(RenderTarget::Ptr rt, DepthStencil::Ptr ds = DepthStencil::Ptr());
+	void setRenderTargets(const std::vector<RenderTarget::Ptr>& rts, DepthStencil::Ptr ds = DepthStencil::Ptr());
 	void removeRenderTargets();
 	void setConstantBuffer(Buffer::Ptr b);
 	void setConstantsBuffer(const std::vector<Buffer::Ptr>& bs);
 	void removeConstantBuffers();
+	void setRasterizer(Rasterizer::Ptr r);
 
 	RenderTarget::Ptr getBackbuffer() { return mBackbuffer; }
 	void setLayout(ID3D11InputLayout* layout);
@@ -237,6 +296,10 @@ public:
 	void setVertexBuffer(Buffer::Ptr b, size_t stride, size_t offset);
 	void setVertexBuffers( std::vector<Buffer::Ptr>& b, const size_t* stride, const size_t* offset);
 	void setViewport(const D3D11_VIEWPORT& vp);
+	void setDepthStencilState(const D3D11_DEPTH_STENCIL_DESC& desc);
+	void setBlendState(const D3D11_BLEND_DESC& desc, const std::array<float, 4>& factor = { 1,1,1,1 }, size_t mask = 0xffffffff);
+	void setDefaultBlendState();
+	void setDefaultDepthStencilState();
 
 	Sampler::Ptr createSampler(const std::string& name, D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV,
 		D3D11_TEXTURE_ADDRESS_MODE addrW = D3D11_TEXTURE_ADDRESS_WRAP, D3D11_COMPARISON_FUNC cmpfunc = D3D11_COMPARISON_NEVER, float minlod = 0, float maxlod = D3D11_FLOAT32_MAX);
@@ -248,8 +311,10 @@ public:
 	VertexShader::Weak createVertexShader(const void* data, size_t size);
 	PixelShader::Weak createPixelShader(const void* data, size_t size);
 	Layout::Ptr createLayout(const D3D11_INPUT_ELEMENT_DESC* descarray, size_t count);
-
-private:
+	Font::Ptr createOrGetFont(const std::wstring& font);
+	Rasterizer::Ptr createOrGetRasterizer(const std::string & name, D3D11_CULL_MODE cull = D3D11_CULL_BACK, D3D11_FILL_MODE fill = D3D11_FILL_SOLID, bool multisample = false);
+	DepthStencil::Ptr createDepthStencil(int width, int height, DXGI_FORMAT format);
+ private:
 	static void checkResult(HRESULT hr);
 
 private:
@@ -260,9 +325,8 @@ private:
 	ID3D11DeviceContext* mContext;
 	IDXGISwapChain* mSwapChain;
 	D3D_FEATURE_LEVEL mFeatureLevel;
-	ID3D11Texture2D* mDepthStencil;
-	ID3D11DepthStencilView* mDepthStencilView;
-	ID3D11RasterizerState* mRasterizer;
+	DepthStencil::Ptr mDefaultDepthStencil;
+	Rasterizer::Ptr mRasterizer;
 
 	RenderTarget::Ptr mBackbuffer;
 
@@ -274,11 +338,16 @@ private:
 	std::set<std::shared_ptr<Buffer>> mBuffers;
 	std::set<std::shared_ptr<Effect>> mEffects;
 	std::set<std::shared_ptr<Layout>> mLayouts;
-	std::map<std::string,std::shared_ptr<Texture>> mTextures;
-	std::map<std::string,std::shared_ptr<Sampler>> mSamplers;
+	std::unordered_map<std::string,std::shared_ptr<Texture>> mTextures;
+	std::unordered_map<std::string,std::shared_ptr<Sampler>> mSamplers;
 	std::vector<VertexShader::Shared> mVSs;
 	std::vector<PixelShader::Shared> mPSs;
+	std::unordered_map<std::wstring, std::shared_ptr<Font>> mFonts;
+	std::unordered_map<std::string, std::shared_ptr<Rasterizer>> mRasterizers;
 
+	std::unordered_map<size_t, DepthStencilState::Shared> mDepthStencilStates;
+	std::unordered_map<size_t, BlendState::Shared> mBlendStates;
+	std::unordered_map<size_t, std::shared_ptr<DepthStencil>> mDepthStencils;
 };
 
 

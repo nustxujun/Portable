@@ -13,44 +13,86 @@
 #include "DeferredRenderer.h"
 #include "Input.h"
 
+#include "ShadowMap.h"
+#include "Quad.h"
+
+
 #include <sstream>
 
 #define MAX_LOADSTRING 100
 
+
+template<class T>
+class Instance
+{
+public:
+	using Shared = std::shared_ptr<T>;
+
+	template<class ... Args>
+	void operator()(Args ... args)
+	{
+		instance = Shared(new T(args...));
+	}
+
+	Shared operator->()const { return instance; }
+	operator Shared()const { return instance; }
+
+	Shared instance;
+};
+
+
 Renderer::Ptr renderer;
-std::shared_ptr<Quad> quad;
+Instance<Quad> quad;
+
+
 std::shared_ptr<Scene> scene;
 std::shared_ptr< DeferredRenderer> deferred;
 std::shared_ptr<Input> input;
+std::shared_ptr<ShadowMap> sm;
+
+std::string show;
+
+
+
 void initRenderer(HWND win)
 {
+
 	RECT rect;
 	GetClientRect(win, &rect);
 	renderer = std::move(std::unique_ptr<Renderer>(new Renderer));
 	renderer->init(win, rect.right, rect.bottom);
 
+	quad(renderer);
 
 	//test = decltype(test)(new Test(renderer));
-	quad =  decltype(quad)(new Quad(renderer));
 	scene = decltype(scene)(new Scene(renderer));
 	deferred = decltype(deferred)(new DeferredRenderer(renderer, scene));
 	input = decltype(input)(new Input());
+	sm = decltype(sm)(new ShadowMap(renderer, scene,quad));
 
 	Parameters params;
-	params["file"] = "tiny.x";
+	params["file"] = "sponzanoflag/sponzanoflag.x";
 	auto model = scene->createModel("test", params);
 	model->attach(scene->getRoot());
-	model->getNode()->setPosition(0.0f, 0.0f, 0.0f);
+	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
 
 	auto cam = scene->createOrGetCamera("main");
-	DirectX::XMFLOAT3 eye(0, 0, -300);
+	DirectX::XMFLOAT3 eye(0, 2000, -2000);
 	DirectX::XMFLOAT3 at(0, 0, 0);
 	cam->lookat(eye, at);
+	//cam->getNode()->setPosition(495.279724f, -374.990845f, 231.994125f);
+	//cam->setDirection(Vector3( 0,0,1 ));
 	cam->setViewport(0, 0, rect.right, rect.bottom);
-	cam->setNearFar(0.01, 10000);
+	cam->setNearFar(1, 10000);
 	cam->setFOVy(0.785398185);
+	//cam->setProjectType(Scene::Camera::PT_ORTHOGRAPHIC);
 
 	input->listen([cam](const Input::Mouse& m, const Input::Keyboard& k) {
+		static auto lasttime = GetTickCount();
+		auto dtime = GetTickCount() - lasttime;
+		lasttime = GetTickCount();
+		float step = dtime * 1.0f;
+		
 		auto node = cam->getNode();
 		auto pos = node->getPosition();
 		auto dir = cam->getDirection();
@@ -61,31 +103,32 @@ void initRenderer(HWND win)
 		Vector2 cur = Vector2(m.x, m.y);
 		static Vector2 last = cur;
 		Vector2 d = cur - last;
+
+
+
+		d = Vector2(d.x  , d.y );
 		last = cur;
-		std::stringstream ss;
 		if (k.W )
 		{
-			pos = dir * 1 + pos;
+			pos = dir * step + pos;
 		}
 		else if (k.S)
 		{
-			pos = dir * -1 + pos;
+			pos = dir * -step + pos;
 		}
 		else if (k.A)
 		{
-			pos = r * -1 + pos;
+			pos = r * -step + pos;
 		}
 		else if (k.D)
 		{
-			pos = r * 1 + pos;
+			pos = r * step + pos;
 		}
 
 		if (m.leftButton)
 		{
 			float pi = 3.14159265358;
-			d.y = std::max(-pi / 2.0f, d.y);
-			d.y = std::min(+pi / 2.0f, d.y);
-			Quaternion rot = Quaternion::CreateFromYawPitchRoll(d.x * 0.005, d.y * 0.005, 0);
+			Quaternion rot = Quaternion::CreateFromYawPitchRoll(d.x * 0.005, d.y  * 0.005, 0);
 
 			rot *= node->getOrientation();
 			dir = Vector3::Transform(Vector3(0, 0, 1), rot);
@@ -94,14 +137,14 @@ void initRenderer(HWND win)
 
 		node->setPosition(pos);
 	});
-	cam->getViewMatrix();
-	//cam->setProjectType(Scene::Camera::PT_ORTHOGRAPHIC);
 
 
 }
 
 void framemove()
 {
+
+
 	input->update();
 	//auto cam = scene->createOrGetCamera("main");
 	//float len = 300;
@@ -112,6 +155,29 @@ void framemove()
 	//
 	//cam->lookat(DirectX::XMFLOAT3(x,y,z), DirectX::XMFLOAT3(0,0,0));
 	deferred->render();
+
+	static auto time = GetTickCount();
+	static size_t count = 0;
+	count++;
+
+	if (count == 100)
+	{
+		float fps = count * 1000.0f / std::max((unsigned long)1,(GetTickCount() - time));
+		time = GetTickCount();
+		count = 0;
+		std::stringstream ss;
+
+		ss << fps;
+		show = ss.str();
+	}
+
+
+	sm->render();
+
+	auto bb = renderer->getBackbuffer();
+	renderer->setRenderTarget(bb);
+	auto font = renderer->createOrGetFont(L"myfile.spritefont");
+	font.lock()->drawText(show.c_str(), Vector2(10, 10));
 	renderer->present();
 }
 

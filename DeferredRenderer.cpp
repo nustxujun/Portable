@@ -40,23 +40,54 @@ DeferredRenderer::DeferredRenderer(Renderer::Ptr r, Scene::Ptr s):mRenderer(r),m
 	mFinalPS = mRenderer->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
 	mFinalTarget = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
 
-	blob = mRenderer->compileFile("drawTexture_ps.hlsl", "main", "ps_5_0");
-	mDrawTexturePS = mRenderer->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
+	D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
+	depthStencilDesc.DepthEnable = TRUE;
+	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS;
+	depthStencilDesc.StencilEnable = FALSE;
+	depthStencilDesc.StencilReadMask = 0xFF;
+	depthStencilDesc.StencilWriteMask = 0xFF;
 
+	// Stencil operations if pixel is front-facing
+	depthStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+	depthStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+	// Stencil operations if pixel is back-facing
+	depthStencilDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+	depthStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+	mDepthStencilDesc = depthStencilDesc;
+
+	D3D11_BLEND_DESC blend = { 0 };
+	blend.RenderTarget[0] = {
+		FALSE,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_ZERO,
+		D3D11_BLEND_OP_ADD,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_ZERO,
+		D3D11_BLEND_OP_ADD,
+		D3D11_COLOR_WRITE_ENABLE_ALL
+	};
+	mDefaultBlendState = blend;
 }
 
 void DeferredRenderer::render()
 {
+
+	mRenderer->setDefaultBlendState();
 
 	renderGbuffer();
 	renderLightingMap();
 	renderFinal();
 
 	mQuad->setRenderTarget(mRenderer->getBackbuffer());
-	mQuad->setTextures({ mFinalTarget});
 	mQuad->setSamplers({ mSampleLinear});
-	mQuad->setPixelShader(mDrawTexturePS);
-	mQuad->draw();
+	mQuad->drawTexture(mFinalTarget);
 }
 
 void DeferredRenderer::renderGbuffer()
@@ -66,6 +97,9 @@ void DeferredRenderer::renderGbuffer()
 	if (e == nullptr)
 		return;
 
+	//mRenderer->setDepthStencilState(mDepthStencilDesc);
+	mRenderer->setDefaultDepthStencilState();
+
 	XMMATRIX mat;
 	mat = XMMatrixIdentity();
 	auto world = e->getVariable("World")->AsMatrix();
@@ -74,33 +108,37 @@ void DeferredRenderer::renderGbuffer()
 
 	auto cam = mScene->createOrGetCamera("main");
 
-
 	mRenderer->setViewport(cam->getViewport());
 	view->SetMatrix((const float*)&cam->getViewMatrix());
 	proj->SetMatrix((const float*)&cam->getProjectionMatrix());
 
 	mRenderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	std::vector<Renderer::RenderTarget::Ptr> rts = { mDiffuse, mNormal, mDepth };
-	mRenderer->clearRenderTargets(rts, { 0,0,0,0 });
+	mDiffuse.lock()->clear({0,0,0,0});
+	mNormal.lock()->clear({0,0,0,0});
+	mDepth.lock()->clear({0,0,0,0});
 
-	mRenderer->clearDepth(1.0f);
+	//mRenderer->clearRenderTargets(rts, { 1,1,1,1 });
+
+	mRenderer->clearDefaultStencil(1.0f);
 	mRenderer->setRenderTargets(rts);
 
-	e->render(mRenderer, [world, this](ID3DX11EffectPass* pass)
+
+	mScene->visitRenderables([world, this,e](const Renderable& r)
 	{
-		mRenderer->setLayout(mGBufferLayout.lock()->bind(pass));
+		world->SetMatrix((const float*)&r.tranformation);
+		mRenderer->setIndexBuffer(r.indices, DXGI_FORMAT_R32_UINT, 0);
+		mRenderer->setVertexBuffer(r.vertices, r.layout.lock()->getSize(), 0);
 
-		mScene->visitRenderables([world, this](Renderable r)
+		e->render(mRenderer, [world, this,&r](ID3DX11EffectPass* pass)
 		{
-			world->SetMatrix((const float*)&r.tranformation);
 			mRenderer->setTextures(r.material->mTextures);
-
-			mRenderer->setIndexBuffer(r.indices, DXGI_FORMAT_R32_UINT, 0);
-			mRenderer->setVertexBuffer(r.vertices, r.layout.lock()->getSize(), 0);
+			mRenderer->setLayout(mGBufferLayout.lock()->bind(pass));
 			mRenderer->getContext()->DrawIndexed(r.numIndices, 0, 0);
 		});
-
 	});
+
+
 
 	mRenderer->removeRenderTargets();
 }
@@ -111,7 +149,8 @@ void DeferredRenderer::renderLightingMap()
 	auto cam = mScene->createOrGetCamera("main");
 
 	LightningConstantBuffer lightningConstantBuffer;
-	lightningConstantBuffer.mLightDirection = XMFLOAT4A(0.0f, -1.0f, 1.0f, 1.0f);
+	lightningConstantBuffer.mLightDirection = { 0.0f, -1.0f, 1.0f, 0.0f };
+	lightningConstantBuffer.mLightDirection.Normalize();
 	lightningConstantBuffer.mColor = XMFLOAT4A(0.99f, 1.0f, 1.0f, 1.0f);
 	//XMFLOAT4 position;
 	//XMStoreFloat4(&position, p_pCamera->GetPosition());
@@ -127,9 +166,7 @@ void DeferredRenderer::renderLightingMap()
 
 	mRenderer->setSamplers({ mSampleLinear, mSamplePoint });
 
-
-
-
+	mQuad->setBlend(mDefaultBlendState);
 	mQuad->setRenderTarget(mLightingMap);
 	mQuad->setTextures({ mDiffuse, mNormal, mDepth });
 	mQuad->setPixelShader(mLightingPS);
@@ -142,6 +179,7 @@ void DeferredRenderer::renderLightingMap()
 
 void DeferredRenderer::renderFinal()
 {
+	mQuad->setBlend(mDefaultBlendState);
 	mQuad->setRenderTarget(mFinalTarget);
 	mQuad->setTextures({ mDiffuse, mLightingMap });
 	mQuad->setSamplers({ mSampleLinear, mSamplePoint });

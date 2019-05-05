@@ -72,7 +72,7 @@ GBufferPixelShaderOutput ps(GBufferVertexShaderOutput input) : SV_TARGET
 	//float4 specularAttributes = tex2D(specularSampler, input.TexCoord);
 
 	// Specular intensity.
-	//output.Color.a = 1.0f;//specularAttributes.r;
+	output.Color.a = 1.0f;//specularAttributes.r;
 
 	//// Read the normal from the normal map.
 	//float3 normalFromMap = tex2D(normalSampler, input.TexCoord);

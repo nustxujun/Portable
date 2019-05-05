@@ -8,7 +8,7 @@ class DeferredRenderer
 {
 	struct LightningConstantBuffer
 	{
-		DirectX::XMFLOAT4A mLightDirection;
+		DirectX::SimpleMath::Vector3 mLightDirection;
 		DirectX::XMFLOAT4A mColor;
 		DirectX::XMFLOAT3A mCameraPosition;
 		DirectX::XMFLOAT4X4A mInvertViewMatrix;
@@ -42,7 +42,7 @@ private:
 	Renderer::RenderTarget::Ptr mFinalTarget;
 
 	std::shared_ptr<Quad> mQuad;
-	Renderer::PixelShader::Weak mDrawTexturePS;
 
-
+	D3D11_DEPTH_STENCIL_DESC mDepthStencilDesc;
+	D3D11_BLEND_DESC mDefaultBlendState;
 };

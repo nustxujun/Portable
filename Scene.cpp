@@ -1,4 +1,5 @@
 #include "Scene.h"
+#include "MathUtilities.h"
 
 Scene::Scene(Renderer::Ptr r) : mRenderer(r)
 {
@@ -32,7 +33,7 @@ Scene::Camera::Ptr Scene::createOrGetCamera(const std::string & name)
 	if (ret != mCameras.end())
 		return ret->second;
 
-	Camera::Ptr c(new Camera());
+	Camera::Ptr c(new Camera(this));
 	Node::Ptr node(new Node());
 	node->mEntity = c;
 	c->mNode = node;
@@ -40,7 +41,7 @@ Scene::Camera::Ptr Scene::createOrGetCamera(const std::string & name)
 	return c;
 }
 
-void Scene::visitRenderables(std::function<void(Renderable)> callback)
+void Scene::visitRenderables(std::function<void(const Renderable&)> callback)
 {
 	std::vector<Renderable> rends;
 
@@ -49,9 +50,10 @@ void Scene::visitRenderables(std::function<void(Renderable)> callback)
 		if (node->mEntity)
 		{
 			auto mat = node->mEntity->getNode()->getTransformation();
-			node->mEntity->visitRenderable([&rends, mat](Renderable r) {
-				r.tranformation = mat;
-				rends.push_back(r);
+			node->mEntity->visitRenderable([&rends, mat](const Renderable& r) {
+				Renderable rend = r;
+				rend.tranformation = mat;
+				rends.emplace_back(std::move(rend));
 			});
 		}
 
@@ -64,7 +66,7 @@ void Scene::visitRenderables(std::function<void(Renderable)> callback)
 	visitor(mRoot);
 
 
-	for (auto i : rends)
+	for (auto& i : rends)
 	{
 		callback(i);
 	}
@@ -105,7 +107,6 @@ const Matrix & Scene::Node::getTransformation()
 	using namespace DirectX;
 	if (isDirty())
 	{
-		mDirty = 0;
 		FXMVECTOR scaling = XMVectorSet(1, 1, 1, 0);
 		FXMVECTOR o = XMVectorSet(0, 0, 0, 0);
 		FXMVECTOR rot = getRealOrientation();
@@ -118,7 +119,7 @@ const Matrix & Scene::Node::getTransformation()
 		}
 
 		XMStoreFloat4x4(&mTranformation, mat);
-	
+		mDirty = 0;
 	}
 	return mTranformation;
 }
@@ -127,12 +128,12 @@ const Vector3 & Scene::Node::getRealPosition()
 {
 	if (isDirty( DT_POSITION ))
 	{
-		mDirty &= ~DT_POSITION;
 		mRealPosition = mPosition;
 		if (mParent)
 		{
 			mRealPosition += mParent->getRealPosition();
 		}
+		mDirty &= ~DT_POSITION;
 	}
 
 	return mRealPosition;
@@ -142,12 +143,12 @@ const Quaternion & Scene::Node::getRealOrientation()
 {
 	if (isDirty (DT_ORIENTATION))
 	{
-		mDirty &= ~DT_ORIENTATION;
 		mRealOrientation = mOrientation;
 		if (mParent)
 		{
 			mRealOrientation *= mParent->getOrientation();
 		}
+		mDirty &= ~DT_ORIENTATION;
 	}
 
 	return mRealOrientation;
@@ -163,7 +164,7 @@ Scene::Model::~Model()
 {
 }
 
-void Scene::Model::visitRenderable(std::function<void(Renderable)> v)
+void Scene::Model::visitRenderable(std::function<void(const Renderable&)> v)
 {
 	for (int i = 0; i < mMesh->getNumMesh(); ++i)
 	{
@@ -171,11 +172,27 @@ void Scene::Model::visitRenderable(std::function<void(Renderable)> v)
 	}
 }
 
-Scene::Camera::Camera():
+std::pair<Vector3, Vector3> Scene::Model::getWorldAABB() const
+{
+	auto aabb = mMesh->getAABB();
+
+	auto node = getNode();
+
+	const auto& tran = node->getTransformation();
+	aabb.min = Vector3::Transform(aabb.min, tran);
+	aabb.max = Vector3::Transform(aabb.max, tran);
+	Vector3 min = Vector3::Min(aabb.min, aabb.max);
+	Vector3 max = Vector3::Max(aabb.min, aabb.max);
+
+	return std::pair<Vector3, Vector3>(min, max);
+}
+
+Scene::Camera::Camera(Scene* s):
 	mFOVy(1.570796327f),
 	mNear(0.01f), 
 	mFar(10000.f),
-	mProjectionType(PT_PERSPECTIVE)
+	mProjectionType(PT_PERSPECTIVE),
+	mScene(s)
 {
 }
 
@@ -185,14 +202,7 @@ Scene::Camera::~Camera()
 
 Matrix Scene::Camera::getViewMatrix()
 {
-	Matrix rot;
-	rot = Matrix::CreateFromQuaternion(mNode->getRealOrientation());
-	auto rotT = rot.Transpose();
-	auto trans = Vector3::Transform(-mNode->getRealPosition(), rotT);
-	Matrix view = rotT;
-	view.Translation(trans);
-
-	return view;
+	return MathUtilities::makeViewMatrix(mNode->getRealPosition(), mNode->getRealOrientation());
 }
 
 void Scene::Camera::lookat(const Vector3 & eye, const Vector3 & at)
@@ -263,25 +273,22 @@ void Scene::Camera::setDirection(const Vector3 & dir)
 	d.Normalize();
 	Vector3 up(0, 1, 0);
 
-	Vector3 x = up.Cross(dir);
+	Vector3 x = up.Cross(d);
 	x.Normalize();
-	Vector3 y = dir.Cross(x);
+	Vector3 y = d.Cross(x);
 	y.Normalize();
 
-	Matrix  mat = Matrix::Identity;
-	mat._11 = x.x;
-	mat._12 = x.y;
-	mat._13 = x.z;
+	Matrix  mat = MathUtilities::makeMatrixFromAxis(x, y, d);
 
-	mat._21 = y.x;
-	mat._22 = y.y;
-	mat._23 = y.z;
+	mNode->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
 
-	mat._31 = dir.x;
-	mat._32 = dir.y;
-	mat._33 = dir.z;
+	Vector3 t(0, 0, 1);
+	t = Vector3::Transform(t, mNode->getOrientation());
+}
 
-	mNode->mOrientation = Quaternion::CreateFromRotationMatrix(mat);
-	mNode->dirty(Node::DT_ORIENTATION);
+void Scene::Camera::visitVisibleObject(std::function<void(Entity::Ptr)> visit)
+{
+	for (auto& e : mScene->mModels)
+		visit(e.second);
 }
 
