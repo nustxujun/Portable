@@ -158,22 +158,35 @@ MeshBuilder::Data MeshBuilder::buildByAssimp(const std::string & filename)
 
 MeshBuilder::Data MeshBuilder::buildByTinyobj(const std::string & filename)
 {
-	tinyobj::ObjReader reader;
-
-	if (!reader.ParseFromFile(filename))
+	std::regex reg("^(.+)[/\\\\].+\\..+$");
+	std::smatch match;
+	std::string totalpath;
+	if (std::regex_match(filename, match, reg))
 	{
-		MessageBoxA(NULL, reader.Error().c_str(), NULL, NULL);
-		abort();
+		totalpath = std::string(match[1]) + "/";
 	}
 
+
+	tinyobj::attrib_t attrib;
+	std::vector<tinyobj::shape_t> shapes;
+	std::vector<tinyobj::material_t> materials;
+
+	std::string warn;
+	std::string err;
+
+	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename.c_str(), totalpath.c_str()))
+	{
+		MessageBoxA(NULL, err.c_str(), NULL,NULL);
+		abort();
+	}
 	Data ret;
 
-	const auto* vertices =reader.GetAttrib().vertices.data();
-	const auto* normals = reader.GetAttrib().normals.data();
-	const auto* texcoords = reader.GetAttrib().texcoords.data();
+	const auto* vertices = attrib.vertices.data();
+	const auto* normals = attrib.normals.data();
+	const auto* texcoords = attrib.texcoords.data();
 
 
-	for (auto& i : reader.GetMaterials())
+	for (auto& i : materials)
 	{
 		Data::Material m;
 		m.texture_diffuses.push_back(i.diffuse_texname);
@@ -181,8 +194,7 @@ MeshBuilder::Data MeshBuilder::buildByTinyobj(const std::string & filename)
 	}
 
 	// Loop over shapes
-	for (size_t s = 0; s < reader.GetShapes().size(); s++) {
-		const auto& shapes = reader.GetShapes();
+	for (size_t s = 0; s < shapes.size(); s++) {
 		// Loop over faces(polygon)
 		size_t index_offset = 0;
 		Data::Mesh mesh;
@@ -190,9 +202,21 @@ MeshBuilder::Data MeshBuilder::buildByTinyobj(const std::string & filename)
 			memcpy(buffer, src, size);
 			buffer += size;
 		};
-		mesh.layout = { POSITION, NORMAL ,TEXCOORD0 };
+		mesh.layout = { POSITION };
+		int stride = 12;
+
+		if (shapes[s].mesh.indices[0].normal_index != 0xffffffff)
+		{
+			stride += 12;
+			mesh.layout.push_back(NORMAL);
+		}
+		if (shapes[s].mesh.indices[0].texcoord_index != 0xffffffff)
+		{
+			stride += 8;
+			mesh.layout.push_back(TEXCOORD0);
+		}
 		mesh.numVertex = shapes[s].mesh.num_face_vertices.size() * 3;
-		mesh.vertices.resize(mesh.numVertex * 32);
+		mesh.vertices.resize(mesh.numVertex * stride);
 		mesh.materialIndex = shapes[s].mesh.material_ids[0];
 		char* data = mesh.vertices.data();
 		for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
@@ -205,10 +229,12 @@ MeshBuilder::Data MeshBuilder::buildByTinyobj(const std::string & filename)
 				tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
 				mesh.indices.push_back(idx.vertex_index);
 
-				char* head = data + idx.vertex_index * 32;
-				copy(head, vertices + 3 * idx.vertex_index, 12);
-				copy(head, normals + 3 * idx.normal_index, 12);
-				copy(head, texcoords + 2 * idx.normal_index, 8);
+				char* head = data + (3 * idx.vertex_index + v) * stride;
+				copy(head, vertices + (3 * idx.vertex_index + v), 12);
+				if (idx.normal_index != 0xffffffff)
+					copy(head, normals + (3 * idx.normal_index + v), 12);
+				if (idx.texcoord_index != 0xffffffff)
+					copy(head, texcoords + (2 * idx.normal_index + v), 8);
 
 			}
 			index_offset += fv;
@@ -216,6 +242,8 @@ MeshBuilder::Data MeshBuilder::buildByTinyobj(const std::string & filename)
 			// per-face material
 			shapes[s].mesh.material_ids[f];
 		}
+
+		ret.meshs.push_back(mesh);
 	}
 
 
