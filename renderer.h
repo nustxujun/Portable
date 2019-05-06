@@ -39,6 +39,7 @@ private:
 		ID3D11DeviceContext* getContext()const {
 			ID3D11DeviceContext* c;
 			mDevice->GetImmediateContext(&c);
+			c->Release();
 			return c;
 		}
 	private:

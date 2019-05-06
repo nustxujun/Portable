@@ -71,7 +71,7 @@ void initRenderer(HWND win)
 	sm = decltype(sm)(new ShadowMap(renderer, scene,quad));
 
 	Parameters params;
-	params["file"] = "sponzanoflag/sponzanoflag.x";
+	params["file"] = "tiny.x";
 	auto model = scene->createModel("test", params);
 	model->attach(scene->getRoot());
 	model->getNode()->setPosition(0.0f, 0.f, 0.0f);

@@ -71,7 +71,6 @@ void Renderer::init(HWND win, int width, int height)
 	checkResult( mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backbuffer) );
 
 	checkResult(mDevice->CreateRenderTargetView(backbuffer, NULL, &bbv));
-
 	auto shared = std::shared_ptr<RenderTarget>(new RenderTarget(mDevice, backbuffer, bbv, nullptr));
 	mRenderTargets.insert(shared);
 	mBackbuffer = shared;
@@ -393,6 +392,7 @@ void Renderer::setDefaultDepthStencilState()
 void Renderer::uninit()
 {
 	mDepthStencils.clear();
+	mBlendStates.clear();
 	mDepthStencilStates.clear();
 	mRasterizers.clear();
 	mFonts.clear();
@@ -667,9 +667,7 @@ void Renderer::Buffer::blit(const void * data, size_t size)
 	}
 	else
 	{
-		ID3D11DeviceContext* context;
-		getDevice()->GetImmediateContext(&context);
-		context->UpdateSubresource(mBuffer, 0, NULL, data, 0, 0);
+		getContext()->UpdateSubresource(mBuffer, 0, NULL, data, 0, 0);
 	}
 }
 
@@ -844,6 +842,7 @@ Renderer::Rasterizer::Rasterizer(ID3D11Device * d, const D3D11_RASTERIZER_DESC &
 
 Renderer::Rasterizer::~Rasterizer()
 {
+	mRasterizer->Release();
 }
 
 Renderer::DepthStencil::DepthStencil(ID3D11Device * d, const D3D11_TEXTURE2D_DESC & desc):D3DObject(d)
