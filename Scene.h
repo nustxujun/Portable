@@ -72,6 +72,10 @@ public:
 		void detach() { if (!mNode->mParent) return; mNode->mParent->removeChild(mNode); }
 
 		Node::Ptr getNode()const { return mNode; }
+
+		Vector3 getDirection();
+		void setDirection(const Vector3& dir);
+
 	private:
 		Node::Ptr mNode;
 	};
@@ -86,6 +90,7 @@ public:
 		Mesh::Ptr getMesh() { return mMesh; };
 		virtual void visitRenderable(std::function<void(const Renderable&)>) override;
 		virtual std::pair<Vector3, Vector3> getWorldAABB()const;
+
 
 	private:
 		Mesh::Ptr mMesh;
@@ -119,9 +124,6 @@ public:
 		const Matrix & getProjectionMatrix();
 		const D3D11_VIEWPORT& getViewport()const { return mViewport; }
 
-		Vector3 getDirection();
-		void setDirection(const Vector3& dir);
-
 		void visitVisibleObject(std::function<void(Entity::Ptr)> visit);
 	private:
 		D3D11_VIEWPORT mViewport;
@@ -133,13 +135,26 @@ public:
 		bool mDirty;
 		Scene* mScene;
 	};
+
+	class Light : public Entity
+	{
+	public:
+		using Ptr = std::shared_ptr<Light>;
+	public:
+		Light();
+		~Light();
+
+		void visitRenderable(std::function<void(const Renderable&)>)override {};
+		std::pair<Vector3, Vector3> getWorldAABB()const override { return std::pair<Vector3, Vector3>(); };
+
+	};
 public:
 	Scene(Renderer::Ptr renderer);
 	~Scene();
 
 	Model::Ptr createModel(const std::string& name, const Parameters& params);
 	Camera::Ptr createOrGetCamera(const std::string& name);
-
+	Light::Ptr createOrGetLight(const std::string& name);
 	void visitRenderables(std::function<void(const Renderable&)> callback);
 
 	Node::Ptr getRoot() { return mRoot; }
@@ -150,4 +165,6 @@ private:
 	Node::Ptr mRoot;
 
 	std::unordered_map<std::string, Camera::Ptr> mCameras;
+	std::unordered_map<std::string, Light::Ptr> mLights;
+
 };

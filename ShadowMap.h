@@ -20,8 +20,6 @@ private:
 	Renderer::RenderTarget::Ptr mLightMap;
 	Scene::Ptr mScene;
 	Renderer::Ptr mRenderer;
-	Vector3 mLightPos;
-	Vector3 mLightDir;
 	Scene::Camera::Ptr mLightCamera;
 
 	int mShadowMapSize = 2048;

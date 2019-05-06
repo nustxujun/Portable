@@ -322,7 +322,7 @@ void Renderer::setIndexBuffer(Buffer::Ptr b, DXGI_FORMAT format, int offset)
 	mContext->IASetIndexBuffer(*ptr, format, offset);
 }
 
-void Renderer::setVertexBuffer(Buffer::Ptr b, size_t stride, size_t offset)
+void Renderer::setVertexBuffer(Buffer::Ptr b, UINT stride, UINT offset)
 {
 	auto ptr = b.lock();
 	if (ptr == nullptr) return;
@@ -331,7 +331,7 @@ void Renderer::setVertexBuffer(Buffer::Ptr b, size_t stride, size_t offset)
 	mContext->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
 }
 
-void Renderer::setVertexBuffers( std::vector<Buffer::Ptr>& b, const size_t * stride, const size_t * offset)
+void Renderer::setVertexBuffers( std::vector<Buffer::Ptr>& b, const UINT * stride, const UINT * offset)
 {
 	std::vector<ID3D11Buffer*> list;
 	list.reserve(b.size());

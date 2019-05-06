@@ -40,7 +40,7 @@ Mesh::Mesh(const Parameters& params, Renderer::Ptr r)
 		auto ib = r->createBuffer(mesh.indices.size() * sizeof(int), D3D11_BIND_INDEX_BUFFER, &InitQuadData);
 
 		std::vector<D3D11_INPUT_ELEMENT_DESC> desc;
-		size_t offset = 0;
+		UINT offset = 0;
 		for (auto& e : mesh.layout)
 		{
 			D3D11_INPUT_ELEMENT_DESC d = {0};

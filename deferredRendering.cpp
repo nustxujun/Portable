@@ -71,21 +71,21 @@ void initRenderer(HWND win)
 	sm = decltype(sm)(new ShadowMap(renderer, scene,quad));
 
 	Parameters params;
-	params["file"] = "tiny.x";
+	params["file"] = "lost-empire/lost_empire.obj";
 	auto model = scene->createModel("test", params);
 	model->attach(scene->getRoot());
 	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
 
 	auto cam = scene->createOrGetCamera("main");
-	DirectX::XMFLOAT3 eye(0, 2000, -2000);
+	DirectX::XMFLOAT3 eye(0, 0, -1);
 	DirectX::XMFLOAT3 at(0, 0, 0);
 	cam->lookat(eye, at);
-	//cam->getNode()->setPosition(495.279724f, -374.990845f, 231.994125f);
-	//cam->setDirection(Vector3( 0,0,1 ));
 	cam->setViewport(0, 0, rect.right, rect.bottom);
 	cam->setNearFar(1, 10000);
 	cam->setFOVy(0.785398185);
-	//cam->setProjectType(Scene::Camera::PT_ORTHOGRAPHIC);
+
+	auto light = scene->createOrGetLight("main");
+	light->setDirection({ 0,-1,0 });
 
 	input->listen([cam](const Input::Mouse& m, const Input::Keyboard& k) {
 		static auto lasttime = GetTickCount();
@@ -146,14 +146,13 @@ void framemove()
 
 
 	input->update();
-	//auto cam = scene->createOrGetCamera("main");
-	//float len = 300;
-	//auto time = GetTickCount() * 0.0005f;
-	//auto x = cos(time) * len;
-	//auto z = sin(time) * len;
-	//auto y = sin(time) * len;
-	//
-	//cam->lookat(DirectX::XMFLOAT3(x,y,z), DirectX::XMFLOAT3(0,0,0));
+	auto light = scene->createOrGetLight("main");
+	float len = 300;
+	auto t = GetTickCount() * 0.0005f;
+	auto x = cos(t) * len;
+	auto y = sin(t) * len;
+	
+	light->setDirection({0,y,x });
 	deferred->render();
 
 	static auto time = GetTickCount();
@@ -172,7 +171,7 @@ void framemove()
 	}
 
 
-	sm->render();
+	//sm->render();
 
 	auto bb = renderer->getBackbuffer();
 	renderer->setRenderTarget(bb);

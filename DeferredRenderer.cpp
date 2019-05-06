@@ -147,9 +147,9 @@ void DeferredRenderer::renderLightingMap()
 {
 	using namespace DirectX;
 	auto cam = mScene->createOrGetCamera("main");
-
+	auto light = mScene->createOrGetLight("main");
 	LightningConstantBuffer lightningConstantBuffer;
-	lightningConstantBuffer.mLightDirection = { 0.0f, -1.0f, 1.0f, 0.0f };
+	lightningConstantBuffer.mLightDirection = light->getDirection();
 	lightningConstantBuffer.mLightDirection.Normalize();
 	lightningConstantBuffer.mColor = XMFLOAT4A(0.99f, 1.0f, 1.0f, 1.0f);
 	//XMFLOAT4 position;

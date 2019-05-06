@@ -41,6 +41,20 @@ Scene::Camera::Ptr Scene::createOrGetCamera(const std::string & name)
 	return c;
 }
 
+Scene::Light::Ptr Scene::createOrGetLight(const std::string & name)
+{
+	auto ret = mLights.find(name);
+	if (ret != mLights.end())
+		return ret->second;
+
+	Light::Ptr c(new Light());
+	Node::Ptr node(new Node());
+	node->mEntity = c;
+	c->mNode = node;
+	mLights.emplace(name, c);
+	return c;
+}
+
 void Scene::visitRenderables(std::function<void(const Renderable&)> callback)
 {
 	std::vector<Renderable> rends;
@@ -86,6 +100,42 @@ Scene::Entity::~Entity()
 {
 }
 
+Vector3 Scene::Entity::getDirection()
+{
+	Vector3 dir(0, 0, 1);
+	auto node = getNode();
+	const auto& rot = node->getOrientation();
+	Vector3::Transform(dir, rot, dir);
+	dir.Normalize();
+	return dir;
+}
+
+void Scene::Entity::setDirection(const Vector3 & dir)
+{
+	using namespace DirectX;
+
+	Vector3 d = dir;
+	d.Normalize();
+	Vector3 up(0, 1, 0);
+
+	Vector3 x = up.Cross(d);
+	x.Normalize();
+	Vector3 y = d.Cross(x);
+	y.Normalize();
+
+	Matrix  mat = MathUtilities::makeMatrixFromAxis(x, y, d);
+
+	mNode->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
+
+	Vector3 t(0, 0, 1);
+	t = Vector3::Transform(t, mNode->getOrientation());
+}
+
+void Scene::Camera::visitVisibleObject(std::function<void(Entity::Ptr)> visit)
+{
+	for (auto& e : mScene->mModels)
+		visit(e.second);
+}
 
 
 void Scene::Node::dirty(size_t s)
@@ -255,40 +305,12 @@ const Matrix & Scene::Camera::getProjectionMatrix()
 	return mProjection;
 }
 
-Vector3 Scene::Camera::getDirection()
+
+Scene::Light::Light()
 {
-	Vector3 dir(0,0,1);
-	auto node = getNode();
-	const auto& rot = node->getOrientation();
-	Vector3::Transform(dir, rot, dir);
-	dir.Normalize();
-	return dir;
 }
 
-void Scene::Camera::setDirection(const Vector3 & dir)
+Scene::Light::~Light()
 {
-	using namespace DirectX;
-
-	Vector3 d = dir;
-	d.Normalize();
-	Vector3 up(0, 1, 0);
-
-	Vector3 x = up.Cross(d);
-	x.Normalize();
-	Vector3 y = d.Cross(x);
-	y.Normalize();
-
-	Matrix  mat = MathUtilities::makeMatrixFromAxis(x, y, d);
-
-	mNode->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
-
-	Vector3 t(0, 0, 1);
-	t = Vector3::Transform(t, mNode->getOrientation());
-}
-
-void Scene::Camera::visitVisibleObject(std::function<void(Entity::Ptr)> visit)
-{
-	for (auto& e : mScene->mModels)
-		visit(e.second);
 }
 

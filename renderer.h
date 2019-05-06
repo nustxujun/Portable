@@ -294,8 +294,8 @@ public:
 	void setLayout(ID3D11InputLayout* layout);
 	void setPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY pri);
 	void setIndexBuffer(Buffer::Ptr b, DXGI_FORMAT format, int offset);
-	void setVertexBuffer(Buffer::Ptr b, size_t stride, size_t offset);
-	void setVertexBuffers( std::vector<Buffer::Ptr>& b, const size_t* stride, const size_t* offset);
+	void setVertexBuffer(Buffer::Ptr b, UINT stride, UINT offset);
+	void setVertexBuffers( std::vector<Buffer::Ptr>& b, const UINT* stride, const UINT* offset);
 	void setViewport(const D3D11_VIEWPORT& vp);
 	void setDepthStencilState(const D3D11_DEPTH_STENCIL_DESC& desc);
 	void setBlendState(const D3D11_BLEND_DESC& desc, const std::array<float, 4>& factor = { 1,1,1,1 }, size_t mask = 0xffffffff);

@@ -4,8 +4,6 @@
 ShadowMap::ShadowMap(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q):mScene(s), mRenderer(r), mQuad(q)
 {
 	mShadowMapSize = 4096;
-	mLightDir = { 0,-1,0.1};
-	mLightDir.Normalize();
 
 	mLightCamera = mScene->createOrGetCamera("light");
 	mLightCamera->setProjectType(Scene::Camera::PT_ORTHOGRAPHIC);
@@ -47,18 +45,21 @@ ShadowMap::~ShadowMap()
 
 void ShadowMap::fitToScene()
 {
+	auto light = mScene->createOrGetLight("main");
+	auto dir = light->getDirection();
+
 	Vector3 min = { FLT_MAX, FLT_MAX ,FLT_MAX };
 	Vector3 max = { FLT_MIN, FLT_MIN, FLT_MIN };
 
 	Vector3 up(0, 1, 0);
-	if (fabs(up.Dot(mLightDir)) >= 1.0f)
+	if (fabs(up.Dot(dir)) >= 1.0f)
 		up = { 0 ,0, 1 };
-	Vector3 x = up.Cross(mLightDir);
+	Vector3 x = up.Cross(dir);
 	x.Normalize();
-	Vector3 y = mLightDir.Cross(x);
+	Vector3 y = dir.Cross(x);
 	y.Normalize();
 
-	auto lightspace = MathUtilities::makeMatrixFromAxis(x, y, mLightDir);
+	auto lightspace = MathUtilities::makeMatrixFromAxis(x, y, dir);
 	auto inv = lightspace.Invert();
 
 	auto cam = mScene->createOrGetCamera("main");
@@ -88,13 +89,14 @@ void ShadowMap::fitToScene()
 
 	});
 
-	mLightPos.x = (min.x + max.x) * 0.5f;
-	mLightPos.y = (min.y + max.y) * 0.5f;
-	mLightPos.z = min.z ;
-	mLightPos = Vector3::Transform(mLightPos, lightspace);
+	Vector3 pos;
+	pos.x = (min.x + max.x) * 0.5f;
+	pos.y = (min.y + max.y) * 0.5f;
+	pos.z = min.z ;
+	pos = Vector3::Transform(pos, lightspace);
 
-	mLightCamera->getNode()->setPosition(mLightPos);
-	mLightCamera->setDirection(mLightDir);
+	mLightCamera->getNode()->setPosition(pos);
+	mLightCamera->setDirection(dir);
 	mLightCamera->setNearFar(1, max.z - min.z);
 	mLightCamera->setViewport(0, 0, max.x - min.x, max.y - min.y);
 }

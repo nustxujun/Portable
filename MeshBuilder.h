@@ -33,4 +33,8 @@ public:
 	};
 public:
 	static Data build(const std::string& filename);
+
+private:
+	static Data buildByAssimp(const std::string& filename);
+	static Data buildByTinyobj(const std::string& filename);
 };
