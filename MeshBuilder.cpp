@@ -174,7 +174,7 @@ MeshBuilder::Data MeshBuilder::buildByTinyobj(const std::string & filename)
 	std::string warn;
 	std::string err;
 
-	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename.c_str(), totalpath.c_str()))
+	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename.c_str(), totalpath.c_str(),true))
 	{
 		MessageBoxA(NULL, err.c_str(), NULL,NULL);
 		abort();
@@ -190,7 +190,8 @@ MeshBuilder::Data MeshBuilder::buildByTinyobj(const std::string & filename)
 	for (auto& i : materials)
 	{
 		Data::Material m;
-		m.texture_diffuses.push_back(totalpath  + i.diffuse_texname);
+		if (i.diffuse_texname.size() > 0)
+			m.texture_diffuses.push_back(totalpath  + i.diffuse_texname);
 		ret.materials.push_back(m);
 	}
 
@@ -251,12 +252,13 @@ MeshBuilder::Data MeshBuilder::buildByTinyobj(const std::string & filename)
 				copy(data, pos, 12);
 				if (idx.normal_index != 0xffffffff)
 					copy(data, normals + (3 * idx.normal_index), 12);
-				else
-					abort();
 				if (idx.texcoord_index != 0xffffffff)
-					copy(data, texcoords + (2 * idx.texcoord_index), 8);
-				else
-					abort();
+				{
+					float coord[2];
+					memcpy(coord, texcoords + (2 * idx.texcoord_index), 8);
+					coord[1] = 1 - coord[1];
+					copy(data, coord, 8);
+				}
 			}
 			index_offset += fv;
 
