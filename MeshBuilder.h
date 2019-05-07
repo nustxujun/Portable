@@ -16,7 +16,7 @@ public:
 	{
 		struct Mesh {
 			std::vector<VertexFormat> layout;
-			std::vector<size_t> indices;
+			std::vector<unsigned int> indices;
 			std::vector<char> vertices;
 			size_t numVertex;
 			size_t materialIndex;

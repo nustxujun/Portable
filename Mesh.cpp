@@ -62,7 +62,7 @@ Mesh::Mesh(const Parameters& params, Renderer::Ptr r)
 		DirectX::SimpleMath::Matrix trans = (DirectX::XMFLOAT4X4)(mesh.tranfromation);
 		trans.Transpose(trans);
 
-		mMeshs.push_back({ vb, ib, mesh.numVertex, mesh.indices.size(), materials[mesh.materialIndex] , layout , trans });
+		mMeshs.push_back({ vb, ib, mesh.numVertex, mesh.indices.size(),mesh.materialIndex == -1? Material::Ptr(): materials[mesh.materialIndex] , layout , trans });
 	}
 
 

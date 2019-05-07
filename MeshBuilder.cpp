@@ -180,6 +180,7 @@ MeshBuilder::Data MeshBuilder::buildByTinyobj(const std::string & filename)
 		abort();
 	}
 	Data ret;
+	ret.aabb = { FLT_MAX,FLT_MAX,FLT_MAX,FLT_MIN, FLT_MIN,FLT_MIN };
 
 	const auto* vertices = attrib.vertices.data();
 	const auto* normals = attrib.normals.data();
@@ -189,7 +190,7 @@ MeshBuilder::Data MeshBuilder::buildByTinyobj(const std::string & filename)
 	for (auto& i : materials)
 	{
 		Data::Material m;
-		m.texture_diffuses.push_back(i.diffuse_texname);
+		m.texture_diffuses.push_back(totalpath  + i.diffuse_texname);
 		ret.materials.push_back(m);
 	}
 
@@ -198,6 +199,14 @@ MeshBuilder::Data MeshBuilder::buildByTinyobj(const std::string & filename)
 		// Loop over faces(polygon)
 		size_t index_offset = 0;
 		Data::Mesh mesh;
+		memset(mesh.tranfromation, 0, sizeof(mesh.tranfromation));
+		mesh.tranfromation[0] = 1;
+		mesh.tranfromation[5] = 1;
+		mesh.tranfromation[10] = 1;
+		mesh.tranfromation[15] = 1;
+
+
+
 		auto copy = [](char*& buffer, const void* src, int size) {
 			memcpy(buffer, src, size);
 			buffer += size;
@@ -219,23 +228,35 @@ MeshBuilder::Data MeshBuilder::buildByTinyobj(const std::string & filename)
 		mesh.vertices.resize(mesh.numVertex * stride);
 		mesh.materialIndex = shapes[s].mesh.material_ids[0];
 		char* data = mesh.vertices.data();
-		for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
+		for (unsigned int f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
 			int fv = shapes[s].mesh.num_face_vertices[f];
 			if (fv != 3)
 				abort();
 			// Loop over vertices in the face.
-			for (size_t v = 0; v < fv; v++) {
+			for (unsigned int v = 0; v < fv; v++) {
 				// access to vertex
 				tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
-				mesh.indices.push_back(idx.vertex_index);
+				mesh.indices.push_back(f * 3 + v);
 
-				char* head = data + (3 * idx.vertex_index + v) * stride;
-				copy(head, vertices + (3 * idx.vertex_index + v), 12);
+				const float* pos = vertices + (3 * idx.vertex_index);
+
+				ret.aabb[0] = std::min(ret.aabb[0], pos[0]);
+				ret.aabb[1] = std::min(ret.aabb[1], pos[1]);
+				ret.aabb[2] = std::min(ret.aabb[2], pos[2]);
+
+				ret.aabb[3] = std::max(ret.aabb[3], pos[0]);
+				ret.aabb[4] = std::max(ret.aabb[4], pos[1]);
+				ret.aabb[5] = std::max(ret.aabb[5], pos[2]);
+				
+				copy(data, pos, 12);
 				if (idx.normal_index != 0xffffffff)
-					copy(head, normals + (3 * idx.normal_index + v), 12);
+					copy(data, normals + (3 * idx.normal_index), 12);
+				else
+					abort();
 				if (idx.texcoord_index != 0xffffffff)
-					copy(head, texcoords + (2 * idx.normal_index + v), 8);
-
+					copy(data, texcoords + (2 * idx.texcoord_index), 8);
+				else
+					abort();
 			}
 			index_offset += fv;
 
@@ -243,9 +264,9 @@ MeshBuilder::Data MeshBuilder::buildByTinyobj(const std::string & filename)
 			shapes[s].mesh.material_ids[f];
 		}
 
-		ret.meshs.push_back(mesh);
+		ret.meshs.push_back((mesh));
 	}
 
 
-	return Data();
+	return ret;
 }
