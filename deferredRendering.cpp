@@ -71,7 +71,7 @@ void initRenderer(HWND win)
 	sm = decltype(sm)(new ShadowMap(renderer, scene,quad));
 
 	Parameters params;
-	params["file"] = "sponza/sponza.obj";
+	params["file"] = "media/cup/cup.obj";
 	auto model = scene->createModel("test", params);
 	model->attach(scene->getRoot());
 	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
@@ -90,7 +90,7 @@ void initRenderer(HWND win)
 	float com_step= std::min(std::min(vec.x, vec.y), vec.z) * 0.001;
 
 	auto light = scene->createOrGetLight("main");
-	light->setDirection({ 0,-1,0.1 });
+	light->setDirection({ 0,-1,1 });
 
 	input->listen([cam, com_step](const Input::Mouse& m, const Input::Keyboard& k) {
 		static auto lasttime = GetTickCount();
@@ -148,7 +148,8 @@ void initRenderer(HWND win)
 
 void framemove()
 {
-
+	auto bb = renderer->getBackbuffer();
+	bb.lock()->clear({ 0,0,0,0 });
 
 	input->update();
 	auto light = scene->createOrGetLight("main");
@@ -157,7 +158,7 @@ void framemove()
 	auto x = cos(t) * len;
 	auto y = sin(t) * len;
 	
-	//light->setDirection({0,y,x });
+	light->setDirection({0,y,x });
 	deferred->render();
 
 	static auto time = GetTickCount();
@@ -176,9 +177,8 @@ void framemove()
 	}
 
 
-	sm->render();
+	//sm->render();
 
-	auto bb = renderer->getBackbuffer();
 	renderer->setRenderTarget(bb);
 	auto font = renderer->createOrGetFont(L"myfile.spritefont");
 	font.lock()->drawText(show.c_str(), Vector2(10, 10));

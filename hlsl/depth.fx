@@ -51,14 +51,14 @@ PixelShaderOutput ps(VertexShaderOutput input) : SV_TARGET
 {
 	PixelShaderOutput output;
 	float depth = input.Depth.x / input.Depth.y;
-	if (depth < 0.25)
+	//if (depth < 0.25)
 		output.depth1 = depth;
-	else if (depth < 0.5)
-		output.depth2 = depth;
-	else if (depth < 0.75)
-		output.depth3 = depth;
-	else
-		output.depth4 = depth;
+	//else if (depth < 0.5)
+	//	output.depth2 = depth;
+	//else if (depth < 0.75)
+	//	output.depth3 = depth;
+	//else
+	//	output.depth4 = depth;
 	return output;
 }
 

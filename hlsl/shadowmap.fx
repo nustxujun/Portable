@@ -70,8 +70,8 @@ float4 ps(PS_INPUT input) : SV_TARGET
 
 	pos.x = (pos.x + 1) * 0.5;
 	pos.y =  ( 1 - pos.y ) * 0.5;
-	float depth = max( lightmap1.Sample(sampLinear, pos.xy).r,  max(lightmap2.Sample(sampLinear, pos.xy).r, max( lightmap3.Sample(sampLinear, pos.xy).r, lightmap4.Sample(sampLinear, pos.xy).r)));
-
+	//float depth = max( lightmap1.Sample(sampLinear, pos.xy).r,  max(lightmap2.Sample(sampLinear, pos.xy).r, max( lightmap3.Sample(sampLinear, pos.xy).r, lightmap4.Sample(sampLinear, pos.xy).r)));
+	float depth = lightmap1.Sample(sampLinear, pos.xy).r;
 	//return float4( 1 - depth, 1 - depth, 1 - depth, 1);
 	//return float4( 1 - pos.z,  1- pos.z,1- pos.z, 1);
 

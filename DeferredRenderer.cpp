@@ -27,7 +27,7 @@ DeferredRenderer::DeferredRenderer(Renderer::Ptr r, Scene::Ptr s):mRenderer(r),m
 
 
 
-	blob = r->compileFile("lighting.hlsl", "main", "ps_5_0");
+	blob = r->compileFile("hlsl/pbr.hlsl", "main", "ps_5_0");
 
 	mLightingPS = r->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
 	mLightingMap = r->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
