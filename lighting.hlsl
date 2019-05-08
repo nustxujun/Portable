@@ -51,7 +51,7 @@ float4 main(PS_INPUT input) : SV_TARGET
 	 float3 lightVector = -normalize(LightDirection.xyz);
 	 //float3 lightVector = -normalize(float3(0.5f, -0.3f, 0.0f));
 	 // Compute diffuse light.
-	 float NdL = max(0, dot(normal, lightVector));
+	 float NdL = max(0.3, dot(normal, lightVector));
 	 float3 diffuseLight = NdL * Color.rgb;
 
 	 // Reflection vector.

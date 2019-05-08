@@ -40,13 +40,25 @@ VertexShaderOutput vs(VertexShaderInput input)
 
 struct PixelShaderOutput
 {
-	float4 Depth: COLOR0;
+	float4 depth1: COLOR0;
+	float4 depth2: COLOR1;
+	float4 depth3: COLOR2;
+	float4 depth4: COLOR3;
+
 };
 
 PixelShaderOutput ps(VertexShaderOutput input) : SV_TARGET
 {
 	PixelShaderOutput output;
-	output.Depth = input.Depth.x / input.Depth.y;
+	float depth = input.Depth.x / input.Depth.y;
+	if (depth < 0.25)
+		output.depth1 = depth;
+	else if (depth < 0.5)
+		output.depth2 = depth;
+	else if (depth < 0.75)
+		output.depth3 = depth;
+	else
+		output.depth4 = depth;
 	return output;
 }
 

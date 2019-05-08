@@ -17,7 +17,7 @@ private:
 	void renderShadow();
 private:
 	Renderer::RenderTarget::Ptr mFinalTarget;
-	Renderer::RenderTarget::Ptr mLightMap;
+	std::vector<Renderer::RenderTarget::Ptr > mLightMaps;
 	Scene::Ptr mScene;
 	Renderer::Ptr mRenderer;
 	Scene::Camera::Ptr mLightCamera;

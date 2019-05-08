@@ -85,7 +85,8 @@ void DeferredRenderer::render()
 	renderLightingMap();
 	renderFinal();
 
-	mQuad->setRenderTarget(mRenderer->getBackbuffer());
+	auto backbuffer = mRenderer->getBackbuffer();
+	mQuad->setRenderTarget(backbuffer);
 	mQuad->setSamplers({ mSampleLinear});
 	mQuad->drawTexture(mFinalTarget);
 }

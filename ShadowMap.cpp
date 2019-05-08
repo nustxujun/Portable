@@ -3,7 +3,7 @@
 
 ShadowMap::ShadowMap(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q):mScene(s), mRenderer(r), mQuad(q)
 {
-	mShadowMapSize = 4096;
+	mShadowMapSize = 1024;
 
 	mLightCamera = mScene->createOrGetCamera("light");
 	mLightCamera->setProjectType(Scene::Camera::PT_ORTHOGRAPHIC);
@@ -16,7 +16,10 @@ ShadowMap::ShadowMap(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q):mScene(s), mRen
 
 	size_t w = mRenderer->getWidth(); 
 	size_t h = mRenderer->getHeight();
-	mLightMap = mRenderer->createRenderTarget(mShadowMapSize, mShadowMapSize, DXGI_FORMAT_R32_FLOAT);
+
+	mLightMaps.resize(4);
+	for (int i = 0; i< mLightMaps.size(); ++i)
+		mLightMaps[i] = mRenderer->createRenderTarget(mShadowMapSize, mShadowMapSize, DXGI_FORMAT_R32_FLOAT);
 	mDepthStencil = r->createDepthStencil(mShadowMapSize, mShadowMapSize, DXGI_FORMAT_D32_FLOAT);
 
 	mFinalTarget = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
@@ -123,9 +126,10 @@ void ShadowMap::renderToLightMap()
 	view->SetMatrix((const float*)&mLightCamera->getViewMatrix());
 	proj->SetMatrix((const float*)&mLightCamera->getProjectionMatrix());
 
-	mLightMap.lock()->clear({ 0,0,0,0 });
+	for (auto& l : mLightMaps)
+		l.lock()->clear({ 0,0,0,0 });
 	mDepthStencil.lock()->clearDepth(1.0f);
-	mRenderer->setRenderTarget(mLightMap, mDepthStencil);
+	mRenderer->setRenderTargets(mLightMaps, mDepthStencil);
 	mRenderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	mRenderer->setDefaultBlendState();
 	mRenderer->setDefaultDepthStencilState();
@@ -186,7 +190,7 @@ void ShadowMap::renderShadow()
 
 		e->render(mRenderer, [world, this, &r](ID3DX11EffectPass* pass)
 		{
-			mRenderer->setTexture(mLightMap);
+			mRenderer->setTextures(mLightMaps);
 			mRenderer->setLayout(mDepthLayout.lock()->bind(pass));
 			mRenderer->getContext()->DrawIndexed(r.numIndices, 0, 0);
 		});

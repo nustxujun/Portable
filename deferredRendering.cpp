@@ -71,27 +71,32 @@ void initRenderer(HWND win)
 	sm = decltype(sm)(new ShadowMap(renderer, scene,quad));
 
 	Parameters params;
-	params["file"] = "lost-empire/lost_empire.obj";
+	params["file"] = "sponza/sponza.obj";
 	auto model = scene->createModel("test", params);
 	model->attach(scene->getRoot());
 	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+	auto aabb = model->getWorldAABB();
+
 
 	auto cam = scene->createOrGetCamera("main");
-	DirectX::XMFLOAT3 eye(0, 0, -1);
-	DirectX::XMFLOAT3 at(0, 0, 0);
+	DirectX::XMFLOAT3 eye(aabb.second);
+	DirectX::XMFLOAT3 at(aabb.first);
 	cam->lookat(eye, at);
 	cam->setViewport(0, 0, rect.right, rect.bottom);
 	cam->setNearFar(1, 10000);
 	cam->setFOVy(0.785398185);
 
-	auto light = scene->createOrGetLight("main");
-	light->setDirection({ 0,-1,0 });
+	Vector3 vec = aabb.second - aabb.first;
+	float com_step= std::min(std::min(vec.x, vec.y), vec.z) * 0.001;
 
-	input->listen([cam](const Input::Mouse& m, const Input::Keyboard& k) {
+	auto light = scene->createOrGetLight("main");
+	light->setDirection({ 0,-1,0.1 });
+
+	input->listen([cam, com_step](const Input::Mouse& m, const Input::Keyboard& k) {
 		static auto lasttime = GetTickCount();
 		auto dtime = GetTickCount() - lasttime;
 		lasttime = GetTickCount();
-		float step = dtime * 1.0f;
+		float step = dtime * com_step;
 		
 		auto node = cam->getNode();
 		auto pos = node->getPosition();
@@ -152,7 +157,7 @@ void framemove()
 	auto x = cos(t) * len;
 	auto y = sin(t) * len;
 	
-	light->setDirection({0,y,x });
+	//light->setDirection({0,y,x });
 	deferred->render();
 
 	static auto time = GetTickCount();
@@ -171,7 +176,7 @@ void framemove()
 	}
 
 
-	//sm->render();
+	sm->render();
 
 	auto bb = renderer->getBackbuffer();
 	renderer->setRenderTarget(bb);
