@@ -242,11 +242,14 @@ public:
 		~DepthStencil();
 
 		operator ID3D11DepthStencilView* () const { return mDSView; }
+		ID3D11ShaderResourceView* getShadowResourceView()const;
 		void clearDepth(float d);
 		void clearStencil(int s);
 	private:
 		ID3D11Texture2D* mTexture;
 		ID3D11DepthStencilView* mDSView;
+		ID3D11ShaderResourceView* mSRView;
+		D3D11_TEXTURE2D_DESC mDesc;
 	};
 
 
@@ -314,7 +317,7 @@ public:
 	Layout::Ptr createLayout(const D3D11_INPUT_ELEMENT_DESC* descarray, size_t count);
 	Font::Ptr createOrGetFont(const std::wstring& font);
 	Rasterizer::Ptr createOrGetRasterizer(const std::string & name, D3D11_CULL_MODE cull = D3D11_CULL_BACK, D3D11_FILL_MODE fill = D3D11_FILL_SOLID, bool multisample = false);
-	DepthStencil::Ptr createDepthStencil(int width, int height, DXGI_FORMAT format);
+	DepthStencil::Ptr createDepthStencil(int width, int height, DXGI_FORMAT format, bool access = false);
  private:
 	static void checkResult(HRESULT hr);
 

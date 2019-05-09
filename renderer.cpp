@@ -560,7 +560,7 @@ Renderer::Rasterizer::Ptr Renderer::createOrGetRasterizer(const std::string & na
 	return Rasterizer::Ptr(shared);
 }
 
-Renderer::DepthStencil::Ptr Renderer::createDepthStencil(int width, int height, DXGI_FORMAT format)
+Renderer::DepthStencil::Ptr Renderer::createDepthStencil(int width, int height, DXGI_FORMAT format, bool access)
 {
 	D3D11_TEXTURE2D_DESC descDepth;
 	ZeroMemory(&descDepth, sizeof(descDepth));
@@ -572,7 +572,7 @@ Renderer::DepthStencil::Ptr Renderer::createDepthStencil(int width, int height, 
 	descDepth.SampleDesc.Count = 1;
 	descDepth.SampleDesc.Quality = 0;
 	descDepth.Usage = D3D11_USAGE_DEFAULT;
-	descDepth.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	descDepth.BindFlags = D3D11_BIND_DEPTH_STENCIL | (access ? D3D11_BIND_SHADER_RESOURCE : 0);
 	descDepth.CPUAccessFlags = 0;
 	descDepth.MiscFlags = 0;
 
@@ -847,6 +847,7 @@ Renderer::Rasterizer::~Rasterizer()
 
 Renderer::DepthStencil::DepthStencil(ID3D11Device * d, const D3D11_TEXTURE2D_DESC & desc):D3DObject(d)
 {
+	mDesc = desc;
 	checkResult(d->CreateTexture2D(&desc, NULL, &mTexture));
 	
 	D3D11_DEPTH_STENCIL_VIEW_DESC descDSV;
@@ -855,6 +856,19 @@ Renderer::DepthStencil::DepthStencil(ID3D11Device * d, const D3D11_TEXTURE2D_DES
 	descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 	descDSV.Texture2D.MipSlice = 0;
 	checkResult(d->CreateDepthStencilView(mTexture, &descDSV, &mDSView));
+
+	if (desc.BindFlags & D3D11_BIND_SHADER_RESOURCE != 0)
+	{
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvd;
+		srvd.Format = desc.Format;
+		srvd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srvd.Texture2D.MostDetailedMip = 0;
+		srvd.Texture2D.MipLevels = 1;
+
+		checkResult(d->CreateShaderResourceView(mTexture, &srvd, &mSRView));
+	}
+	else
+		mSRView = nullptr;
 }
 
 Renderer::DepthStencil::~DepthStencil()
@@ -862,6 +876,12 @@ Renderer::DepthStencil::~DepthStencil()
 	mTexture->Release();
 	mDSView->Release();
 }
+
+ID3D11ShaderResourceView* Renderer::DepthStencil::getShadowResourceView()const
+{
+	return mSRView;
+}
+
 
 void Renderer::DepthStencil::clearDepth(float d)
 {

@@ -1,12 +1,10 @@
 #include "DeferredRenderer.h"
 
 
-DeferredRenderer::DeferredRenderer(Renderer::Ptr r, Scene::Ptr s):mRenderer(r),mScene(s)
+DeferredRenderer::DeferredRenderer(Renderer::Ptr r, Scene::Ptr s):Pipeline::Stage(r,s)
 {
-	mQuad = decltype(mQuad)(new Quad(r));
-
-	auto blob = mRenderer->compileFile("gbuffer.fx", "", "fx_5_0");
-	mSceneFX = mRenderer->createEffect((**blob).GetBufferPointer(), (**blob).GetBufferSize());
+	auto blob = getRenderer()->compileFile("gbuffer.fx", "", "fx_5_0");
+	mSceneFX = getRenderer()->createEffect((**blob).GetBufferPointer(), (**blob).GetBufferSize());
 
 	D3D11_INPUT_ELEMENT_DESC modelLayout[] =
 	{
@@ -17,13 +15,13 @@ DeferredRenderer::DeferredRenderer(Renderer::Ptr r, Scene::Ptr s):mRenderer(r),m
 		//{"TANGENT", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 44, D3D11_INPUT_PER_VERTEX_DATA, 0},
 	};
 
-	mGBufferLayout = mRenderer->createLayout(modelLayout, ARRAYSIZE(modelLayout));
+	mGBufferLayout = getRenderer()->createLayout(modelLayout, ARRAYSIZE(modelLayout));
 
-	int w = mRenderer->getWidth();
-	int h = mRenderer->getHeight();
-	mDiffuse = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
-	mNormal = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
-	mDepth = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32_FLOAT);
+	int w = getRenderer()->getWidth();
+	int h = getRenderer()->getHeight();
+	mDiffuse = getRenderer()->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
+	mNormal = getRenderer()->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
+	mDepth = getRenderer()->createRenderTarget(w, h, DXGI_FORMAT_R32_FLOAT);
 
 
 
@@ -36,9 +34,9 @@ DeferredRenderer::DeferredRenderer(Renderer::Ptr r, Scene::Ptr s):mRenderer(r),m
 	mSampleLinear = r->createSampler("linear", D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
 	mSamplePoint = r->createSampler("point", D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
 
-	blob = mRenderer->compileFile("final.hlsl", "main", "ps_5_0");
-	mFinalPS = mRenderer->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
-	mFinalTarget = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
+	blob = getRenderer()->compileFile("final.hlsl", "main", "ps_5_0");
+	mFinalPS = getRenderer()->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
+	mFinalTarget = getRenderer()->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
 
 	D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
 	depthStencilDesc.DepthEnable = TRUE;
@@ -76,17 +74,16 @@ DeferredRenderer::DeferredRenderer(Renderer::Ptr r, Scene::Ptr s):mRenderer(r),m
 	mDefaultBlendState = blend;
 }
 
-void DeferredRenderer::render()
+void DeferredRenderer::render(Renderer::RenderTarget::Ptr rt)
 {
 
-	mRenderer->setDefaultBlendState();
+	getRenderer()->setDefaultBlendState();
 
 	renderGbuffer();
 	renderLightingMap();
 	renderFinal();
 
-	auto backbuffer = mRenderer->getBackbuffer();
-	mQuad->setRenderTarget(backbuffer);
+	mQuad->setRenderTarget(rt);
 	mQuad->setSamplers({ mSampleLinear});
 	mQuad->drawTexture(mFinalTarget);
 }
@@ -98,8 +95,8 @@ void DeferredRenderer::renderGbuffer()
 	if (e == nullptr)
 		return;
 
-	//mRenderer->setDepthStencilState(mDepthStencilDesc);
-	mRenderer->setDefaultDepthStencilState();
+	//getRenderer()->setDepthStencilState(mDepthStencilDesc);
+	getRenderer()->setDefaultDepthStencilState();
 
 	XMMATRIX mat;
 	mat = XMMatrixIdentity();
@@ -107,48 +104,48 @@ void DeferredRenderer::renderGbuffer()
 	auto view = e->getVariable("View")->AsMatrix();
 	auto proj = e->getVariable("Projection")->AsMatrix();
 
-	auto cam = mScene->createOrGetCamera("main");
+	auto cam = getScene()->createOrGetCamera("main");
 
-	mRenderer->setViewport(cam->getViewport());
+	getRenderer()->setViewport(cam->getViewport());
 	view->SetMatrix((const float*)&cam->getViewMatrix());
 	proj->SetMatrix((const float*)&cam->getProjectionMatrix());
 
-	mRenderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	getRenderer()->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	std::vector<Renderer::RenderTarget::Ptr> rts = { mDiffuse, mNormal, mDepth };
 	mDiffuse.lock()->clear({0,0,0,0});
 	mNormal.lock()->clear({0,0,0,0});
 	mDepth.lock()->clear({0,0,0,0});
 
-	//mRenderer->clearRenderTargets(rts, { 1,1,1,1 });
+	//getRenderer()->clearRenderTargets(rts, { 1,1,1,1 });
 
-	mRenderer->clearDefaultStencil(1.0f);
-	mRenderer->setRenderTargets(rts);
+	getRenderer()->clearDefaultStencil(1.0f);
+	getRenderer()->setRenderTargets(rts);
 
 
-	mScene->visitRenderables([world, this,e](const Renderable& r)
+	getScene()->visitRenderables([world, this,e](const Renderable& r)
 	{
 		world->SetMatrix((const float*)&r.tranformation);
-		mRenderer->setIndexBuffer(r.indices, DXGI_FORMAT_R32_UINT, 0);
-		mRenderer->setVertexBuffer(r.vertices, r.layout.lock()->getSize(), 0);
+		getRenderer()->setIndexBuffer(r.indices, DXGI_FORMAT_R32_UINT, 0);
+		getRenderer()->setVertexBuffer(r.vertices, r.layout.lock()->getSize(), 0);
 
-		e->render(mRenderer, [world, this,&r](ID3DX11EffectPass* pass)
+		e->render(getRenderer(), [world, this,&r](ID3DX11EffectPass* pass)
 		{
-			mRenderer->setTextures(r.material->mTextures);
-			mRenderer->setLayout(mGBufferLayout.lock()->bind(pass));
-			mRenderer->getContext()->DrawIndexed(r.numIndices, 0, 0);
+			getRenderer()->setTextures(r.material->mTextures);
+			getRenderer()->setLayout(mGBufferLayout.lock()->bind(pass));
+			getRenderer()->getContext()->DrawIndexed(r.numIndices, 0, 0);
 		});
 	});
 
 
 
-	mRenderer->removeRenderTargets();
+	getRenderer()->removeRenderTargets();
 }
 
 void DeferredRenderer::renderLightingMap()
 {
 	using namespace DirectX;
-	auto cam = mScene->createOrGetCamera("main");
-	auto light = mScene->createOrGetLight("main");
+	auto cam = getScene()->createOrGetCamera("main");
+	auto light = getScene()->createOrGetLight("main");
 	LightningConstantBuffer lightningConstantBuffer;
 	lightningConstantBuffer.mLightDirection = light->getDirection();
 	lightningConstantBuffer.mLightDirection.Normalize();
@@ -165,7 +162,7 @@ void DeferredRenderer::renderLightingMap()
 	XMMATRIX mat = XMMatrixInverse(nullptr, view * proj);
 	XMStoreFloat4x4(&lightningConstantBuffer.mInvertViewMatrix, mat);
 
-	mRenderer->setSamplers({ mSampleLinear, mSamplePoint });
+	getRenderer()->setSamplers({ mSampleLinear, mSamplePoint });
 
 	mQuad->setBlend(mDefaultBlendState);
 	mQuad->setRenderTarget(mLightingMap);

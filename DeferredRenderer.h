@@ -3,8 +3,9 @@
 #include "renderer.h"
 #include "Scene.h"
 #include "Quad.h"
+#include "Pipeline.h"
 
-class DeferredRenderer
+class DeferredRenderer: public Pipeline::Stage
 {
 	struct LightningConstantBuffer
 	{
@@ -16,14 +17,13 @@ class DeferredRenderer
 public:
 	DeferredRenderer(Renderer::Ptr r, Scene::Ptr s);
 
-	void render();
+	void render(Renderer::RenderTarget::Ptr rt);
 private:
 	void renderGbuffer();
 	void renderLightingMap();
 	void renderFinal();
 private:
 	Renderer::Ptr mRenderer;
-	Scene::Ptr mScene;
 
 	Renderer::Effect::Ptr mSceneFX;
 	Renderer::Layout::Ptr mGBufferLayout;
@@ -41,7 +41,6 @@ private:
 	Renderer::PixelShader::Weak mFinalPS;
 	Renderer::RenderTarget::Ptr mFinalTarget;
 
-	std::shared_ptr<Quad> mQuad;
 
 	D3D11_DEPTH_STENCIL_DESC mDepthStencilDesc;
 	D3D11_BLEND_DESC mDefaultBlendState;

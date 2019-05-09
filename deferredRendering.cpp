@@ -15,6 +15,7 @@
 
 #include "ShadowMap.h"
 #include "Quad.h"
+#include "Pipeline.h"
 
 
 #include <sstream>
@@ -49,6 +50,7 @@ std::shared_ptr<Scene> scene;
 std::shared_ptr< DeferredRenderer> deferred;
 std::shared_ptr<Input> input;
 std::shared_ptr<ShadowMap> sm;
+std::shared_ptr<Pipeline> ppl;
 
 std::string show;
 
@@ -66,12 +68,14 @@ void initRenderer(HWND win)
 
 	//test = decltype(test)(new Test(renderer));
 	scene = decltype(scene)(new Scene(renderer));
-	deferred = decltype(deferred)(new DeferredRenderer(renderer, scene));
 	input = decltype(input)(new Input());
-	sm = decltype(sm)(new ShadowMap(renderer, scene,quad));
+	ppl = decltype(ppl)(new Pipeline(renderer, scene, quad));
+
+	ppl->pushStage<DeferredRenderer>();
+	ppl->pushStage<ShadowMap>();
 
 	Parameters params;
-	params["file"] = "media/cup/cup.obj";
+	params["file"] = "sponza/sponza.obj";
 	auto model = scene->createModel("test", params);
 	model->attach(scene->getRoot());
 	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
@@ -90,7 +94,7 @@ void initRenderer(HWND win)
 	float com_step= std::min(std::min(vec.x, vec.y), vec.z) * 0.001;
 
 	auto light = scene->createOrGetLight("main");
-	light->setDirection({ 0,-1,1 });
+	light->setDirection({ 0,-1,0.1 });
 
 	input->listen([cam, com_step](const Input::Mouse& m, const Input::Keyboard& k) {
 		static auto lasttime = GetTickCount();
@@ -158,8 +162,8 @@ void framemove()
 	auto x = cos(t) * len;
 	auto y = sin(t) * len;
 	
-	light->setDirection({0,y,x });
-	deferred->render();
+	//light->setDirection({0,y,x });
+	
 
 	static auto time = GetTickCount();
 	static size_t count = 0;
@@ -176,7 +180,7 @@ void framemove()
 		show = ss.str();
 	}
 
-
+	ppl->render();
 	//sm->render();
 
 	renderer->setRenderTarget(bb);

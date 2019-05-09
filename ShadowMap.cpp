@@ -1,35 +1,35 @@
 #include "ShadowMap.h"
 #include "MathUtilities.h"
 
-ShadowMap::ShadowMap(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q):mScene(s), mRenderer(r), mQuad(q)
+ShadowMap::ShadowMap(Renderer::Ptr r, Scene::Ptr s):Pipeline::Stage(r,s)
 {
 	mShadowMapSize = 1024;
 
-	mLightCamera = mScene->createOrGetCamera("light");
+	mLightCamera = getScene()->createOrGetCamera("light");
 	mLightCamera->setProjectType(Scene::Camera::PT_ORTHOGRAPHIC);
 
-	auto blob = mRenderer->compileFile("hlsl/depth.fx", "", "fx_5_0");
-	mDepthEffect = mRenderer->createEffect((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
+	auto blob = getRenderer()->compileFile("hlsl/depth.fx", "", "fx_5_0");
+	mDepthEffect = getRenderer()->createEffect((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
 
-	blob = mRenderer->compileFile("hlsl/shadowmap.fx", "", "fx_5_0");
-	mEffect = mRenderer->createEffect((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
+	blob = getRenderer()->compileFile("hlsl/shadowmap.fx", "", "fx_5_0");
+	mEffect = getRenderer()->createEffect((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
 
-	size_t w = mRenderer->getWidth(); 
-	size_t h = mRenderer->getHeight();
+	size_t w = getRenderer()->getWidth(); 
+	size_t h = getRenderer()->getHeight();
 
 	mLightMaps.resize(4);
 	for (int i = 0; i< mLightMaps.size(); ++i)
-		mLightMaps[i] = mRenderer->createRenderTarget(mShadowMapSize, mShadowMapSize, DXGI_FORMAT_R32_FLOAT);
+		mLightMaps[i] = getRenderer()->createRenderTarget(mShadowMapSize, mShadowMapSize, DXGI_FORMAT_R32_FLOAT);
 	mDepthStencil = r->createDepthStencil(mShadowMapSize, mShadowMapSize, DXGI_FORMAT_D32_FLOAT);
 
-	mFinalTarget = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
+	mFinalTarget = getRenderer()->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
 
 	D3D11_INPUT_ELEMENT_DESC depthlayout[] =
 	{
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
 	};
 
-	mDepthLayout = mRenderer->createLayout(depthlayout, ARRAYSIZE(depthlayout));
+	mDepthLayout = getRenderer()->createLayout(depthlayout, ARRAYSIZE(depthlayout));
 
 	D3D11_INPUT_ELEMENT_DESC layout[] =
 	{
@@ -37,9 +37,9 @@ ShadowMap::ShadowMap(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q):mScene(s), mRen
 		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
 
 	};
-	mLayout = mRenderer->createLayout(depthlayout, ARRAYSIZE(layout));
+	mLayout = getRenderer()->createLayout(depthlayout, ARRAYSIZE(layout));
 
-	mSampler = mRenderer->createSampler("shadowsample", D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
+	mSampler = getRenderer()->createSampler("shadowsample", D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
 }
 
 ShadowMap::~ShadowMap()
@@ -48,7 +48,7 @@ ShadowMap::~ShadowMap()
 
 void ShadowMap::fitToScene()
 {
-	auto light = mScene->createOrGetLight("main");
+	auto light = getScene()->createOrGetLight("main");
 	auto dir = light->getDirection();
 
 	Vector3 min = { FLT_MAX, FLT_MAX ,FLT_MAX };
@@ -65,7 +65,7 @@ void ShadowMap::fitToScene()
 	auto lightspace = MathUtilities::makeMatrixFromAxis(x, y, dir);
 	auto inv = lightspace.Invert();
 
-	auto cam = mScene->createOrGetCamera("main");
+	auto cam = getScene()->createOrGetCamera("main");
 	cam->visitVisibleObject([&min,&max,inv](Scene::Entity::Ptr e)
 	{
 		auto aabb = e->getWorldAABB();
@@ -122,36 +122,36 @@ void ShadowMap::renderToLightMap()
 	vp.TopLeftY = 0;
 	vp.MinDepth = 0;
 	vp.MaxDepth = 1.0f;
-	mRenderer->setViewport(vp);
+	getRenderer()->setViewport(vp);
 	view->SetMatrix((const float*)&mLightCamera->getViewMatrix());
 	proj->SetMatrix((const float*)&mLightCamera->getProjectionMatrix());
 
 	for (auto& l : mLightMaps)
 		l.lock()->clear({ 0,0,0,0 });
 	mDepthStencil.lock()->clearDepth(1.0f);
-	mRenderer->setRenderTargets(mLightMaps, mDepthStencil);
-	mRenderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	mRenderer->setDefaultBlendState();
-	mRenderer->setDefaultDepthStencilState();
-	mRenderer->setSampler(mSampler);
+	getRenderer()->setRenderTargets(mLightMaps, mDepthStencil);
+	getRenderer()->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	getRenderer()->setDefaultBlendState();
+	getRenderer()->setDefaultDepthStencilState();
+	getRenderer()->setSampler(mSampler);
 
 
-	mScene->visitRenderables([world, this, e](const Renderable& r)
+	getScene()->visitRenderables([world, this, e](const Renderable& r)
 	{
 		world->SetMatrix((const float*)&r.tranformation);
-		mRenderer->setIndexBuffer(r.indices, DXGI_FORMAT_R32_UINT, 0);
-		mRenderer->setVertexBuffer(r.vertices, r.layout.lock()->getSize(), 0);
+		getRenderer()->setIndexBuffer(r.indices, DXGI_FORMAT_R32_UINT, 0);
+		getRenderer()->setVertexBuffer(r.vertices, r.layout.lock()->getSize(), 0);
 
-		e->render(mRenderer, [world, this, &r](ID3DX11EffectPass* pass)
+		e->render(getRenderer(), [world, this, &r](ID3DX11EffectPass* pass)
 		{
-			mRenderer->setLayout(mDepthLayout.lock()->bind(pass));
-			mRenderer->getContext()->DrawIndexed(r.numIndices, 0, 0);
+			getRenderer()->setLayout(mDepthLayout.lock()->bind(pass));
+			getRenderer()->getContext()->DrawIndexed(r.numIndices, 0, 0);
 		});
 	});
 
 
 
-	mRenderer->removeRenderTargets();
+	getRenderer()->removeRenderTargets();
 }
 
 void ShadowMap::renderShadow()
@@ -164,50 +164,50 @@ void ShadowMap::renderShadow()
 	auto view = e->getVariable("View")->AsMatrix();
 	auto proj = e->getVariable("Projection")->AsMatrix();
 	auto lightvp = e->getVariable("LightViewProjection")->AsMatrix();
-	auto cam = mScene->createOrGetCamera("main");
+	auto cam = getScene()->createOrGetCamera("main");
 
 	Matrix lvp = mLightCamera->getViewMatrix();
 	lvp *= mLightCamera->getProjectionMatrix();
 	lightvp->SetMatrix((const float*)& lvp);
 
 
-	mRenderer->setViewport(cam->getViewport());
+	getRenderer()->setViewport(cam->getViewport());
 	view->SetMatrix((const float*)&cam->getViewMatrix());
 	proj->SetMatrix((const float*)&cam->getProjectionMatrix());
 
 	mFinalTarget.lock()->clear({ 0,0,0,0 });
-	mRenderer->clearDefaultStencil(1.0f);
-	mRenderer->setRenderTarget(mFinalTarget);
-	mRenderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	mRenderer->setDefaultBlendState();
+	getRenderer()->clearDefaultStencil(1.0f);
+	getRenderer()->setRenderTarget(mFinalTarget);
+	getRenderer()->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	getRenderer()->setDefaultBlendState();
 
 
-	mScene->visitRenderables([world, this, e](const Renderable& r)
+	getScene()->visitRenderables([world, this, e](const Renderable& r)
 	{
 		world->SetMatrix((const float*)&r.tranformation);
-		mRenderer->setIndexBuffer(r.indices, DXGI_FORMAT_R32_UINT, 0);
-		mRenderer->setVertexBuffer(r.vertices, r.layout.lock()->getSize(), 0);
+		getRenderer()->setIndexBuffer(r.indices, DXGI_FORMAT_R32_UINT, 0);
+		getRenderer()->setVertexBuffer(r.vertices, r.layout.lock()->getSize(), 0);
 
-		e->render(mRenderer, [world, this, &r](ID3DX11EffectPass* pass)
+		e->render(getRenderer(), [world, this, &r](ID3DX11EffectPass* pass)
 		{
-			mRenderer->setTextures(mLightMaps);
-			mRenderer->setLayout(mDepthLayout.lock()->bind(pass));
-			mRenderer->getContext()->DrawIndexed(r.numIndices, 0, 0);
+			getRenderer()->setTextures(mLightMaps);
+			getRenderer()->setLayout(mDepthLayout.lock()->bind(pass));
+			getRenderer()->getContext()->DrawIndexed(r.numIndices, 0, 0);
 		});
 	});
 
 
 
-	mRenderer->removeRenderTargets();
+	getRenderer()->removeRenderTargets();
 }
 
-void ShadowMap::render()
+void ShadowMap::render(Renderer::RenderTarget::Ptr rt)
 {
 	fitToScene();
 	renderToLightMap();
 	renderShadow();
 	
-	mQuad->setRenderTarget(mRenderer->getBackbuffer());
+	mQuad->setRenderTarget(rt);
 	mQuad->setTextures({ mFinalTarget });
 	mQuad->setDefaultPixelShader();
 	mQuad->setDefaultSampler();
@@ -223,7 +223,6 @@ void ShadowMap::render()
 		D3D11_COLOR_WRITE_ENABLE_ALL,
 	};
 
-	//D3DX11SaveTextureToFile(mRenderer->getContext(), mFinalTarget.lock()->getTexture(), D3DX11_IFF_BMP, L"test.bmp");
 	mQuad->setBlend(desc);
 	mQuad->draw();
 

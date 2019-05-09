@@ -65,7 +65,7 @@ float4 main(PS_INPUT input) : SV_TARGET
 {
 	float3 albedo = pow(albedoTexture.Sample(sampLinear, input.Tex).rgb, 2.2);
 	const float3 metallic = 0.1;
-	const float roughness = 0.5;
+	const float roughness = 0.9;
 
 	float4 normalData = normalTexture.Sample(sampPoint, input.Tex);
 	float3 N = 2.0f * normalData.xyz - 1.0f;
@@ -90,6 +90,7 @@ float4 main(PS_INPUT input) : SV_TARGET
 	//float distance = length(lightPositions[i] - WorldPos);
 	//float attenuation = 1.0 / (distance * distance);
 	//float3 radiance = lightColors[i] * attenuation;
+	float3 radiance = 3;
 
 	// cook-torrance brdf
 	float NDF = DistributionGGX(N, H, roughness);
@@ -106,9 +107,9 @@ float4 main(PS_INPUT input) : SV_TARGET
 
 	// add to outgoing radiance Lo
 	float NdotL = max(dot(N, L), 0.0);
-	Lo += (kD * albedo / PI + specular)  * NdotL ; //* radiance
+	Lo += (kD * albedo / PI + specular)  * NdotL * radiance;
 
-	float3 ambient = 0.03 * albedo ;//* ao
+	float3 ambient = 0.03 * albedo;// *ao;
 	float3 color = ambient + Lo;
 
 	color = color / (color + 1);

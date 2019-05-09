@@ -3,14 +3,15 @@
 #include "Renderer.h"
 #include "Scene.h"
 #include "Quad.h"
+#include "Pipeline.h"
 
-class ShadowMap
+class ShadowMap: public Pipeline::Stage
 {
 public:
-	ShadowMap(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q);
+	ShadowMap(Renderer::Ptr r, Scene::Ptr s);
 	~ShadowMap();
 
-	void render();
+	void render(Renderer::RenderTarget::Ptr rt);
 private:
 	void fitToScene();
 	void renderToLightMap();
@@ -18,8 +19,6 @@ private:
 private:
 	Renderer::RenderTarget::Ptr mFinalTarget;
 	std::vector<Renderer::RenderTarget::Ptr > mLightMaps;
-	Scene::Ptr mScene;
-	Renderer::Ptr mRenderer;
 	Scene::Camera::Ptr mLightCamera;
 
 	int mShadowMapSize = 2048;
@@ -31,5 +30,4 @@ private:
 	D3D11_DEPTH_STENCIL_DESC mDepthStencilDesc;
 	Renderer::DepthStencil::Ptr mDepthStencil;
 	Renderer::Sampler::Ptr mSampler;
-	Quad::Ptr mQuad;
 };
