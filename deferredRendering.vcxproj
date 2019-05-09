@@ -152,6 +152,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="AO.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="D3D11Helper.h" />
     <ClInclude Include="DeferredRenderer.h" />
@@ -172,6 +173,7 @@
     <ClInclude Include="tiny_obj_loader.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AO.cpp" />
     <ClCompile Include="DeferredRenderer.cpp" />
     <ClCompile Include="deferredRendering.cpp" />
     <ClCompile Include="Input.cpp" />

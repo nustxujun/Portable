@@ -1,7 +1,7 @@
 #include "DeferredRenderer.h"
 
 
-DeferredRenderer::DeferredRenderer(Renderer::Ptr r, Scene::Ptr s):Pipeline::Stage(r,s)
+DeferredRenderer::DeferredRenderer(Renderer::Ptr r, Scene::Ptr s, Pipeline* p):Pipeline::Stage(r,s,p)
 {
 	auto blob = getRenderer()->compileFile("gbuffer.fx", "", "fx_5_0");
 	mSceneFX = getRenderer()->createEffect((**blob).GetBufferPointer(), (**blob).GetBufferSize());
@@ -22,6 +22,9 @@ DeferredRenderer::DeferredRenderer(Renderer::Ptr r, Scene::Ptr s):Pipeline::Stag
 	mDiffuse = getRenderer()->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
 	mNormal = getRenderer()->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
 	mDepth = getRenderer()->createRenderTarget(w, h, DXGI_FORMAT_R32_FLOAT);
+	addSharedRT("diffuse", mDiffuse);
+	addSharedRT("normal", mNormal);
+	addSharedRT("depth", mDepth);
 
 
 
@@ -85,7 +88,7 @@ void DeferredRenderer::render(Renderer::RenderTarget::Ptr rt)
 
 	mQuad->setRenderTarget(rt);
 	mQuad->setSamplers({ mSampleLinear});
-	mQuad->drawTexture(mFinalTarget);
+	//mQuad->drawTexture(mFinalTarget);
 }
 
 void DeferredRenderer::renderGbuffer()
@@ -147,8 +150,9 @@ void DeferredRenderer::renderLightingMap()
 	auto cam = getScene()->createOrGetCamera("main");
 	auto light = getScene()->createOrGetLight("main");
 	LightningConstantBuffer lightningConstantBuffer;
-	lightningConstantBuffer.mLightDirection = light->getDirection();
-	lightningConstantBuffer.mLightDirection.Normalize();
+	auto dir = light->getDirection();
+	dir.Normalize();
+	lightningConstantBuffer.mLightDirection = {dir.x, dir.y,dir.z};
 	lightningConstantBuffer.mColor = XMFLOAT4A(0.99f, 1.0f, 1.0f, 1.0f);
 	//XMFLOAT4 position;
 	//XMStoreFloat4(&position, p_pCamera->GetPosition());
@@ -160,7 +164,7 @@ void DeferredRenderer::renderLightingMap()
 	XMMATRIX view = XMLoadFloat4x4(&cam->getViewMatrix());
 	XMMATRIX proj = XMLoadFloat4x4(&cam->getProjectionMatrix());
 	XMMATRIX mat = XMMatrixInverse(nullptr, view * proj);
-	XMStoreFloat4x4(&lightningConstantBuffer.mInvertViewMatrix, mat);
+	XMStoreFloat4x4A(&lightningConstantBuffer.mInvertViewMatrix, mat);
 
 	getRenderer()->setSamplers({ mSampleLinear, mSamplePoint });
 

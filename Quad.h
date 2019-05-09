@@ -23,16 +23,7 @@ public:
 		setDefaultPixelShader();
 		setDefaultSampler();
 		D3D11_BLEND_DESC desc = { 0 };
-		//desc.RenderTarget[0] = {
-		//	TRUE,
-		//	D3D11_BLEND_SRC_ALPHA,
-		//	D3D11_BLEND_INV_SRC_ALPHA,
-		//	D3D11_BLEND_OP_ADD,
-		//	D3D11_BLEND_ONE,
-		//	D3D11_BLEND_ZERO,
-		//	D3D11_BLEND_OP_ADD,
-		//	D3D11_COLOR_WRITE_ENABLE_ALL,
-		//};
+
 		desc.RenderTarget[0] = {
 			TRUE,
 			D3D11_BLEND_SRC_ALPHA,
@@ -54,9 +45,13 @@ public:
 	void setRenderTarget(Renderer::RenderTarget::Ptr rt) { mRenderTarget = rt; };
 	void setTextures(const std::vector<Renderer::RenderTarget::Ptr>& rts);
 	void setTextures(const std::vector<Renderer::Texture::Ptr>& ts);
+	void setTextures(const std::vector<ID3D11ShaderResourceView*>& ts);
+
 	void setPixelShader(Renderer::PixelShader::Weak ps) { mPS = ps; };
 	void setSamplers(const std::vector<Renderer::Sampler::Ptr>& ss) { mSamplers = ss; };
-	void setConstant(Renderer::Buffer::Ptr c) { mConstant = c; }
+	void setConstant(Renderer::Buffer::Ptr c) { mConstants.clear(); mConstants.push_back(c); }
+	void setConstants(const std::vector<Renderer::Buffer::Ptr>& c) { mConstants = c; }
+
 	void setBlend(const D3D11_BLEND_DESC&desc, const std::array<float, 4>& factor = { 1,1,1,1 }, size_t mask = 0xffffffff);
 	void setDefaultPixelShader()  { setPixelShader(mDrawTexturePS); }
 	void setDefaultSampler() { setSamplers({ mDefaultSampler }); }
@@ -71,7 +66,7 @@ private:
 	std::vector<ID3D11ShaderResourceView*> mSRVs;
 	Renderer::PixelShader::Weak mPS;
 	std::vector<Renderer::Sampler::Ptr> mSamplers;
-	Renderer::Buffer::Ptr mConstant;
+	std::vector<Renderer::Buffer::Ptr> mConstants;
 	Renderer::PixelShader::Weak mDrawTexturePS;
 	Renderer::Sampler::Ptr mDefaultSampler;
 	struct BlendState

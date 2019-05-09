@@ -9,13 +9,13 @@ class DeferredRenderer: public Pipeline::Stage
 {
 	struct LightningConstantBuffer
 	{
-		DirectX::SimpleMath::Vector3 mLightDirection;
+		DirectX::XMFLOAT3A mLightDirection;
 		DirectX::XMFLOAT4A mColor;
 		DirectX::XMFLOAT3A mCameraPosition;
 		DirectX::XMFLOAT4X4A mInvertViewMatrix;
 	};
 public:
-	DeferredRenderer(Renderer::Ptr r, Scene::Ptr s);
+	DeferredRenderer(Renderer::Ptr r, Scene::Ptr s, Pipeline* p);
 
 	void render(Renderer::RenderTarget::Ptr rt);
 private:

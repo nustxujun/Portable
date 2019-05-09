@@ -8,7 +8,7 @@
 class ShadowMap: public Pipeline::Stage
 {
 public:
-	ShadowMap(Renderer::Ptr r, Scene::Ptr s);
+	ShadowMap(Renderer::Ptr r, Scene::Ptr s, Pipeline* p);
 	~ShadowMap();
 
 	void render(Renderer::RenderTarget::Ptr rt);

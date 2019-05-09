@@ -75,7 +75,7 @@ void Quad::draw(const std::array<float, 4>& color)
 	mRenderer->setLayout(mLayout.lock()->bind(mVS));
 	mRenderer->setShaderResourceViews(mSRVs);
 	mRenderer->setSamplers(mSamplers);
-	mRenderer->setConstantBuffer(mConstant);
+	mRenderer->setConstantBuffers(mConstants);
 
 	context->DrawIndexed(6, 0, 0);
 
@@ -104,6 +104,12 @@ void Quad::setTextures(const std::vector<Renderer::Texture::Ptr>& ts)
 		mSRVs.push_back(*i.lock());
 	}
 }
+
+void Quad::setTextures(const std::vector<ID3D11ShaderResourceView*>& ts)
+{
+	mSRVs = ts;
+}
+
 
 void Quad::setBlend(const D3D11_BLEND_DESC & desc, const std::array<float, 4>& factor, size_t mask)
 {

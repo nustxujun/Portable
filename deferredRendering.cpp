@@ -16,7 +16,7 @@
 #include "ShadowMap.h"
 #include "Quad.h"
 #include "Pipeline.h"
-
+#include "AO.h"
 
 #include <sstream>
 
@@ -47,9 +47,7 @@ Instance<Quad> quad;
 
 
 std::shared_ptr<Scene> scene;
-std::shared_ptr< DeferredRenderer> deferred;
 std::shared_ptr<Input> input;
-std::shared_ptr<ShadowMap> sm;
 std::shared_ptr<Pipeline> ppl;
 
 std::string show;
@@ -66,16 +64,16 @@ void initRenderer(HWND win)
 
 	quad(renderer);
 
-	//test = decltype(test)(new Test(renderer));
 	scene = decltype(scene)(new Scene(renderer));
 	input = decltype(input)(new Input());
 	ppl = decltype(ppl)(new Pipeline(renderer, scene, quad));
 
 	ppl->pushStage<DeferredRenderer>();
 	ppl->pushStage<ShadowMap>();
+	ppl->pushStage<AO>();
 
 	Parameters params;
-	params["file"] = "sponza/sponza.obj";
+	params["file"] = "tiny.x";
 	auto model = scene->createModel("test", params);
 	model->attach(scene->getRoot());
 	model->getNode()->setPosition(0.0f, 0.f, 0.0f);

@@ -289,7 +289,7 @@ public:
 	void setRenderTargets(const std::vector<RenderTarget::Ptr>& rts, DepthStencil::Ptr ds = DepthStencil::Ptr());
 	void removeRenderTargets();
 	void setConstantBuffer(Buffer::Ptr b);
-	void setConstantsBuffer(const std::vector<Buffer::Ptr>& bs);
+	void setConstantBuffers(const std::vector<Buffer::Ptr>& bs);
 	void removeConstantBuffers();
 	void setRasterizer(Rasterizer::Ptr r);
 
@@ -308,6 +308,7 @@ public:
 	Sampler::Ptr createSampler(const std::string& name, D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV,
 		D3D11_TEXTURE_ADDRESS_MODE addrW = D3D11_TEXTURE_ADDRESS_WRAP, D3D11_COMPARISON_FUNC cmpfunc = D3D11_COMPARISON_NEVER, float minlod = 0, float maxlod = D3D11_FLOAT32_MAX);
 	Texture::Ptr createTexture(const std::string& filename);
+	Texture::Ptr createTexture(const std::string& name, const D3D11_TEXTURE2D_DESC& desc, const void* data, size_t size);
 	RenderTarget::Ptr createRenderTarget(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage = D3D11_USAGE_DEFAULT);
 	Buffer::Ptr createBuffer(int size, D3D11_BIND_FLAG flag, const D3D11_SUBRESOURCE_DATA* initialdata = NULL,D3D11_USAGE usage = D3D11_USAGE_DEFAULT, bool CPUaccess = false);
 	SharedCompiledData compileFile(const std::string& filename, const std::string& entryPoint, const std::string& shaderModel, const D3D10_SHADER_MACRO* macro = NULL);
@@ -317,7 +318,7 @@ public:
 	Layout::Ptr createLayout(const D3D11_INPUT_ELEMENT_DESC* descarray, size_t count);
 	Font::Ptr createOrGetFont(const std::wstring& font);
 	Rasterizer::Ptr createOrGetRasterizer(const std::string & name, D3D11_CULL_MODE cull = D3D11_CULL_BACK, D3D11_FILL_MODE fill = D3D11_FILL_SOLID, bool multisample = false);
-	DepthStencil::Ptr createDepthStencil(int width, int height, DXGI_FORMAT format, bool access = false);
+	DepthStencil::Ptr createDepthStencil(int width, int height, DXGI_FORMAT format);
  private:
 	static void checkResult(HRESULT hr);
 

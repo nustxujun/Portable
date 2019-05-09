@@ -274,7 +274,7 @@ void Renderer::setConstantBuffer(Buffer::Ptr b)
 	}
 }
 
-void Renderer::setConstantsBuffer(const std::vector<Buffer::Ptr>& bs)
+void Renderer::setConstantBuffers(const std::vector<Buffer::Ptr>& bs)
 {
 	std::vector<ID3D11Buffer*> list;
 	list.reserve(bs.size());
@@ -452,6 +452,26 @@ Renderer::Texture::Ptr Renderer::createTexture(const std::string & filename)
 	return Texture::Ptr(ret.first->second);
 }
 
+Renderer::Texture::Ptr Renderer::createTexture(const std::string& name, const D3D11_TEXTURE2D_DESC& desc, const void* data, size_t size)
+{
+	auto exist = mTextures.find(name);
+	if (exist != mTextures.end())
+		return exist->second;
+
+	D3D11_SUBRESOURCE_DATA initdata;
+	initdata.pSysMem = data;
+	initdata.SysMemPitch = size;
+
+	ID3D11Texture2D* tex;
+	checkResult(mDevice->CreateTexture2D(&desc, &initdata, &tex));
+
+	ID3D11ShaderResourceView* srv;
+	checkResult(mDevice->CreateShaderResourceView(tex, nullptr, &srv));
+	auto ret = mTextures.emplace(name, new Texture(srv));
+	return Texture::Ptr(ret.first->second);
+}
+
+
 Renderer::RenderTarget::Ptr Renderer::createRenderTarget(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage)
 {
 
@@ -560,7 +580,7 @@ Renderer::Rasterizer::Ptr Renderer::createOrGetRasterizer(const std::string & na
 	return Rasterizer::Ptr(shared);
 }
 
-Renderer::DepthStencil::Ptr Renderer::createDepthStencil(int width, int height, DXGI_FORMAT format, bool access)
+Renderer::DepthStencil::Ptr Renderer::createDepthStencil(int width, int height, DXGI_FORMAT format)
 {
 	D3D11_TEXTURE2D_DESC descDepth;
 	ZeroMemory(&descDepth, sizeof(descDepth));
@@ -568,11 +588,11 @@ Renderer::DepthStencil::Ptr Renderer::createDepthStencil(int width, int height, 
 	descDepth.Height = height;
 	descDepth.MipLevels = 1;
 	descDepth.ArraySize = 1;
-	descDepth.Format = format;
+	descDepth.Format =  format;
 	descDepth.SampleDesc.Count = 1;
 	descDepth.SampleDesc.Quality = 0;
 	descDepth.Usage = D3D11_USAGE_DEFAULT;
-	descDepth.BindFlags = D3D11_BIND_DEPTH_STENCIL | (access ? D3D11_BIND_SHADER_RESOURCE : 0);
+	descDepth.BindFlags = D3D11_BIND_DEPTH_STENCIL ;
 	descDepth.CPUAccessFlags = 0;
 	descDepth.MiscFlags = 0;
 
@@ -616,13 +636,7 @@ Renderer::RenderTarget::RenderTarget(ID3D11Device* d, int width, int height, DXG
 
 
 	// Create the final shader resource view
-	D3D11_SHADER_RESOURCE_VIEW_DESC finalSRVDesc;
-	finalSRVDesc.Format = descFinalTexture.Format;
-	finalSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	finalSRVDesc.Texture2D.MostDetailedMip = 0;
-	finalSRVDesc.Texture2D.MipLevels = 1;
-
-	checkResult(d->CreateShaderResourceView(mTexture, &finalSRVDesc, &mSRView));
+	checkResult(d->CreateShaderResourceView(mTexture, nullptr, &mSRView));
 
 }
 
@@ -847,9 +861,13 @@ Renderer::Rasterizer::~Rasterizer()
 
 Renderer::DepthStencil::DepthStencil(ID3D11Device * d, const D3D11_TEXTURE2D_DESC & desc):D3DObject(d)
 {
+	bool access = (desc.BindFlags & D3D11_BIND_SHADER_RESOURCE) != 0;
+	if (access)
+		abort();
 	mDesc = desc;
 	checkResult(d->CreateTexture2D(&desc, NULL, &mTexture));
 	
+
 	D3D11_DEPTH_STENCIL_VIEW_DESC descDSV;
 	ZeroMemory(&descDSV, sizeof(descDSV));
 	descDSV.Format = desc.Format;
@@ -857,18 +875,18 @@ Renderer::DepthStencil::DepthStencil(ID3D11Device * d, const D3D11_TEXTURE2D_DES
 	descDSV.Texture2D.MipSlice = 0;
 	checkResult(d->CreateDepthStencilView(mTexture, &descDSV, &mDSView));
 
-	if (desc.BindFlags & D3D11_BIND_SHADER_RESOURCE != 0)
-	{
-		D3D11_SHADER_RESOURCE_VIEW_DESC srvd;
-		srvd.Format = desc.Format;
-		srvd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-		srvd.Texture2D.MostDetailedMip = 0;
-		srvd.Texture2D.MipLevels = 1;
+	//if (access)
+	//{
+	//	D3D11_SHADER_RESOURCE_VIEW_DESC srvd;
+	//	srvd.Format = DXGI_FORMAT_R32_FLOAT;
+	//	srvd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	//	srvd.Texture2D.MostDetailedMip = 0;
+	//	srvd.Texture2D.MipLevels = 1;
 
-		checkResult(d->CreateShaderResourceView(mTexture, &srvd, &mSRView));
-	}
-	else
-		mSRView = nullptr;
+	//	checkResult(d->CreateShaderResourceView(mTexture, &srvd, &mSRView));
+	//}
+	//else
+	//	mSRView = nullptr;
 }
 
 Renderer::DepthStencil::~DepthStencil()

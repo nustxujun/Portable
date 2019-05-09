@@ -1,7 +1,7 @@
 #include "ShadowMap.h"
 #include "MathUtilities.h"
 
-ShadowMap::ShadowMap(Renderer::Ptr r, Scene::Ptr s):Pipeline::Stage(r,s)
+ShadowMap::ShadowMap(Renderer::Ptr r, Scene::Ptr s, Pipeline* p):Pipeline::Stage(r,s,p)
 {
 	mShadowMapSize = 1024;
 
