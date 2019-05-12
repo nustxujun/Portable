@@ -22,6 +22,8 @@ public:
 		setTextures({ texture });
 		setDefaultPixelShader();
 		setDefaultSampler();
+		setDefaultViewport();
+
 		D3D11_BLEND_DESC desc = { 0 };
 
 		desc.RenderTarget[0] = {
@@ -36,16 +38,15 @@ public:
 		};
 
 
-
 		setBlend(desc);
 		draw();
 	}
 
 
 	void setRenderTarget(Renderer::RenderTarget::Ptr rt) { mRenderTarget = rt; };
-	void setTextures(const std::vector<Renderer::RenderTarget::Ptr>& rts);
-	void setTextures(const std::vector<Renderer::Texture::Ptr>& ts);
-	void setTextures(const std::vector<ID3D11ShaderResourceView*>& ts);
+	void setTextures(const std::vector<Renderer::ShaderResource::Ptr>& c) { setTexturesImpl(c); }
+	template<class T>
+	void setTextures(const std::vector<T>& c) { setTexturesImpl(c); }
 
 	void setPixelShader(Renderer::PixelShader::Weak ps) { mPS = ps; };
 	void setSamplers(const std::vector<Renderer::Sampler::Ptr>& ss) { mSamplers = ss; };
@@ -55,6 +56,16 @@ public:
 	void setBlend(const D3D11_BLEND_DESC&desc, const std::array<float, 4>& factor = { 1,1,1,1 }, size_t mask = 0xffffffff);
 	void setDefaultPixelShader()  { setPixelShader(mDrawTexturePS); }
 	void setDefaultSampler() { setSamplers({ mDefaultSampler }); }
+	void setViewport(const D3D11_VIEWPORT& vp) { mViewport = vp; }
+	void setDefaultViewport() { mViewport = { 0.0f,0.0f, (float) mRenderer->getWidth(),(float) mRenderer->getHeight(), 0.0f, 1.0f }; }
+private:
+	template<class T>
+	void setTexturesImpl(const std::vector<T>& c)
+	{
+		mSRVs.clear();
+		for (auto& i : c)
+			mSRVs.push_back(i);
+	}
 private:
 	Renderer::Ptr mRenderer;
 	Renderer::VertexShader::Weak mVS;
@@ -63,7 +74,7 @@ private:
 	Renderer::Buffer::Ptr mIndexBuffer;
 
 	Renderer::RenderTarget::Ptr mRenderTarget;
-	std::vector<ID3D11ShaderResourceView*> mSRVs;
+	std::vector<Renderer::ShaderResource::Ptr> mSRVs;
 	Renderer::PixelShader::Weak mPS;
 	std::vector<Renderer::Sampler::Ptr> mSamplers;
 	std::vector<Renderer::Buffer::Ptr> mConstants;
@@ -77,5 +88,6 @@ private:
 	};
 
 	BlendState mBlendState;
+	D3D11_VIEWPORT mViewport;
 
 };

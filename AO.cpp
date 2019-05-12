@@ -1,6 +1,7 @@
 #include "AO.h"
 #include <algorithm>
 #include <random>
+#include "MathUtilities.h"
 
 AO::AO(Renderer::Ptr r, Scene::Ptr s, Pipeline* p): Pipeline::Stage(r,s,p)
 {
@@ -11,25 +12,28 @@ AO::AO(Renderer::Ptr r, Scene::Ptr s, Pipeline* p): Pipeline::Stage(r,s,p)
 
 
 	mKernel = r->createBuffer(sizeof(Kernel), D3D11_BIND_CONSTANT_BUFFER);
-	mMatrix = r->createBuffer(sizeof(Matrix), D3D11_BIND_CONSTANT_BUFFER);
+	mMatrix = r->createBuffer(sizeof(ConstantMatrix), D3D11_BIND_CONSTANT_BUFFER);
 
 	std::uniform_real_distribution<float> rand1(-1.0, 1.0); 
-	std::uniform_real_distribution<float> rand2(0 , 1.0);
+	std::uniform_real_distribution<float> rand2(0.0 , 1.0);
+	std::uniform_real_distribution<float> rand3(0.0, 1.0);
+
 	std::default_random_engine gen;
 
 	float noiseSize = 4.0f;
 
 	Kernel kernel;
-	for (int i = 0; i < 64; ++i)
+	kernel.kernelSize = 64;
+	for (int i = 0; i < kernel.kernelSize; ++i)
 	{
 		DirectX::SimpleMath::Vector3 v = { rand1(gen) ,rand1(gen) ,rand2(gen) };
+		//DirectX::SimpleMath::Vector3 v = {1,0,1};
 		v.Normalize();
-		v *= pow( rand2(gen),2);
+		v *= pow(rand2(gen), 2);
 		kernel.kernel[i] = { v.x, v.y,v.z };
 	}
 	kernel.scale = { r->getWidth() / noiseSize, r->getHeight() / noiseSize };
-	kernel.kernelSize = 64;
-	kernel.radius = 1;
+	kernel.radius = 10;
 	mKernel.lock()->blit(&kernel, sizeof(kernel));
 
 	D3D11_TEXTURE2D_DESC noiseTexDesc;
@@ -45,16 +49,41 @@ AO::AO(Renderer::Ptr r, Scene::Ptr s, Pipeline* p): Pipeline::Stage(r,s,p)
 	noiseTexDesc.CPUAccessFlags = 0;
 	noiseTexDesc.MiscFlags = 0;
 
-	float noise[16] = { 0 };
-	for (int i = 0; i < 4; ++i)
+	std::vector<DirectX::SimpleMath::Vector4> noise(noiseSize * noiseSize);
+
+	for (int i = 0; i < noise.size(); ++i)
 	{
 		DirectX::SimpleMath::Vector3 d = { rand1(gen), rand1(gen), 0.0f };
-		memcpy(noise + i * 4, &d, sizeof(d));
+		//DirectX::SimpleMath::Vector3 d = { -1,1, 0.0f };
+
+		d.Normalize();
+		noise[i] = {d.x, d.y, d.z,0};
 	}
 
-	mNoise = r->createTexture("ssao_noise", noiseTexDesc, noise, sizeof(noise));
+	mNoise = r->createTexture("ssao_noise", noiseTexDesc, noise.data(), noiseSize * sizeof(DirectX::SimpleMath::Vector4));
 
 	mLinearWrap = r->createSampler("linear_wrap", D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
+	mPointWrap = r->createSampler("point_wrap", D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
+
+	//using namespace DirectX::SimpleMath;
+	//Vector3 normal = { 0,0, 1};
+	//normal.Normalize();
+	//Vector3 nis = { -1,1,0 };
+	//Vector3 tmp = normal;
+	//tmp *= nis.Dot(normal);
+	//Vector3 tan = nis;
+	//tan -= tmp;
+	//tan.Normalize();
+	//Vector3 bin = normal.Cross(tan);
+
+	//Matrix m;
+	//m = MathUtilities::makeMatrixFromAxis(tan, bin, normal);
+	//Vector4 vec = { 1,0,0,0 };
+	//vec = Vector4::Transform(vec, m);
+
+
+
+
 }
 
 void AO::render(Renderer::RenderTarget::Ptr rt)
@@ -62,31 +91,32 @@ void AO::render(Renderer::RenderTarget::Ptr rt)
 	using namespace DirectX;
 	auto cam = getScene()->createOrGetCamera("main");
 
-	Matrix matrix;
+	ConstantMatrix matrix;
 
 	auto view = cam->getViewMatrix();
 	auto proj = cam->getProjectionMatrix();
-	auto mat = view * proj;
 
-	XMStoreFloat4x4A(&matrix.invertProjection,mat.Invert());
-	XMStoreFloat4x4A(&matrix.projection, mat);
+	XMStoreFloat4x4A(&matrix.invertProjection, proj.Invert().Transpose());
+	XMStoreFloat4x4A(&matrix.projection, proj.Transpose());
+	XMStoreFloat4x4A(&matrix.view,view.Transpose() );
+
 	mMatrix.lock()->blit(&matrix, sizeof(matrix));
 
 
 	mQuad->setConstants({ mKernel, mMatrix });
 	mQuad->setPixelShader(mPS);
-	mQuad->setSamplers({ mLinearWrap });
-	mQuad->setTextures({ mNormal.lock()->getShaderResourceView(), mDepth.lock()->getShaderResourceView(), *mNoise.lock() });
+	mQuad->setSamplers({ mLinearWrap ,mPointWrap });
+	mQuad->setTextures({ mNormal, mDepth, mNoise});
 	D3D11_BLEND_DESC desc = { 0 };
 	desc.RenderTarget[0] = {
 		FALSE,
-		D3D11_BLEND_ONE,
+		D3D11_BLEND_DEST_COLOR,
 		D3D11_BLEND_ZERO,
 		D3D11_BLEND_OP_ADD,
 		D3D11_BLEND_ONE,
 		D3D11_BLEND_ZERO,
 		D3D11_BLEND_OP_ADD,
-		D3D11_COLOR_WRITE_ENABLE_ALL
+		D3D11_COLOR_WRITE_ENABLE_ALL,
 	};
 
 	mQuad->setBlend(desc);

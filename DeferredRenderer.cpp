@@ -88,7 +88,7 @@ void DeferredRenderer::render(Renderer::RenderTarget::Ptr rt)
 
 	mQuad->setRenderTarget(rt);
 	mQuad->setSamplers({ mSampleLinear});
-	//mQuad->drawTexture(mFinalTarget);
+	mQuad->drawTexture(mFinalTarget);
 }
 
 void DeferredRenderer::renderGbuffer()
@@ -116,8 +116,8 @@ void DeferredRenderer::renderGbuffer()
 	getRenderer()->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	std::vector<Renderer::RenderTarget::Ptr> rts = { mDiffuse, mNormal, mDepth };
 	mDiffuse.lock()->clear({0,0,0,0});
-	mNormal.lock()->clear({0,0,0,0});
-	mDepth.lock()->clear({0,0,0,0});
+	mNormal.lock()->clear({0.5,0.5,1,0});
+	mDepth.lock()->clear({1.0f,0,0,0});
 
 	//getRenderer()->clearRenderTargets(rts, { 1,1,1,1 });
 
@@ -161,10 +161,8 @@ void DeferredRenderer::renderLightingMap()
 
 
 	//lightningConstantBuffer.mInvertViewMatrix = XMMatrixTranspose(XMMatrixInverse(nullptr, XMMatrixMultiply(p_pCamera->GetViewMatrix(), p_pCamera->GetProjectionMatrix())));
-	XMMATRIX view = XMLoadFloat4x4(&cam->getViewMatrix());
-	XMMATRIX proj = XMLoadFloat4x4(&cam->getProjectionMatrix());
-	XMMATRIX mat = XMMatrixInverse(nullptr, view * proj);
-	XMStoreFloat4x4A(&lightningConstantBuffer.mInvertViewMatrix, mat);
+	auto mat = cam->getViewMatrix() * cam->getProjectionMatrix();
+	XMStoreFloat4x4A(&lightningConstantBuffer.mInvertViewMatrix, mat.Invert().Transpose());
 
 	getRenderer()->setSamplers({ mSampleLinear, mSamplePoint });
 

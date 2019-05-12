@@ -7,6 +7,12 @@
 
 class ShadowMap: public Pipeline::Stage
 {
+	struct ConstantMatrix
+	{
+		DirectX::XMFLOAT4X4 world;
+		DirectX::XMFLOAT4X4 view;
+		DirectX::XMFLOAT4X4 proj;
+	};
 public:
 	ShadowMap(Renderer::Ptr r, Scene::Ptr s, Pipeline* p);
 	~ShadowMap();
@@ -14,20 +20,33 @@ public:
 	void render(Renderer::RenderTarget::Ptr rt);
 private:
 	void fitToScene();
-	void renderToLightMap();
+	void renderToShadowMap();
 	void renderShadow();
+
+
 private:
 	Renderer::RenderTarget::Ptr mFinalTarget;
-	std::vector<Renderer::RenderTarget::Ptr > mLightMaps;
+	int mNumLevels;
+	std::vector<DirectX::SimpleMath::Matrix> mProjections;
+	std::vector<Vector4> mCascadeDepths;
+	Renderer::DepthStencil::Ptr mShadowMap;
 	Scene::Camera::Ptr mLightCamera;
 
 	int mShadowMapSize = 2048;
+	float mNear;
+	float mFar;
+	Vector3 mLightPos;
+	Vector3 mLightDir;
+	Matrix mLightView;
+	Renderer::Buffer::Ptr mConstants;
 
 	Renderer::Layout::Ptr mDepthLayout;
 	Renderer::Effect::Ptr mDepthEffect;
 	Renderer::Effect::Ptr mEffect;
 	Renderer::Layout::Ptr mLayout;
 	D3D11_DEPTH_STENCIL_DESC mDepthStencilDesc;
-	Renderer::DepthStencil::Ptr mDepthStencil;
 	Renderer::Sampler::Ptr mSampler;
+	Renderer::VertexShader::Weak mShadowVS;
+
+
 };

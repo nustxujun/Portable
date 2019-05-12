@@ -305,6 +305,18 @@ const Matrix & Scene::Camera::getProjectionMatrix()
 	return mProjection;
 }
 
+std::array<Scene::Camera::Corner, 8> Scene::Camera::getWorldCorners()
+{
+	auto ret = MathUtilities::calFrustumCorners(mViewport.Width, mViewport.Height, mNear, mFar, mFOVy);
+	auto eyeToWorld = getViewMatrix().Invert();
+	for (auto&i : ret)
+		i = Vector3::Transform(i, eyeToWorld);
+
+
+	std::array<Scene::Camera::Corner, 8> arr ;
+	return ret;
+}
+
 
 Scene::Light::Light()
 {

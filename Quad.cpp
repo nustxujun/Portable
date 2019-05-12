@@ -3,6 +3,14 @@
 
 Quad::Quad(Renderer::Ptr r):mRenderer(r)
 {
+	mViewport = 
+	{
+		0,0,
+		(float)r->getWidth(), (float)r->getHeight(),
+		0, 1.0f
+	};
+
+
 	auto vsblob = mRenderer->compileFile("quad_vs.hlsl", "main", "vs_5_0");
 	mVS = mRenderer->createVertexShader((**vsblob).GetBufferPointer(), (**vsblob).GetBufferSize());
 	
@@ -57,8 +65,7 @@ void Quad::draw(const std::array<float, 4>& color)
 	//mRenderTarget.lock()->clear(color);
 	mRenderer->setRenderTarget(mRenderTarget);
 
-
-	//mRenderer->setDefaultBlendState();
+	mRenderer->setViewport(mViewport);
 
 	mRenderer->setBlendState(mBlendState.desc, mBlendState.factor, mBlendState.mask);
 	mRenderer->setDefaultDepthStencilState();
@@ -73,9 +80,9 @@ void Quad::draw(const std::array<float, 4>& color)
 	context->PSSetShader(*mPS.lock(), NULL, 0);
 
 	mRenderer->setLayout(mLayout.lock()->bind(mVS));
-	mRenderer->setShaderResourceViews(mSRVs);
+	mRenderer->setTextures(mSRVs);
 	mRenderer->setSamplers(mSamplers);
-	mRenderer->setConstantBuffers(mConstants);
+	mRenderer->setPSConstantBuffers({ mConstants });
 
 	context->DrawIndexed(6, 0, 0);
 
@@ -84,31 +91,6 @@ void Quad::draw(const std::array<float, 4>& color)
 	mRenderer->removeSamplers();
 }
 
-
-
-void Quad::setTextures(const std::vector<Renderer::RenderTarget::Ptr>& rts)
-{
-	mSRVs.clear();
-	for (auto i : rts)
-	{
-		if (i.lock())
-			mSRVs.push_back((*i.lock()).getShaderResourceView());
-	}
-}
-
-void Quad::setTextures(const std::vector<Renderer::Texture::Ptr>& ts)
-{
-	mSRVs.clear();
-	for (auto i : ts)
-	{
-		mSRVs.push_back(*i.lock());
-	}
-}
-
-void Quad::setTextures(const std::vector<ID3D11ShaderResourceView*>& ts)
-{
-	mSRVs = ts;
-}
 
 
 void Quad::setBlend(const D3D11_BLEND_DESC & desc, const std::array<float, 4>& factor, size_t mask)

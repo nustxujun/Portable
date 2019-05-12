@@ -61,7 +61,20 @@ public:
 		T* mInterface;
 	};
 
-	class RenderTarget final : public NODefault, public D3DObject
+	class ShaderResource
+	{
+	public:
+		using Ptr = std::weak_ptr<ShaderResource>;
+	public:
+		ShaderResource(ID3D11ShaderResourceView* srv );
+		~ShaderResource();
+
+		ID3D11ShaderResourceView* getShaderResourceView()const { return mSRView; }
+		operator ID3D11ShaderResourceView* ()const { return mSRView; }
+	protected:
+		ID3D11ShaderResourceView* mSRView;
+	};
+	class RenderTarget final : public NODefault, public D3DObject, public ShaderResource
 	{
 	public:
 		using Ptr = std::weak_ptr<RenderTarget>;
@@ -72,14 +85,12 @@ public:
 		operator ID3D11RenderTargetView*() { return mRTView; }
 		
 		ID3D11Texture2D* getTexture() const{ return mTexture; }
-		ID3D11ShaderResourceView* getShaderResourceView()const { return mSRView; }
 		ID3D11RenderTargetView* getRenderTargetView() const{ return mRTView; }
 
 		void clear(const std::array<float,4> c);
 	private:
 		ID3D11Texture2D* mTexture;
 		ID3D11RenderTargetView* mRTView;
-		ID3D11ShaderResourceView* mSRView;
 	};
 
 	class Buffer final : public NODefault, public D3DObject
@@ -123,20 +134,13 @@ public:
 		std::unordered_map<std::string, ID3DX11EffectTechnique*> mTechs;
 	};
 
-	class Texture final : public NODefault
+	class Texture final : public NODefault, public ShaderResource
 	{
 	public:
 		using Ptr = std::weak_ptr<Texture>;
 	public:
-		Texture(ID3D11ShaderResourceView* srv) :mSRV(srv) {};
-		~Texture() { mSRV->Release(); };
-
-		operator ID3D11ShaderResourceView*()const
-		{
-			return mSRV;
-		}
+		Texture(ID3D11ShaderResourceView* srv) :ShaderResource(srv){};
 	private:
-		ID3D11ShaderResourceView* mSRV;
 	};
 
 	class Sampler final : public NODefault
@@ -233,7 +237,7 @@ public:
 		ID3D11RasterizerState* mRasterizer;
 	};
 
-	class DepthStencil:public NODefault, public D3DObject
+	class DepthStencil:public NODefault, public D3DObject, public ShaderResource
 	{
 	public:
 		using Ptr = std::weak_ptr<DepthStencil>;
@@ -242,13 +246,11 @@ public:
 		~DepthStencil();
 
 		operator ID3D11DepthStencilView* () const { return mDSView; }
-		ID3D11ShaderResourceView* getShadowResourceView()const;
 		void clearDepth(float d);
 		void clearStencil(int s);
 	private:
 		ID3D11Texture2D* mTexture;
 		ID3D11DepthStencilView* mDSView;
-		ID3D11ShaderResourceView* mSRView;
 		D3D11_TEXTURE2D_DESC mDesc;
 	};
 
@@ -273,12 +275,22 @@ public:
 	void clearRenderTargets(std::vector<RenderTarget::Ptr>& rts, const std::array<float,4>& color);
 	void clearDefaultStencil(float d, int s = 0);
 
-	void setTexture(const Texture::Ptr tex);
-	void setTextures(const std::vector<Texture::Ptr>& texs);
-	void setTexture(const RenderTarget::Ptr tex);
-	void setTextures(const std::vector<RenderTarget::Ptr>& texs);
-	void setShaderResourceView(ID3D11ShaderResourceView* srv);
-	void setShaderResourceViews(const std::vector<ID3D11ShaderResourceView*>& srvs);
+	//void setTexture(const Texture::Ptr tex);
+	//void setTextures(const std::vector<Texture::Ptr>& texs);
+	//void setTexture(const RenderTarget::Ptr tex);
+	//void setTextures(const std::vector<RenderTarget::Ptr>& texs);
+	void setTexture(ShaderResource::Ptr srv);
+	void setTextures(const std::vector<ShaderResource::Ptr>& srvs);
+	template<class Container>
+	void setTextures(const Container& c)
+	{
+		std::vector<ShaderResource::Ptr> list;
+		list.reserve(c.size());
+		for (auto& i : c)
+			list.push_back(i);
+
+		setTextures(list);
+	}
 	void removeShaderResourceViews();
 
 	void setSampler(Sampler::Ptr s);
@@ -288,9 +300,9 @@ public:
 	void setRenderTarget(RenderTarget::Ptr rt, DepthStencil::Ptr ds = DepthStencil::Ptr());
 	void setRenderTargets(const std::vector<RenderTarget::Ptr>& rts, DepthStencil::Ptr ds = DepthStencil::Ptr());
 	void removeRenderTargets();
-	void setConstantBuffer(Buffer::Ptr b);
-	void setConstantBuffers(const std::vector<Buffer::Ptr>& bs);
-	void removeConstantBuffers();
+	void setVSConstantBuffers(const std::vector<Buffer::Ptr>& bs);
+	void setPSConstantBuffers(const std::vector<Buffer::Ptr>& bs);
+
 	void setRasterizer(Rasterizer::Ptr r);
 
 	RenderTarget::Ptr getBackbuffer() { return mBackbuffer; }
@@ -304,6 +316,9 @@ public:
 	void setBlendState(const D3D11_BLEND_DESC& desc, const std::array<float, 4>& factor = { 1,1,1,1 }, size_t mask = 0xffffffff);
 	void setDefaultBlendState();
 	void setDefaultDepthStencilState();
+	void setVertexShader(VertexShader::Weak shader);
+	void setPixelShader(PixelShader::Weak shader);
+
 
 	Sampler::Ptr createSampler(const std::string& name, D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV,
 		D3D11_TEXTURE_ADDRESS_MODE addrW = D3D11_TEXTURE_ADDRESS_WRAP, D3D11_COMPARISON_FUNC cmpfunc = D3D11_COMPARISON_NEVER, float minlod = 0, float maxlod = D3D11_FLOAT32_MAX);
@@ -318,10 +333,11 @@ public:
 	Layout::Ptr createLayout(const D3D11_INPUT_ELEMENT_DESC* descarray, size_t count);
 	Font::Ptr createOrGetFont(const std::wstring& font);
 	Rasterizer::Ptr createOrGetRasterizer(const std::string & name, D3D11_CULL_MODE cull = D3D11_CULL_BACK, D3D11_FILL_MODE fill = D3D11_FILL_SOLID, bool multisample = false);
-	DepthStencil::Ptr createDepthStencil(int width, int height, DXGI_FORMAT format);
+	DepthStencil::Ptr createDepthStencil(int width, int height, DXGI_FORMAT format, bool access = false);
  private:
 	static void checkResult(HRESULT hr);
 
+	void setConstantBuffersImpl(const std::vector<Buffer::Ptr>& bs, std::function<void(size_t, ID3D11Buffer**)> f);
 private:
 	int mWidth = 0;
 	int mHeight = 0;

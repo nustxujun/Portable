@@ -76,6 +76,9 @@ float4 main(PS_INPUT input) : SV_TARGET
 	worldPos.y = -(input.Tex.y * 2.0f - 1.0f);
 	worldPos.z = depthVal;
 	worldPos.w = 1.0f;
+	worldPos = mul(worldPos, InvertViewProjection);
+	worldPos /= worldPos.w;
+
 
 	float3 V = normalize(CameraPosition - worldPos.xyz);
 

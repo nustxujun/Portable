@@ -106,6 +106,8 @@ public:
 			PT_ORTHOGRAPHIC,
 			PT_PERSPECTIVE,
 		};
+
+		using Corner = DirectX::SimpleMath::Vector3;
 	public:
 		Camera(Scene* s);
 		~Camera();
@@ -119,10 +121,15 @@ public:
 		void lookat(const Vector3& eye, const Vector3& at);
 		void setViewport(float left, float top, float width, float height);
 		void setFOVy(float fovy);
+		float getFOVy()const { return mFOVy; }
 		void setNearFar(float n, float f);
+		float getNear()const { return mNear; }
+		float getFar()const { return mFar; }
+
 		void setProjectType(ProjectionType type) { mProjectionType = type; };
 		const Matrix & getProjectionMatrix();
 		const D3D11_VIEWPORT& getViewport()const { return mViewport; }
+		std::array<Corner, 8> getWorldCorners();
 
 		void visitVisibleObject(std::function<void(Entity::Ptr)> visit);
 	private:

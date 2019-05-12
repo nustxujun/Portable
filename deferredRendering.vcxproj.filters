@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="shader">
+      <UniqueIdentifier>{617e755d-acdc-4aba-94ee-246f1d59f490}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -132,5 +135,22 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="hlsl\depth.fx">
+      <Filter>shader</Filter>
+    </FxCompile>
+    <FxCompile Include="hlsl\pbr.hlsl">
+      <Filter>shader</Filter>
+    </FxCompile>
+    <FxCompile Include="hlsl\shadowmap.fx">
+      <Filter>shader</Filter>
+    </FxCompile>
+    <FxCompile Include="hlsl\ssao.hlsl">
+      <Filter>shader</Filter>
+    </FxCompile>
+    <FxCompile Include="hlsl\castshadow.hlsl">
+      <Filter>shader</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

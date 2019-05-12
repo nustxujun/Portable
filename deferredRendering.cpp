@@ -68,31 +68,32 @@ void initRenderer(HWND win)
 	input = decltype(input)(new Input());
 	ppl = decltype(ppl)(new Pipeline(renderer, scene, quad));
 
-	ppl->pushStage<DeferredRenderer>();
+	//ppl->pushStage<DeferredRenderer>();
 	ppl->pushStage<ShadowMap>();
-	ppl->pushStage<AO>();
+	//ppl->pushStage<AO>();
 
 	Parameters params;
-	params["file"] = "tiny.x";
+	params["file"] = "lost-empire/lost_empire.obj";
 	auto model = scene->createModel("test", params);
 	model->attach(scene->getRoot());
 	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
 	auto aabb = model->getWorldAABB();
 
+	Vector3 vec = aabb.second - aabb.first;
 
 	auto cam = scene->createOrGetCamera("main");
 	DirectX::XMFLOAT3 eye(aabb.second);
 	DirectX::XMFLOAT3 at(aabb.first);
-	cam->lookat(eye, at);
+	cam->lookat( {20,eye.y,0}, { (eye + at) * 0.5f });
+
 	cam->setViewport(0, 0, rect.right, rect.bottom);
-	cam->setNearFar(1, 10000);
+	cam->setNearFar(1, vec.Length());
 	cam->setFOVy(0.785398185);
 
-	Vector3 vec = aabb.second - aabb.first;
 	float com_step= std::min(std::min(vec.x, vec.y), vec.z) * 0.001;
 
 	auto light = scene->createOrGetLight("main");
-	light->setDirection({ 0,-1,0.1 });
+	light->setDirection({ 0,-1,0.2 });
 
 	input->listen([cam, com_step](const Input::Mouse& m, const Input::Keyboard& k) {
 		static auto lasttime = GetTickCount();
