@@ -59,26 +59,26 @@ float4 ps(PS_INPUT input) : SV_TARGET
 
 		float2 uv = (pos.xy + float2(i, 0)) * float2(scale, 1);
 		float depth = lightmap.Sample(sampLinear, uv).r;
-		if (depth + 0.001 < pos.z)
+		if (depth + 0.00001 < pos.z)
 		{
-			if (i == 0)
-				return float4(0.3, 0, 0, 1);
-			else if (i == 1)
-				return float4(0, 0.3, 0, 1);
-			else if (i == 2)
-				return float4(0, 0.0, 0.3, 1);
-			else
+			//if (i == 0)
+			//	return float4(0.3, 0, 0, 1);
+			//else if (i == 1)
+			//	return float4(0, 0.3, 0, 1);
+			//else if (i == 2)
+			//	return float4(0, 0.0, 0.3, 1);
+			//else
 				return 0.3;
 		}
 		else
 		{
-			if (i == 0)
-				return float4(0.9, 0, 0, 1);
-			else if (i == 1)
-				return float4(0, 0.9, 0, 1);
-			else if (i == 2)
-				return float4(0, 0.0, 0.9, 1);
-			else
+			//if (i == 0)
+			//	return float4(0.9, 0, 0, 1);
+			//else if (i == 1)
+			//	return float4(0, 0.9, 0, 1);
+			//else if (i == 2)
+			//	return float4(0, 0.0, 0.9, 1);
+			//else
 				return 1;
 		}
 	}

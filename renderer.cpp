@@ -78,7 +78,18 @@ void Renderer::init(HWND win, int width, int height)
 	mDefaultDepthStencil = createDepthStencil(width, height, DXGI_FORMAT_D24_UNORM_S8_UINT);
 
 
-	createOrGetRasterizer("default",D3D11_CULL_BACK);
+	//D3D11_RASTERIZER_DESC rasterDesc;
+	//rasterDesc.AntialiasedLineEnable = false;
+	//rasterDesc.CullMode = D3D11_CULL_BACK;
+	//rasterDesc.DepthBias = 0;
+	//rasterDesc.DepthBiasClamp = 0.0f;
+	//rasterDesc.DepthClipEnable = true;
+	//rasterDesc.FillMode = D3D11_FILL_SOLID;
+	//rasterDesc.FrontCounterClockwise = false;
+	//rasterDesc.MultisampleEnable = false;
+	//rasterDesc.ScissorEnable = false;
+	//rasterDesc.SlopeScaledDepthBias = 0.0f;
+	//createOrGetRasterizer(rasterDesc);
 
 }
 
@@ -270,6 +281,23 @@ void Renderer::setRasterizer(Rasterizer::Ptr r)
 	mContext->RSSetState(*ptr);
 }
 
+void Renderer::setDefaultRasterizer()
+{
+	D3D11_RASTERIZER_DESC rasterDesc;
+	rasterDesc.AntialiasedLineEnable = false;
+	rasterDesc.CullMode = D3D11_CULL_BACK;
+	rasterDesc.DepthBias = 0;
+	rasterDesc.DepthBiasClamp = 0.0f;
+	rasterDesc.DepthClipEnable = true;
+	rasterDesc.FillMode = D3D11_FILL_SOLID;
+	rasterDesc.FrontCounterClockwise = false;
+	rasterDesc.MultisampleEnable = false;
+	rasterDesc.ScissorEnable = false;
+	rasterDesc.SlopeScaledDepthBias = 0.0f;
+	auto dft = createOrGetRasterizer(rasterDesc);
+	setRasterizer(dft);
+}
+
 void Renderer::setLayout(ID3D11InputLayout*  layout)
 {
 	mContext->IASetInputLayout(layout);
@@ -451,6 +479,7 @@ Renderer::Texture::Ptr Renderer::createTexture(const std::string& name, const D3
 	ID3D11ShaderResourceView* srv;
 	checkResult(mDevice->CreateShaderResourceView(tex, nullptr, &srv));
 	auto ret = mTextures.emplace(name, new Texture(srv));
+	tex->Release();
 	return Texture::Ptr(ret.first->second);
 }
 
@@ -539,26 +568,28 @@ Renderer::Font::Ptr Renderer::createOrGetFont(const std::wstring & font)
 	return Font::Ptr(shared);
 }
 
-Renderer::Rasterizer::Ptr Renderer::createOrGetRasterizer(const std::string & name, D3D11_CULL_MODE cull, D3D11_FILL_MODE fill, bool multisample)
+Renderer::Rasterizer::Ptr Renderer::createOrGetRasterizer(const D3D11_RASTERIZER_DESC& desc)
 {
-	auto ret = mRasterizers.find(name);
+	auto key = Common::hash(desc);
+
+	auto ret = mRasterizers.find(key);
 	if (ret != mRasterizers.end())
 		return ret->second;
 
-	D3D11_RASTERIZER_DESC rasterDesc;
-	rasterDesc.AntialiasedLineEnable = false;
-	rasterDesc.CullMode = cull;
-	rasterDesc.DepthBias = 0;
-	rasterDesc.DepthBiasClamp = 0.0f;
-	rasterDesc.DepthClipEnable = true;
-	rasterDesc.FillMode = fill;
-	rasterDesc.FrontCounterClockwise = false;
-	rasterDesc.MultisampleEnable = multisample;
-	rasterDesc.ScissorEnable = false;
-	rasterDesc.SlopeScaledDepthBias = 0.0f;
+	//D3D11_RASTERIZER_DESC rasterDesc;
+	//rasterDesc.AntialiasedLineEnable = false;
+	//rasterDesc.CullMode = cull;
+	//rasterDesc.DepthBias = 0;
+	//rasterDesc.DepthBiasClamp = 0.0f;
+	//rasterDesc.DepthClipEnable = true;
+	//rasterDesc.FillMode = fill;
+	//rasterDesc.FrontCounterClockwise = false;
+	//rasterDesc.MultisampleEnable = multisample;
+	//rasterDesc.ScissorEnable = false;
+	//rasterDesc.SlopeScaledDepthBias = 0.0f;
 
-	std::shared_ptr<Rasterizer> shared(new Rasterizer(mDevice, rasterDesc));
-	mRasterizers.emplace(name, shared);
+	std::shared_ptr<Rasterizer> shared(new Rasterizer(mDevice, desc));
+	mRasterizers.emplace(key, shared);
 
 	return Rasterizer::Ptr(shared);
 }

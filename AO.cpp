@@ -65,21 +65,7 @@ AO::AO(Renderer::Ptr r, Scene::Ptr s, Pipeline* p): Pipeline::Stage(r,s,p)
 	mLinearWrap = r->createSampler("linear_wrap", D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
 	mPointWrap = r->createSampler("point_wrap", D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
 
-	//using namespace DirectX::SimpleMath;
-	//Vector3 normal = { 0,0, 1};
-	//normal.Normalize();
-	//Vector3 nis = { -1,1,0 };
-	//Vector3 tmp = normal;
-	//tmp *= nis.Dot(normal);
-	//Vector3 tan = nis;
-	//tan -= tmp;
-	//tan.Normalize();
-	//Vector3 bin = normal.Cross(tan);
 
-	//Matrix m;
-	//m = MathUtilities::makeMatrixFromAxis(tan, bin, normal);
-	//Vector4 vec = { 1,0,0,0 };
-	//vec = Vector4::Transform(vec, m);
 
 
 
@@ -109,7 +95,7 @@ void AO::render(Renderer::RenderTarget::Ptr rt)
 	mQuad->setTextures({ mNormal, mDepth, mNoise});
 	D3D11_BLEND_DESC desc = { 0 };
 	desc.RenderTarget[0] = {
-		FALSE,
+		TRUE,
 		D3D11_BLEND_DEST_COLOR,
 		D3D11_BLEND_ZERO,
 		D3D11_BLEND_OP_ADD,

@@ -304,6 +304,7 @@ public:
 	void setPSConstantBuffers(const std::vector<Buffer::Ptr>& bs);
 
 	void setRasterizer(Rasterizer::Ptr r);
+	void setDefaultRasterizer();
 
 	RenderTarget::Ptr getBackbuffer() { return mBackbuffer; }
 	void setLayout(ID3D11InputLayout* layout);
@@ -332,7 +333,7 @@ public:
 	PixelShader::Weak createPixelShader(const void* data, size_t size);
 	Layout::Ptr createLayout(const D3D11_INPUT_ELEMENT_DESC* descarray, size_t count);
 	Font::Ptr createOrGetFont(const std::wstring& font);
-	Rasterizer::Ptr createOrGetRasterizer(const std::string & name, D3D11_CULL_MODE cull = D3D11_CULL_BACK, D3D11_FILL_MODE fill = D3D11_FILL_SOLID, bool multisample = false);
+	Rasterizer::Ptr createOrGetRasterizer(  const D3D11_RASTERIZER_DESC& desc);
 	DepthStencil::Ptr createDepthStencil(int width, int height, DXGI_FORMAT format, bool access = false);
  private:
 	static void checkResult(HRESULT hr);
@@ -364,7 +365,7 @@ private:
 	std::vector<VertexShader::Shared> mVSs;
 	std::vector<PixelShader::Shared> mPSs;
 	std::unordered_map<std::wstring, std::shared_ptr<Font>> mFonts;
-	std::unordered_map<std::string, std::shared_ptr<Rasterizer>> mRasterizers;
+	std::unordered_map<size_t, std::shared_ptr<Rasterizer>> mRasterizers;
 
 	std::unordered_map<size_t, DepthStencilState::Shared> mDepthStencilStates;
 	std::unordered_map<size_t, BlendState::Shared> mBlendStates;

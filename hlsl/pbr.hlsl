@@ -64,8 +64,8 @@ float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
 float4 main(PS_INPUT input) : SV_TARGET
 {
 	float3 albedo = pow(albedoTexture.Sample(sampLinear, input.Tex).rgb, 2.2);
-	const float3 metallic = 0.1;
-	const float roughness = 0.9;
+	const float3 metallic = 0.5;
+	const float roughness = 0.5;
 
 	float4 normalData = normalTexture.Sample(sampPoint, input.Tex);
 	float3 N = 2.0f * normalData.xyz - 1.0f;

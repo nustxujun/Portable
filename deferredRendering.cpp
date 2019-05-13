@@ -68,9 +68,9 @@ void initRenderer(HWND win)
 	input = decltype(input)(new Input());
 	ppl = decltype(ppl)(new Pipeline(renderer, scene, quad));
 
-	//ppl->pushStage<DeferredRenderer>();
-	ppl->pushStage<ShadowMap>();
-	//ppl->pushStage<AO>();
+	ppl->pushStage<DeferredRenderer>();
+	//ppl->pushStage<ShadowMap>();
+	ppl->pushStage<AO>();
 
 	Parameters params;
 	params["file"] = "lost-empire/lost_empire.obj";
@@ -93,7 +93,7 @@ void initRenderer(HWND win)
 	float com_step= std::min(std::min(vec.x, vec.y), vec.z) * 0.001;
 
 	auto light = scene->createOrGetLight("main");
-	light->setDirection({ 0,-1,0.2 });
+	light->setDirection({ 0.5,-1,0.5 });
 
 	input->listen([cam, com_step](const Input::Mouse& m, const Input::Keyboard& k) {
 		static auto lasttime = GetTickCount();
@@ -157,11 +157,11 @@ void framemove()
 	input->update();
 	auto light = scene->createOrGetLight("main");
 	float len = 300;
-	auto t = GetTickCount() * 0.0005f;
+	auto t = GetTickCount() * 0.0002f;
 	auto x = cos(t) * len;
 	auto y = sin(t) * len;
 	
-	//light->setDirection({0,y,x });
+	//light->setDirection({x,y,x });
 	
 
 	static auto time = GetTickCount();

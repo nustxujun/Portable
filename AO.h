@@ -5,7 +5,6 @@
 
 class AO :public Pipeline::Stage
 {
-	__declspec(align(16))
 	struct Kernel
 	{
 		int kernelSize;

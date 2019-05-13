@@ -33,10 +33,6 @@ private:
 	Scene::Camera::Ptr mLightCamera;
 
 	int mShadowMapSize = 2048;
-	float mNear;
-	float mFar;
-	Vector3 mLightPos;
-	Vector3 mLightDir;
 	Matrix mLightView;
 	Renderer::Buffer::Ptr mConstants;
 
@@ -47,6 +43,6 @@ private:
 	D3D11_DEPTH_STENCIL_DESC mDepthStencilDesc;
 	Renderer::Sampler::Ptr mSampler;
 	Renderer::VertexShader::Weak mShadowVS;
-
+	Renderer::Rasterizer::Ptr mRasterizer;
 
 };
