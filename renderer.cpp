@@ -493,8 +493,6 @@ Renderer::RenderTarget::Ptr Renderer::createRenderTarget(int width, int height, 
 
 Renderer::Buffer::Ptr Renderer::createBuffer(int size, D3D11_BIND_FLAG flag, const D3D11_SUBRESOURCE_DATA* initialdata, D3D11_USAGE usage, bool CPUaccess)
 {
-	ID3D11Buffer* buffer;
-
 	D3D11_BUFFER_DESC bd;
 	ZeroMemory(&bd, sizeof(bd));
 	bd.Usage = usage;

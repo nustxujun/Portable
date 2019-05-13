@@ -292,7 +292,7 @@ void ShadowMap::render(Renderer::RenderTarget::Ptr rt)
 	mQuad->setDefaultSampler();
 	D3D11_BLEND_DESC desc = { 0 };
 	desc.RenderTarget[0] = {
-		FALSE,
+		TRUE,
 		D3D11_BLEND_DEST_COLOR,
 		D3D11_BLEND_ZERO,
 		D3D11_BLEND_OP_ADD,

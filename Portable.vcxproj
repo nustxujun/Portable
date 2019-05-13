@@ -22,8 +22,9 @@
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{82B8A39C-9887-40AF-8E40-2B1B5BA73E72}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>deferredRendering</RootNamespace>
+    <RootNamespace>Portable</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <ProjectName>Portable</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -157,6 +158,8 @@
     <ClInclude Include="D3D11Helper.h" />
     <ClInclude Include="DeferredRenderer.h" />
     <ClInclude Include="deferredRendering.h" />
+    <ClInclude Include="Framework.h" />
+    <ClInclude Include="GBuffer.h" />
     <ClInclude Include="Input.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="MathUtilities.h" />
@@ -175,7 +178,9 @@
   <ItemGroup>
     <ClCompile Include="AO.cpp" />
     <ClCompile Include="DeferredRenderer.cpp" />
-    <ClCompile Include="deferredRendering.cpp" />
+    <ClCompile Include="GBuffer.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="Framework.cpp" />
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="Mesh.cpp" />

@@ -39,7 +39,7 @@ Renderer::DepthStencil::Ptr Pipeline::Stage::getSharedDS(const std::string & nam
 	
 }
 
-Pipeline::Pipeline(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q) :
+Pipeline::Pipeline(Renderer::Ptr r, Scene::Ptr s) :
 	mRenderer(r), mScene(s)
 {
 }

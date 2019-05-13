@@ -33,7 +33,7 @@ public:
 		Pipeline* mPipeline;
 	};
 public:
-	Pipeline(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q);
+	Pipeline(Renderer::Ptr r, Scene::Ptr s);
 
 	template<class T, class ... Args>
 	void pushStage(Args ... args)

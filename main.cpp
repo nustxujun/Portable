@@ -3,52 +3,17 @@
 
 #include "stdafx.h"
 #include "deferredRendering.h"
-#include "renderer.h"
 #include <memory>
 
-#include "Quad.h"
-#include "Mesh.h"
-#include "Scene.h"
-
-#include "DeferredRenderer.h"
-#include "Input.h"
-
-#include "ShadowMap.h"
-#include "Quad.h"
-#include "Pipeline.h"
-#include "AO.h"
 
 #include <sstream>
+
+#include "Framework.h"
 
 #define MAX_LOADSTRING 100
 
 
-template<class T>
-class Instance
-{
-public:
-	using Shared = std::shared_ptr<T>;
-
-	template<class ... Args>
-	void operator()(Args ... args)
-	{
-		instance = Shared(new T(args...));
-	}
-
-	Shared operator->()const { return instance; }
-	operator Shared()const { return instance; }
-
-	Shared instance;
-};
-
-
-Renderer::Ptr renderer;
-Instance<Quad> quad;
-
-
-std::shared_ptr<Scene> scene;
-std::shared_ptr<Input> input;
-std::shared_ptr<Pipeline> ppl;
+std::shared_ptr<Framework> framework;
 
 std::string show;
 
@@ -56,136 +21,43 @@ std::string show;
 
 void initRenderer(HWND win)
 {
-
-	RECT rect;
-	GetClientRect(win, &rect);
-	renderer = std::move(std::unique_ptr<Renderer>(new Renderer));
-	renderer->init(win, rect.right, rect.bottom);
-
-	quad(renderer);
-
-	scene = decltype(scene)(new Scene(renderer));
-	input = decltype(input)(new Input());
-	ppl = decltype(ppl)(new Pipeline(renderer, scene, quad));
-
-	ppl->pushStage<DeferredRenderer>();
-	//ppl->pushStage<ShadowMap>();
-	ppl->pushStage<AO>();
-
-	Parameters params;
-	params["file"] = "lost-empire/lost_empire.obj";
-	auto model = scene->createModel("test", params);
-	model->attach(scene->getRoot());
-	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-	auto aabb = model->getWorldAABB();
-
-	Vector3 vec = aabb.second - aabb.first;
-
-	auto cam = scene->createOrGetCamera("main");
-	DirectX::XMFLOAT3 eye(aabb.second);
-	DirectX::XMFLOAT3 at(aabb.first);
-	cam->lookat( {20,eye.y,0}, { (eye + at) * 0.5f });
-
-	cam->setViewport(0, 0, rect.right, rect.bottom);
-	cam->setNearFar(1, vec.Length());
-	cam->setFOVy(0.785398185);
-
-	float com_step= std::min(std::min(vec.x, vec.y), vec.z) * 0.001;
-
-	auto light = scene->createOrGetLight("main");
-	light->setDirection({ 0.5,-1,0.5 });
-
-	input->listen([cam, com_step](const Input::Mouse& m, const Input::Keyboard& k) {
-		static auto lasttime = GetTickCount();
-		auto dtime = GetTickCount() - lasttime;
-		lasttime = GetTickCount();
-		float step = dtime * com_step;
-		
-		auto node = cam->getNode();
-		auto pos = node->getPosition();
-		auto dir = cam->getDirection();
-		Vector3 up(0, 1, 0);
-		Vector3 r = up.Cross(dir);
-		r.Normalize();
-
-		Vector2 cur = Vector2(m.x, m.y);
-		static Vector2 last = cur;
-		Vector2 d = cur - last;
-
-
-
-		d = Vector2(d.x  , d.y );
-		last = cur;
-		if (k.W )
-		{
-			pos = dir * step + pos;
-		}
-		else if (k.S)
-		{
-			pos = dir * -step + pos;
-		}
-		else if (k.A)
-		{
-			pos = r * -step + pos;
-		}
-		else if (k.D)
-		{
-			pos = r * step + pos;
-		}
-
-		if (m.leftButton)
-		{
-			float pi = 3.14159265358;
-			Quaternion rot = Quaternion::CreateFromYawPitchRoll(d.x * 0.005, d.y  * 0.005, 0);
-
-			rot *= node->getOrientation();
-			dir = Vector3::Transform(Vector3(0, 0, 1), rot);
-			cam->setDirection(dir);
-		}
-
-		node->setPosition(pos);
-	});
-
-
+	framework = std::make_shared<Framework>(win);
+	framework->init();
 }
 
 void framemove()
 {
-	auto bb = renderer->getBackbuffer();
-	bb.lock()->clear({ 0,0,0,0 });
-
-	input->update();
-	auto light = scene->createOrGetLight("main");
-	float len = 300;
-	auto t = GetTickCount() * 0.0002f;
-	auto x = cos(t) * len;
-	auto y = sin(t) * len;
-	
-	//light->setDirection({x,y,x });
-	
+	framework->update();
+	//input->update();
+	//auto light = scene->createOrGetLight("main");
+	//float len = 300;
+	//auto t = GetTickCount() * 0.0002f;
+	//auto x = cos(t) * len;
+	//auto y = sin(t) * len;
+	//
+	////light->setDirection({x,y,x });
+	//
 
 	static auto time = GetTickCount();
-	static size_t count = 0;
-	count++;
+	//static size_t count = 0;
+	//count++;
 
-	if (count == 100)
-	{
-		float fps = count * 1000.0f / std::max((unsigned long)1,(GetTickCount() - time));
-		time = GetTickCount();
-		count = 0;
-		std::stringstream ss;
+	//if (count == 100)
+	//{
+	//	float fps = count * 1000.0f / std::max((unsigned long)1,(GetTickCount() - time));
+	//	time = GetTickCount();
+	//	count = 0;
+	//	std::stringstream ss;
 
-		ss << fps;
-		show = ss.str();
-	}
+	//	ss << fps;
+	//	show = ss.str();
+	//}
 
-	ppl->render();
-	//sm->render();
 
-	renderer->setRenderTarget(bb);
-	auto font = renderer->createOrGetFont(L"myfile.spritefont");
-	font.lock()->drawText(show.c_str(), Vector2(10, 10));
-	renderer->present();
+	//renderer->setRenderTarget(bb);
+	//auto font = renderer->createOrGetFont(L"myfile.spritefont");
+	//font.lock()->drawText(show.c_str(), Vector2(10, 10));
+	//renderer->present();
 }
 
 
@@ -344,8 +216,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         break;
     case WM_DESTROY:
-		renderer->uninit();
-		renderer.reset();
         PostQuitMessage(0);
         break;
     default:
