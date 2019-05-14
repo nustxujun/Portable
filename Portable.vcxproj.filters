@@ -93,6 +93,9 @@
     <ClInclude Include="PBR.h">
       <Filter>Pipeline</Filter>
     </ClInclude>
+    <ClInclude Include="VolumetricLighting.h">
+      <Filter>Pipeline</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -144,6 +147,9 @@
       <Filter>Pipeline</Filter>
     </ClCompile>
     <ClCompile Include="PBR.cpp">
+      <Filter>Pipeline</Filter>
+    </ClCompile>
+    <ClCompile Include="VolumetricLighting.cpp">
       <Filter>Pipeline</Filter>
     </ClCompile>
   </ItemGroup>

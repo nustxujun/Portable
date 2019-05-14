@@ -4,6 +4,8 @@
 #include "PBR.h"
 #include "ShadowMap.h"
 #include "AO.h"
+#include "Prepare.h"
+#include "VolumetricLighting.h"
 Framework::Framework(HWND win)
 {
 	mRenderer = std::make_shared<Renderer>();
@@ -23,23 +25,46 @@ Framework::~Framework()
 
 void Framework::init()
 {
+	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
 	auto w = mRenderer->getWidth();
 	auto h = mRenderer->getHeight();
 	auto albedo = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
 	auto normal = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
 	auto worldpos = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R32_TYPELESS,true);
+	auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
+	
+	mPipeline->setFrameBuffer(frame);
+	auto bb = mRenderer->getBackbuffer();
+	mPipeline->pushStage([bb](Renderer::RenderTarget::Ptr rt)
+	{
+		rt.lock()->clear({ 1,1,1,1 });
+	});
+
+	mPipeline->pushStage([this](Renderer::RenderTarget::Ptr rt)
+	{
+		auto light = mScene->createOrGetLight("main");
+		auto time = GetTickCount() * 0.0002f;
+		auto x = cos(time);
+		auto y = sin(time);
+		light->setDirection({ x, y,x });
+	});
 
 	mPipeline->pushStage<GBuffer>(albedo, normal, worldpos, depth);
-	//mPipeline->pushStage<PBR>(albedo, normal, depth, 0.5f, 0.5f,10.0f);
-	mPipeline->pushStage<AO>(normal, depth,10.0f);
+	mPipeline->pushStage<PBR>(albedo, normal, depth, 0.5f, 0.5f,10.0f);
+	//mPipeline->pushStage<AO>(normal, depth,10.0f);
 	//mPipeline->pushStage<ShadowMap>(worldpos,depth, 2048, 8);
+	mPipeline->pushStage<VolumetricLighting>();
 
-
-
+	mPipeline->pushStage([bb,quad](Renderer::RenderTarget::Ptr rt)
+	{
+		quad->setRenderTarget(bb);
+		quad->drawTexture(rt,false);
+	});
 
 	Parameters params;
-	params["file"] = "sponza/sponza.obj";
+	params["file"] = "tiny.x";
+	//params["file"] = "media/sponza/sponza.obj";
 	auto model = mScene->createModel("test", params);
 	model->attach(mScene->getRoot());
 	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
@@ -66,8 +91,6 @@ void Framework::init()
 
 void Framework::update()
 {
-	auto bb = mRenderer->getBackbuffer();
-	bb.lock()->clear({ 1,1,1,1 });
 	mInput->update();
 	mPipeline->render();
 	showFPS();

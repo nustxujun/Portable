@@ -57,6 +57,7 @@ float4 main(PS_INPUT input) : SV_TARGET
 
 		float3 vec = mul(kernel[i], TBN); 
 		float4 sample = float4(pos.xyz + vec* radius, 1);
+		float linearDepth = sample.z;
 		sample = mul(sample, projection);
 		sample.xyz /= sample.w;
 
@@ -65,11 +66,15 @@ float4 main(PS_INPUT input) : SV_TARGET
 			continue;
 		}
 
-		sample.xy = sample.xy * 0.5f + 0.5f;
-		sample.y = 1.0f - sample.y;
+		float2 uv = sample.xy * 0.5f + 0.5f;
+		uv.y = 1.0f - uv.y;
 
-		float sampleDepth = depthTex.Sample(pointWrap, sample.xy).r;
-		if (sampleDepth + 0.000001 <= sample.z) {
+		float sampleDepth = depthTex.Sample(pointWrap, uv.xy).r;
+		float4 samplepos = float4(sample.xy, sampleDepth, 1);
+		samplepos = mul(samplepos, invertProjection);
+		samplepos /= samplepos.w;
+
+		if (samplepos.z + 1.0f<= linearDepth && samplepos.z + 50.0f > linearDepth) {
 			occlusion += 1.0f;
 		}
 	}

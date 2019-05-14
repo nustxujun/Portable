@@ -17,13 +17,13 @@ public:
 
 	void draw(const std::array<float, 4>& color = {1,1,1,1});
 	template<class T>
-	void drawTexture(T texture)
+	void drawTexture(T texture, bool blend = true)
 	{
 		setTextures({ texture });
 		setDefaultPixelShader();
 		setDefaultSampler();
 		setDefaultViewport();
-		setDefaultBlend();
+		setDefaultBlend(blend);
 		draw();
 	}
 
@@ -43,7 +43,7 @@ public:
 	void setDefaultSampler() { setSamplers({ mDefaultSampler }); }
 	void setViewport(const D3D11_VIEWPORT& vp) { mViewport = vp; }
 	void setDefaultViewport() { mViewport = { 0.0f,0.0f, (float) mRenderer->getWidth(),(float) mRenderer->getHeight(), 0.0f, 1.0f }; }
-	void setDefaultBlend() ;
+	void setDefaultBlend(bool blend = true) ;
 private:
 	template<class T>
 	void setTexturesImpl(const std::vector<T>& c)

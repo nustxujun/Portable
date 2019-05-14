@@ -20,11 +20,6 @@ public:
 
 		Renderer::Ptr getRenderer()const { return mRenderer; }
 		Scene::Ptr getScene()const { return mScene; }
-		void addSharedRT(const std::string& name, Renderer::RenderTarget::Ptr rt);
-		void addSharedDS(const std::string& name, Renderer::DepthStencil::Ptr rt);
-		Renderer::RenderTarget::Ptr getSharedRT(const std::string& name);
-		Renderer::DepthStencil::Ptr getSharedDS(const std::string& name);
-
 	protected:
 		Quad::Ptr mQuad;
 	private:
@@ -32,6 +27,25 @@ public:
 		Scene::Ptr mScene;
 		Pipeline* mPipeline;
 	};
+
+	class Anonymous : public Stage
+	{
+	public:
+		using DrawCall = std::function<void(Renderer::RenderTarget::Ptr)>;
+	public:
+		Anonymous(Renderer::Ptr r, Scene::Ptr s, Pipeline* p, DrawCall drawcall) :Stage(r, s, p), mDrawCall(drawcall)
+		{
+		}
+
+		void render(Renderer::RenderTarget::Ptr rt) override final
+		{
+			mDrawCall(rt);
+		}
+
+	private:
+		DrawCall mDrawCall;
+	};
+
 public:
 	Pipeline(Renderer::Ptr r, Scene::Ptr s);
 
@@ -42,11 +56,13 @@ public:
 		mStages.emplace_back(Stage::Ptr(ptr));
 	}
 
+	void pushStage(Anonymous::DrawCall dc);
+
 	void render();
+	void setFrameBuffer(Renderer::RenderTarget::Ptr rt);
 private:
 	Renderer::Ptr mRenderer;
 	Scene::Ptr mScene;
 	std::vector<Stage::Ptr> mStages;
-	std::unordered_map<std::string, Renderer::RenderTarget::Ptr> mSharedRenderTargets;
-	std::unordered_map<std::string, Renderer::DepthStencil::Ptr> mSharedDepthStencils;
+	Renderer::RenderTarget::Ptr mFrameBuffer;
 };

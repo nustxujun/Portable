@@ -100,12 +100,12 @@ void Quad::setBlend(const D3D11_BLEND_DESC & desc, const std::array<float, 4>& f
 	mBlendState = { desc,factor, mask };
 }
 
-void Quad::setDefaultBlend()
+void Quad::setDefaultBlend(bool blend)
 {
 	D3D11_BLEND_DESC desc = { 0 };
 
 	desc.RenderTarget[0] = {
-		TRUE,
+		blend,
 		D3D11_BLEND_DEST_COLOR,
 		D3D11_BLEND_ZERO,
 		D3D11_BLEND_OP_ADD,

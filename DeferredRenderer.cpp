@@ -22,9 +22,6 @@ DeferredRenderer::DeferredRenderer(Renderer::Ptr r, Scene::Ptr s, Pipeline* p):P
 	mDiffuse = getRenderer()->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
 	mNormal = getRenderer()->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
 	mDepth = getRenderer()->createRenderTarget(w, h, DXGI_FORMAT_R32_FLOAT);
-	addSharedRT("diffuse", mDiffuse);
-	addSharedRT("normal", mNormal);
-	addSharedRT("depth", mDepth);
 
 
 
