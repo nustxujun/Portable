@@ -6,10 +6,12 @@ GBuffer::GBuffer(
 	Pipeline* p,
 	Renderer::RenderTarget::Ptr a,
 	Renderer::RenderTarget::Ptr n,
+	Renderer::RenderTarget::Ptr w,
 	Renderer::DepthStencil::Ptr d):
 	Pipeline::Stage(r,s,p),
 	mAlbedo(a), 
 	mNormal(n), 
+	mWorldPos(w),
 	mDepth(d)
 {
 	auto blob = getRenderer()->compileFile("hlsl/gbuffer.fx", "", "fx_5_0");
@@ -50,7 +52,7 @@ void GBuffer::render(Renderer::RenderTarget::Ptr rt)
 	proj->SetMatrix((const float*)&cam->getProjectionMatrix());
 	renderer->setViewport(cam->getViewport());
 
-	std::vector<Renderer::RenderTarget::Ptr> rts = { mAlbedo, mNormal};
+	std::vector<Renderer::RenderTarget::Ptr> rts = { mAlbedo, mNormal,mWorldPos};
 	mAlbedo.lock()->clear({ 0,0,0,0 });
 	mNormal.lock()->clear({ 0.5,0.5,1,0 });
 	mDepth.lock()->clearDepth(1.0f);

@@ -7,10 +7,12 @@ SamplerState sampPoint: register(s1);
 
 cbuffer ConstantBuffer: register(b0)
 {
-	float4 LightDirection;
-	float4 Color;
-	float3 CameraPosition;
-	matrix InvertViewProjection;
+	matrix invertViewProj;
+	float4 lightDir;
+	float4 cameraPos;
+	float radiance;
+	float roughness;
+	float metallic;
 }
 
 struct PS_INPUT
@@ -64,8 +66,6 @@ float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
 float4 main(PS_INPUT input) : SV_TARGET
 {
 	float3 albedo = pow(albedoTexture.Sample(sampLinear, input.Tex).rgb, 2.2);
-	const float3 metallic = 0.5;
-	const float roughness = 0.5;
 
 	float4 normalData = normalTexture.Sample(sampPoint, input.Tex);
 	float3 N = 2.0f * normalData.xyz - 1.0f;
@@ -76,11 +76,11 @@ float4 main(PS_INPUT input) : SV_TARGET
 	worldPos.y = -(input.Tex.y * 2.0f - 1.0f);
 	worldPos.z = depthVal;
 	worldPos.w = 1.0f;
-	worldPos = mul(worldPos, InvertViewProjection);
+	worldPos = mul(worldPos, invertViewProj);
 	worldPos /= worldPos.w;
 
 
-	float3 V = normalize(CameraPosition - worldPos.xyz);
+	float3 V = normalize(cameraPos.xyz - worldPos.xyz);
 
 	float3 F0 = 0.04;
 	F0 = lerp(F0, albedo, metallic);
@@ -88,12 +88,12 @@ float4 main(PS_INPUT input) : SV_TARGET
 	float3 Lo = 0;
 
 	// calculate per-light radiance
-	float3 L = -normalize(LightDirection.xyz);
+	float3 L = -normalize(lightDir.xyz);
 	float3 H = normalize(V + L);
 	//float distance = length(lightPositions[i] - WorldPos);
 	//float attenuation = 1.0 / (distance * distance);
 	//float3 radiance = lightColors[i] * attenuation;
-	float3 radiance = 3;
+	//float3 radiance = 3;
 
 	// cook-torrance brdf
 	float NDF = DistributionGGX(N, H, roughness);

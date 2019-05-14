@@ -20,13 +20,13 @@ class AO :public Pipeline::Stage
 		DirectX::XMFLOAT4X4A view;
 	};
 public:
-	AO(Renderer::Ptr r, Scene::Ptr s, Pipeline* p);
+	AO(Renderer::Ptr r, Scene::Ptr s, Pipeline* p, Renderer::ShaderResource::Ptr normal, Renderer::ShaderResource::Ptr depth, float radius);
 	
 	void render(Renderer::RenderTarget::Ptr rt) override;
 private:
 	Renderer::Texture::Ptr mNoise;
-	Renderer::RenderTarget::Ptr mNormal;
-	Renderer::RenderTarget::Ptr mDepth;
+	Renderer::ShaderResource::Ptr mNormal;
+	Renderer::ShaderResource::Ptr mDepth;
 
 	Renderer::PixelShader::Weak mPS;
 

@@ -14,7 +14,6 @@ public:
 	virtual void update();
 protected:
 	virtual void initInput(float speed);
-
 private:
 	void showFPS();
 	void calFPS();

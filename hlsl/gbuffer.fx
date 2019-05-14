@@ -26,6 +26,7 @@ struct GBufferVertexShaderOutput
 	float4 Position : SV_POSITION;
 	float3 Normal : NORMAL0;
 	float2 TexCoord : TEXCOORD0;
+	float4 WorldPos: TEXCOORD1;
 };
 
 GBufferVertexShaderOutput vs(GBufferVertexShaderInput input)
@@ -33,6 +34,7 @@ GBufferVertexShaderOutput vs(GBufferVertexShaderInput input)
 	GBufferVertexShaderOutput output = (GBufferVertexShaderOutput)0;
 
 	float4 worldPosition = mul(float4(input.Position.xyz, 1.0f), World);
+	output.WorldPos = worldPosition;
 	float4 viewPosition = mul(worldPosition, View);
 	output.Position = mul(viewPosition, Projection);
 
@@ -47,6 +49,7 @@ struct GBufferPixelShaderOutput
 {
 	float4 Color : COLOR0;
 	float4 Normal : COLOR1;
+	float4 WorldPos: COLOR2;
 };
 
 GBufferPixelShaderOutput ps(GBufferVertexShaderOutput input) : SV_TARGET
@@ -59,7 +62,7 @@ GBufferPixelShaderOutput ps(GBufferVertexShaderOutput input) : SV_TARGET
 	normalFromMap = normalize(normalFromMap);
 	output.Normal.rgb = 0.5f * (normalFromMap + 1.0f);
 	output.Normal.a = 1.0f;
-
+	output.WorldPos = input.WorldPos;
 	return output;
 }
 

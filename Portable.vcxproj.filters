@@ -90,6 +90,9 @@
     <ClInclude Include="GBuffer.h">
       <Filter>Pipeline</Filter>
     </ClInclude>
+    <ClInclude Include="PBR.h">
+      <Filter>Pipeline</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -138,6 +141,9 @@
       <Filter>Engine</Filter>
     </ClCompile>
     <ClCompile Include="GBuffer.cpp">
+      <Filter>Pipeline</Filter>
+    </ClCompile>
+    <ClCompile Include="PBR.cpp">
       <Filter>Pipeline</Filter>
     </ClCompile>
   </ItemGroup>

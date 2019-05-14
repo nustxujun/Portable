@@ -1,6 +1,9 @@
 #include "Framework.h"
-#include "GBuffer.h"
 #include <sstream>
+#include "GBuffer.h"
+#include "PBR.h"
+#include "ShadowMap.h"
+#include "AO.h"
 Framework::Framework(HWND win)
 {
 	mRenderer = std::make_shared<Renderer>();
@@ -24,13 +27,19 @@ void Framework::init()
 	auto h = mRenderer->getHeight();
 	auto albedo = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
 	auto normal = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
+	auto worldpos = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R32_TYPELESS,true);
 
-	mPipeline->pushStage<GBuffer>(albedo, normal, depth);
+	mPipeline->pushStage<GBuffer>(albedo, normal, worldpos, depth);
+	//mPipeline->pushStage<PBR>(albedo, normal, depth, 0.5f, 0.5f,10.0f);
+	mPipeline->pushStage<AO>(normal, depth,10.0f);
+	//mPipeline->pushStage<ShadowMap>(worldpos,depth, 2048, 8);
+
+
 
 
 	Parameters params;
-	params["file"] = "tiny.x";
+	params["file"] = "sponza/sponza.obj";
 	auto model = mScene->createModel("test", params);
 	model->attach(mScene->getRoot());
 	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
@@ -58,7 +67,7 @@ void Framework::init()
 void Framework::update()
 {
 	auto bb = mRenderer->getBackbuffer();
-	bb.lock()->clear({ 0,0,0,0 });
+	bb.lock()->clear({ 1,1,1,1 });
 	mInput->update();
 	mPipeline->render();
 	showFPS();
@@ -68,7 +77,7 @@ void Framework::update()
 void Framework::initInput(float speed)
 {
 	auto cam = mScene->createOrGetCamera("main");
-	float com_step = speed * 0.001;
+	float com_step = speed * 0.001f;
 
 	mInput->listen([cam, com_step](const Input::Mouse& m, const Input::Keyboard& k) {
 		static auto lasttime = GetTickCount();

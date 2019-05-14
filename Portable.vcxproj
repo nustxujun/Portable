@@ -165,6 +165,7 @@
     <ClInclude Include="MathUtilities.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="MeshBuilder.h" />
+    <ClInclude Include="PBR.h" />
     <ClInclude Include="Pipeline.h" />
     <ClInclude Include="Quad.h" />
     <ClInclude Include="renderer.h" />
@@ -185,6 +186,7 @@
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="MeshBuilder.cpp" />
+    <ClCompile Include="PBR.cpp" />
     <ClCompile Include="Pipeline.cpp" />
     <ClCompile Include="Quad.cpp" />
     <ClCompile Include="renderer.cpp" />

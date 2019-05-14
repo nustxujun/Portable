@@ -3,10 +3,9 @@
 #include <random>
 #include "MathUtilities.h"
 
-AO::AO(Renderer::Ptr r, Scene::Ptr s, Pipeline* p): Pipeline::Stage(r,s,p)
+AO::AO(Renderer::Ptr r, Scene::Ptr s, Pipeline* p, Renderer::ShaderResource::Ptr normal, Renderer::ShaderResource::Ptr depth, float radius):
+	Pipeline::Stage(r,s,p), mNormal(normal), mDepth(depth)
 {
-	mNormal = getSharedRT("normal");
-	mDepth = getSharedRT("depth");
 	auto blob = r->compileFile("hlsl/ssao.hlsl", "main", "ps_5_0");
 	mPS = r->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
 
@@ -33,7 +32,7 @@ AO::AO(Renderer::Ptr r, Scene::Ptr s, Pipeline* p): Pipeline::Stage(r,s,p)
 		kernel.kernel[i] = { v.x, v.y,v.z };
 	}
 	kernel.scale = { r->getWidth() / noiseSize, r->getHeight() / noiseSize };
-	kernel.radius = 10;
+	kernel.radius = radius;
 	mKernel.lock()->blit(&kernel, sizeof(kernel));
 
 	D3D11_TEXTURE2D_DESC noiseTexDesc;
@@ -93,19 +92,8 @@ void AO::render(Renderer::RenderTarget::Ptr rt)
 	mQuad->setPixelShader(mPS);
 	mQuad->setSamplers({ mLinearWrap ,mPointWrap });
 	mQuad->setTextures({ mNormal, mDepth, mNoise});
-	D3D11_BLEND_DESC desc = { 0 };
-	desc.RenderTarget[0] = {
-		TRUE,
-		D3D11_BLEND_DEST_COLOR,
-		D3D11_BLEND_ZERO,
-		D3D11_BLEND_OP_ADD,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_ZERO,
-		D3D11_BLEND_OP_ADD,
-		D3D11_COLOR_WRITE_ENABLE_ALL,
-	};
-
-	mQuad->setBlend(desc);
+	
+	mQuad->setDefaultBlend();
 	mQuad->setRenderTarget(rt);
 	mQuad->draw();
 }

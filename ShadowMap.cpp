@@ -1,27 +1,17 @@
 #include "ShadowMap.h"
 #include "MathUtilities.h"
 
-ShadowMap::ShadowMap(Renderer::Ptr r, Scene::Ptr s, Pipeline* p) :Pipeline::Stage(r, s, p)
+ShadowMap::ShadowMap(Renderer::Ptr r, Scene::Ptr s, Pipeline* p,Renderer::ShaderResource::Ptr worldpos, Renderer::ShaderResource::Ptr depth, int size, int numlevels) :
+	Pipeline::Stage(r, s, p), mWorldPos(worldpos),mSceneDepth(depth), mShadowMapSize(size), mNumLevels(numlevels), mQuad(r)
 {
 	mShadowMapSize = 2048;
-	mNumLevels = 8;
+	mNumLevels = std::min(mNumLevels, 8);
 
 	mProjections.resize(mNumLevels);
 	mCascadeDepths.resize(mNumLevels);
 
-	mLightCamera = getScene()->createOrGetCamera("light");
-	mLightCamera->setProjectType(Scene::Camera::PT_ORTHOGRAPHIC);
-
-	auto blob = getRenderer()->compileFile("hlsl/shadowmap.fx", "", "fx_5_0");
-	mEffect = getRenderer()->createEffect((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
-
-	auto scale = mEffect.lock()->getVariable("scale");
-	float mapsize = 1.0f / mNumLevels;
-	scale->SetRawValue(&mapsize, 0, sizeof(mapsize));
-	auto numcascades = mEffect.lock()->getVariable("numcascades");
-	numcascades->SetRawValue(&mNumLevels, 0, 4);
-
-
+	auto blob = getRenderer()->compileFile("hlsl/receiveshadow.hlsl", "ps", "ps_5_0");
+	mReceiveShadowPS = getRenderer()->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
 
 	blob = r->compileFile("hlsl/castshadow.hlsl", "vs", "vs_5_0");
 	mShadowVS = r->createVertexShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
@@ -31,8 +21,6 @@ ShadowMap::ShadowMap(Renderer::Ptr r, Scene::Ptr s, Pipeline* p) :Pipeline::Stag
 
 	mShadowMap = r->createDepthStencil(mShadowMapSize * mNumLevels, mShadowMapSize, DXGI_FORMAT_R32_TYPELESS, true);
 
-	mFinalTarget = getRenderer()->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
-
 	D3D11_INPUT_ELEMENT_DESC depthlayout[] =
 	{
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -40,17 +28,8 @@ ShadowMap::ShadowMap(Renderer::Ptr r, Scene::Ptr s, Pipeline* p) :Pipeline::Stag
 
 	mDepthLayout = getRenderer()->createLayout(depthlayout, ARRAYSIZE(depthlayout));
 
-	D3D11_INPUT_ELEMENT_DESC layout[] =
-	{
-		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
-
-	};
-	mLayout = getRenderer()->createLayout(depthlayout, ARRAYSIZE(layout));
-
-	mSampler = getRenderer()->createSampler("shadowsample", D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
-
-	mConstants = r->createBuffer(sizeof(ConstantMatrix), D3D11_BIND_CONSTANT_BUFFER);
+	mCastConstants = r->createBuffer(sizeof(CastConstants), D3D11_BIND_CONSTANT_BUFFER);
+	mReceiveConstants = r->createBuffer(sizeof(ReceiveConstants), D3D11_BIND_CONSTANT_BUFFER);
 
 
 	D3D11_RASTERIZER_DESC rasterDesc;
@@ -65,6 +44,10 @@ ShadowMap::ShadowMap(Renderer::Ptr r, Scene::Ptr s, Pipeline* p) :Pipeline::Stag
 	rasterDesc.ScissorEnable = false;
 	rasterDesc.SlopeScaledDepthBias = 0.0f;
 	mRasterizer = r->createOrGetRasterizer(rasterDesc);
+
+	mLinear = r->createSampler("liear_wrap", D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
+	mPoint = r->createSampler("point_wrap", D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
+
 }
 
 ShadowMap::~ShadowMap()
@@ -181,14 +164,14 @@ void ShadowMap::renderToShadowMap()
 	using namespace DirectX;
 	using namespace DirectX::SimpleMath;
 
-	ConstantMatrix constant;
+	CastConstants constant;
 	constant.view = mLightView.Transpose();
 
 	getRenderer()->setRenderTarget({}, mShadowMap);
 	getRenderer()->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	getRenderer()->setDefaultBlendState();
 	getRenderer()->setDefaultDepthStencilState();
-	getRenderer()->setSampler(mSampler);
+	getRenderer()->setSampler(mPoint);
 	getRenderer()->setVertexShader(mShadowVS);
 	getRenderer()->setPixelShader({});
 	getRenderer()->setLayout(mDepthLayout.lock()->bind(mShadowVS));
@@ -211,8 +194,8 @@ void ShadowMap::renderToShadowMap()
 		getScene()->visitRenderables([&constant, this](const Renderable& r)
 		{
 			constant.world = r.tranformation.Transpose();
-			mConstants.lock()->blit(&constant, sizeof(constant));
-			getRenderer()->setVSConstantBuffers({ mConstants });
+			mCastConstants.lock()->blit(&constant, sizeof(constant));
+			getRenderer()->setVSConstantBuffers({ mCastConstants });
 
 			getRenderer()->setIndexBuffer(r.indices, DXGI_FORMAT_R32_UINT, 0);
 			getRenderer()->setVertexBuffer(r.vertices, r.layout.lock()->getSize(), 0);
@@ -222,60 +205,35 @@ void ShadowMap::renderToShadowMap()
 	}
 
 
-
 	getRenderer()->removeRenderTargets();
 }
 
-void ShadowMap::renderShadow()
+void ShadowMap::renderShadow(Renderer::RenderTarget::Ptr rt)
 {
-	auto e = mEffect.lock();
-	if (e == nullptr)
-		return;
+	ReceiveConstants constants;
+	memcpy(constants.cascadeDepths, mCascadeDepths.data(), mCascadeDepths.size() * sizeof(Vector4));
+	constants.lightView = mLightView.Transpose();
+	for (int i = 0; i < mNumLevels; ++i)
+	{
+		constants.lightProjs[i] = mProjections[i].Transpose();
+	}
 
-	e->setTech("receive");
-
-	auto world = e->getVariable("World")->AsMatrix();
-	auto view = e->getVariable("View")->AsMatrix();
-	auto proj = e->getVariable("Projection")->AsMatrix();
-	auto lightv = e->getVariable("lightView")->AsMatrix();
-	auto lightprojs = e->getVariable("lightProjs")->AsMatrix();
-	auto cascadeDepths = e->getVariable("cascadeDepths")->AsVector();
-	cascadeDepths->SetFloatVectorArray((const float*)mCascadeDepths.data(), 0, mCascadeDepths.size());
 
 	auto cam = getScene()->createOrGetCamera("main");
+	constants.invertViewProj = (cam->getViewMatrix() * cam->getProjectionMatrix()).Invert().Transpose();
+	constants.numcascades = mNumLevels;
+	constants.scale = 1.0f / mNumLevels;
+	mReceiveConstants.lock()->blit(&constants, sizeof(constants));
 
-	lightv->SetMatrix((const float*)& mLightView);
-	lightprojs->SetMatrixArray((const float*)mProjections.data(), 0, mProjections.size());
+	mQuad.setRenderTarget(rt);
+	mQuad.setConstant(mReceiveConstants);
+	mQuad.setSamplers({ mLinear, mPoint });
+	mQuad.setDefaultBlend();
+	mQuad.setTextures({ mWorldPos, mSceneDepth,mShadowMap });
+	mQuad.setPixelShader(mReceiveShadowPS);
+	mQuad.setDefaultViewport();
+	mQuad.draw();
 
-	getRenderer()->setViewport(cam->getViewport());
-	view->SetMatrix((const float*)&cam->getViewMatrix());
-	proj->SetMatrix((const float*)&cam->getProjectionMatrix());
-
-	mFinalTarget.lock()->clear({ 0,0,0,0 });
-	getRenderer()->clearDefaultStencil(1.0f);
-	getRenderer()->setRenderTarget(mFinalTarget);
-	getRenderer()->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	getRenderer()->setDefaultBlendState();
-	getRenderer()->setDefaultRasterizer();
-
-
-	getScene()->visitRenderables([world, this, e](const Renderable& r)
-	{
-		world->SetMatrix((const float*)&r.tranformation);
-		getRenderer()->setIndexBuffer(r.indices, DXGI_FORMAT_R32_UINT, 0);
-		getRenderer()->setVertexBuffer(r.vertices, r.layout.lock()->getSize(), 0);
-
-		e->render(getRenderer(), [world, this, &r](ID3DX11EffectPass* pass)
-		{
-			getRenderer()->setTexture(mShadowMap);
-			getRenderer()->setLayout(mDepthLayout.lock()->bind(pass));
-			getRenderer()->getContext()->DrawIndexed(r.numIndices, 0, 0);
-		});
-	});
-
-
-
-	getRenderer()->removeRenderTargets();
 }
 
 void ShadowMap::render(Renderer::RenderTarget::Ptr rt)
@@ -283,17 +241,18 @@ void ShadowMap::render(Renderer::RenderTarget::Ptr rt)
 	fitToScene();
 	renderToShadowMap();
 
-	renderShadow();
+	renderShadow(rt);
 
-	
-	mQuad->setRenderTarget(rt);
-	mQuad->setTextures({ mFinalTarget });
-	mQuad->setDefaultPixelShader();
-	mQuad->setDefaultSampler();
+
+
+	float w = getRenderer()->getWidth();
+	float h = getRenderer()->getHeight();
+
+
 	D3D11_BLEND_DESC desc = { 0 };
 	desc.RenderTarget[0] = {
-		TRUE,
-		D3D11_BLEND_DEST_COLOR,
+		FALSE,
+		D3D11_BLEND_ONE,
 		D3D11_BLEND_ZERO,
 		D3D11_BLEND_OP_ADD,
 		D3D11_BLEND_ONE,
@@ -302,25 +261,12 @@ void ShadowMap::render(Renderer::RenderTarget::Ptr rt)
 		D3D11_COLOR_WRITE_ENABLE_ALL,
 	};
 
-	mQuad->setBlend(desc);
-
-
-	float w = getRenderer()->getWidth();
-	float h = getRenderer()->getHeight();
-	//mQuad->setViewport({
-	//	0.0f, h * 0.3f, w , h * 0.7f ,0.0f, 1.0f
-	//});
-
-	mQuad->setViewport({
-	0.0f, 0 , w , h  ,0.0f, 1.0f
-		});
-	mQuad->draw();
-
-
-	//mQuad->setViewport({
-	//	0.0f,0,w, h *0.3f,0.0f, 1.0f
-	//});
-	//
-	//mQuad->setTextures({ mShadowMap });
-	//mQuad->draw();
+	mQuad.setBlend(desc);
+	mQuad.setDefaultPixelShader();
+	mQuad.setDefaultSampler();
+	mQuad.setViewport({
+		0.0f,0,w, h *0.3f,0.0f, 1.0f
+	});
+	mQuad.setTextures({ mShadowMap });
+	mQuad.draw();
 }

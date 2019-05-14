@@ -73,17 +73,19 @@ void Quad::draw(const std::array<float, 4>& color)
 	mRenderer->setIndexBuffer(mIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
 	mRenderer->setVertexBuffer(mVertexBuffer, sizeof(Vertex), 0);
 	
-	auto context = mRenderer->getContext();
 
 
-	context->VSSetShader(*mVS.lock(), NULL, 0);
-	context->PSSetShader(*mPS.lock(), NULL, 0);
+	//context->VSSetShader(*mVS.lock(), NULL, 0);
+	//context->PSSetShader(*mPS.lock(), NULL, 0);
+	mRenderer->setVertexShader(mVS);
+	mRenderer->setPixelShader(mPS);
 
 	mRenderer->setLayout(mLayout.lock()->bind(mVS));
 	mRenderer->setTextures(mSRVs);
 	mRenderer->setSamplers(mSamplers);
-	mRenderer->setPSConstantBuffers({ mConstants });
+	mRenderer->setPSConstantBuffers(mConstants);
 
+	auto context = mRenderer->getContext();
 	context->DrawIndexed(6, 0, 0);
 
 	mRenderer->removeRenderTargets();
@@ -96,4 +98,25 @@ void Quad::draw(const std::array<float, 4>& color)
 void Quad::setBlend(const D3D11_BLEND_DESC & desc, const std::array<float, 4>& factor, size_t mask)
 {
 	mBlendState = { desc,factor, mask };
+}
+
+void Quad::setDefaultBlend()
+{
+	D3D11_BLEND_DESC desc = { 0 };
+
+	desc.RenderTarget[0] = {
+		TRUE,
+		D3D11_BLEND_DEST_COLOR,
+		D3D11_BLEND_ZERO,
+		D3D11_BLEND_OP_ADD,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_ZERO,
+		D3D11_BLEND_OP_ADD,
+		D3D11_COLOR_WRITE_ENABLE_ALL
+	};
+	mBlendState = {
+		desc,
+		{1,1,1,1},
+		0xffffffff,
+	};
 }

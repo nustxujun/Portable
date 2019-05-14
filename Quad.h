@@ -23,22 +23,7 @@ public:
 		setDefaultPixelShader();
 		setDefaultSampler();
 		setDefaultViewport();
-
-		D3D11_BLEND_DESC desc = { 0 };
-
-		desc.RenderTarget[0] = {
-			TRUE,
-			D3D11_BLEND_SRC_ALPHA,
-			D3D11_BLEND_INV_SRC_ALPHA,
-			D3D11_BLEND_OP_ADD,
-			D3D11_BLEND_ONE,
-			D3D11_BLEND_ZERO,
-			D3D11_BLEND_OP_ADD,
-			D3D11_COLOR_WRITE_ENABLE_ALL
-		};
-
-
-		setBlend(desc);
+		setDefaultBlend();
 		draw();
 	}
 
@@ -58,6 +43,7 @@ public:
 	void setDefaultSampler() { setSamplers({ mDefaultSampler }); }
 	void setViewport(const D3D11_VIEWPORT& vp) { mViewport = vp; }
 	void setDefaultViewport() { mViewport = { 0.0f,0.0f, (float) mRenderer->getWidth(),(float) mRenderer->getHeight(), 0.0f, 1.0f }; }
+	void setDefaultBlend() ;
 private:
 	template<class T>
 	void setTexturesImpl(const std::vector<T>& c)
