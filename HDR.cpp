@@ -20,7 +20,7 @@ HDR::HDR(Renderer::Ptr r, Scene::Ptr s, Pipeline * p):
 	int samplelen = 1;
 	for (size_t i = 0; i < numSamples; ++i)
 	{
-		mLuminance[i] = r->createRenderTarget(samplelen, samplelen, DXGI_FORMAT_R32G32B32A32_FLOAT);
+		mLuminance[i] = r->createRenderTarget(samplelen, samplelen, DXGI_FORMAT_R32_FLOAT);
 		samplelen *= 3;
 	}
 
@@ -34,39 +34,67 @@ HDR::~HDR()
 void HDR::render(Renderer::RenderTarget::Ptr rt)
 {
 	renderLuminance(rt);
-
-	mQuad.setDefaultViewport();
-	mQuad.setDefaultBlend(false);
-
-	mQuad.setSamplers({ mPoint });
-	mQuad.setPixelShader(mPS);
-	mQuad.setTextures({ rt,mLuminance[0] });
-	mQuad.setRenderTarget(mTarget);
-	mQuad.draw();
+	renderHDR(rt);
 
 	mQuad.setRenderTarget(rt);
-	mQuad.drawTexture(mTarget,false);
+	mQuad.drawTexture(mTarget, false);
+
+	//auto w = getRenderer()->getWidth();
+	//auto h = getRenderer()->getHeight();
+	//size_t count = mLuminance.size();
+	//float width = (float)w / (float)count;
+
+	//for (size_t i = 0; i < count; ++i)
+	//{
+	//	D3D11_VIEWPORT vp = {
+	//		width * i, 0,
+	//		width, width,
+	//		0,1.0f,
+	//	};
+
+	//	mQuad.setViewport(vp);
+	//	mQuad.setTextures({ mLuminance[i] });
+	//	mQuad.draw();
+	//}
+	//
+	
 }
 
 void HDR::renderLuminance(Renderer::RenderTarget::Ptr rt)
 {
+	float len = pow(3, mLuminance.size() - 1);
 	mLuminance.back().lock()->clear({ 1,1,1,1 });
 	mQuad.setDefaultBlend(false);
-	mQuad.setDefaultViewport();
 
 	mQuad.setRenderTarget(mLuminance.back());
 	mQuad.setSamplers({ mPoint });
 	mQuad.setPixelShader(mDownSamplePS3x3);
 	mQuad.setTextures({rt });
+
+	mQuad.setViewport({0,0,len ,len ,0,1.0f});
 	mQuad.draw();
 
 	mQuad.setPixelShader(mDownSamplePS2x2);
 	for (size_t i = mLuminance.size() - 1; i > 0; --i)
 	{
+		len /= 3;
+		mQuad.setViewport({ 0,0,len ,len ,0,1.0f });
 		mQuad.setRenderTarget(mLuminance[i - 1]);
 		mQuad.setTextures({ mLuminance[i] });
 		mQuad.draw();
 	}
 	//mQuad.setRenderTarget(rt);
 	//mQuad.drawTexture(mLuminance[0],false);
+}
+
+void HDR::renderHDR(Renderer::RenderTarget::Ptr frame)
+{
+	mQuad.setDefaultViewport();
+	mQuad.setDefaultBlend(false);
+
+	mQuad.setSamplers({ mPoint });
+	mQuad.setPixelShader(mPS);
+	mQuad.setTextures({ frame,mLuminance[0] });
+	mQuad.setRenderTarget(mTarget);
+	mQuad.draw();
 }

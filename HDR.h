@@ -9,6 +9,7 @@ public:
 	void render(Renderer::RenderTarget::Ptr rt) override;
 private:
 	void renderLuminance(Renderer::RenderTarget::Ptr rt);
+	void renderHDR(Renderer::RenderTarget::Ptr frame);
 private:
 	Renderer::RenderTarget::Ptr mTarget;
 	Renderer::PixelShader::Weak mPS;

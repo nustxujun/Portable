@@ -64,8 +64,8 @@ void Framework::init()
 	});
 
 	Parameters params;
-	//params["file"] = "tiny.x";
-	params["file"] = "sponza/sponza.obj";
+	params["file"] = "tiny.x";
+	//params["file"] = "media/sponza/sponza.obj";
 	auto model = mScene->createModel("test", params);
 	model->attach(mScene->getRoot());
 	model->getNode()->setPosition(0.0f, 0.f, 0.0f);

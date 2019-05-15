@@ -245,28 +245,28 @@ void ShadowMap::render(Renderer::RenderTarget::Ptr rt)
 
 
 
-	float w = getRenderer()->getWidth();
-	float h = getRenderer()->getHeight();
+	//float w = getRenderer()->getWidth();
+	//float h = getRenderer()->getHeight();
 
 
-	D3D11_BLEND_DESC desc = { 0 };
-	desc.RenderTarget[0] = {
-		FALSE,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_ZERO,
-		D3D11_BLEND_OP_ADD,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_ZERO,
-		D3D11_BLEND_OP_ADD,
-		D3D11_COLOR_WRITE_ENABLE_ALL,
-	};
+	//D3D11_BLEND_DESC desc = { 0 };
+	//desc.RenderTarget[0] = {
+	//	FALSE,
+	//	D3D11_BLEND_ONE,
+	//	D3D11_BLEND_ZERO,
+	//	D3D11_BLEND_OP_ADD,
+	//	D3D11_BLEND_ONE,
+	//	D3D11_BLEND_ZERO,
+	//	D3D11_BLEND_OP_ADD,
+	//	D3D11_COLOR_WRITE_ENABLE_ALL,
+	//};
 
-	mQuad.setBlend(desc);
-	mQuad.setDefaultPixelShader();
-	mQuad.setDefaultSampler();
-	mQuad.setViewport({
-		0.0f,0,w, h *0.3f,0.0f, 1.0f
-	});
-	mQuad.setTextures({ mShadowMap });
-	mQuad.draw();
+	//mQuad.setBlend(desc);
+	//mQuad.setDefaultPixelShader();
+	//mQuad.setDefaultSampler();
+	//mQuad.setViewport({
+	//	0.0f,0,w, h *0.3f,0.0f, 1.0f
+	//});
+	//mQuad.setTextures({ mShadowMap });
+	//mQuad.draw();
 }
