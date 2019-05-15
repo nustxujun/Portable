@@ -16,17 +16,7 @@ public:
 	~Quad();
 
 	void draw(const std::array<float, 4>& color = {1,1,1,1});
-	template<class T>
-	void drawTexture(T texture, bool blend = true)
-	{
-		setTextures({ texture });
-		setDefaultPixelShader();
-		setDefaultSampler();
-		setDefaultViewport();
-		setDefaultBlend(blend);
-		draw();
-	}
-
+	void drawTexture(Renderer::ShaderResource::Ptr texture, bool blend = true);
 
 	void setRenderTarget(Renderer::RenderTarget::Ptr rt) { mRenderTarget = rt; };
 	void setTextures(const std::vector<Renderer::ShaderResource::Ptr>& c) { setTexturesImpl(c); }

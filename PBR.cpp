@@ -53,11 +53,25 @@ void PBR::render(Renderer::RenderTarget::Ptr rt)
 	mConstants.lock()->blit(&constants, sizeof(constants));
 
 	mQuad.setRenderTarget(rt);
-	mQuad.setDefaultBlend();
 	mQuad.setTextures({ mAlbedo, mNormal, mDepth });
 	mQuad.setPixelShader(mPS);
 	mQuad.setSamplers({ mLinear, mPoint});
 	mQuad.setConstant(mConstants);
+
+	D3D11_BLEND_DESC desc = { 0 };
+
+	desc.RenderTarget[0] = {
+		TRUE,
+		D3D11_BLEND_SRC_ALPHA,
+		D3D11_BLEND_INV_SRC_ALPHA,
+		D3D11_BLEND_OP_ADD,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_OP_ADD,
+		D3D11_COLOR_WRITE_ENABLE_ALL
+	};
+
+	mQuad.setBlend(desc);
 	mQuad.draw();
 
 }

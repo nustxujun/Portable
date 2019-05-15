@@ -14,7 +14,10 @@ private:
 	void renderBlur(Renderer::RenderTarget::Ptr rt);
 private:
 	Renderer::PixelShader::Weak mPS;
+	Renderer::PixelShader::Weak mColorFilter;
+
 	Renderer::RenderTarget::Ptr mBlur;
 	Quad mQuad;
 	Renderer::Buffer::Ptr mConstants;
+	Renderer::Sampler::Ptr mLinearClamp;
 };

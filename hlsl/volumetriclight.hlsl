@@ -16,7 +16,6 @@ struct PS_INPUT
 
 float4 main(PS_INPUT input) : SV_TARGET
 {
-
 	float NUM_SAMPLES = 500;
 	float Density = 1;
 	float Weight =0.1;
@@ -29,8 +28,6 @@ float4 main(PS_INPUT input) : SV_TARGET
 	deltaTexCoord *= 1.0f / NUM_SAMPLES * Density;
 	// Store initial sample.
 	float4 color = frameTex.Sample(linearWrap, texCoord);
-	float length = normalize(color.rgb);
-	
 
 	// Set up illumination decay factor.
 	float illuminationDecay = 1.0f;

@@ -210,10 +210,11 @@ void Renderer::setRenderTarget(RenderTarget::Ptr rt, DepthStencil::Ptr ds)
 	{
 		rtv = *ptr;
 	}
-	auto dsv = ds.lock();
-	if (dsv == nullptr)
-		dsv = mDefaultDepthStencil.lock();
-	mContext->OMSetRenderTargets(1, &rtv, *dsv);
+	auto dsvptr = ds.lock();
+	ID3D11DepthStencilView* dsv = nullptr;
+	if (dsvptr != nullptr)
+		dsv = *dsvptr;
+	mContext->OMSetRenderTargets(1, &rtv, dsv);
 }
 
 void Renderer::setRenderTargets(const std::vector<RenderTarget::Ptr>& rts, DepthStencil::Ptr ds)

@@ -93,6 +93,16 @@ void Quad::draw(const std::array<float, 4>& color)
 	mRenderer->removeSamplers();
 }
 
+void Quad::drawTexture(Renderer::ShaderResource::Ptr texture, bool blend)
+{
+	setTextures({ texture });
+	setDefaultPixelShader();
+	setDefaultSampler();
+	setDefaultViewport();
+	setDefaultBlend(blend);
+	draw();
+}
+
 
 
 void Quad::setBlend(const D3D11_BLEND_DESC & desc, const std::array<float, 4>& factor, size_t mask)

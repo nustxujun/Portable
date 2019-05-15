@@ -96,6 +96,9 @@
     <ClInclude Include="VolumetricLighting.h">
       <Filter>Pipeline</Filter>
     </ClInclude>
+    <ClInclude Include="HDR.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -152,6 +155,9 @@
     <ClCompile Include="VolumetricLighting.cpp">
       <Filter>Pipeline</Filter>
     </ClCompile>
+    <ClCompile Include="HDR.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="deferredRendering.rc">
@@ -168,22 +174,20 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="hlsl\depth.fx">
+    <None Include="hlsl\castshadow.hlsl">
       <Filter>shader</Filter>
-    </FxCompile>
-    <FxCompile Include="hlsl\pbr.hlsl">
+    </None>
+    <None Include="hlsl\depth.fx">
       <Filter>shader</Filter>
-    </FxCompile>
-    <FxCompile Include="hlsl\shadowmap.fx">
+    </None>
+    <None Include="hlsl\pbr.hlsl">
       <Filter>shader</Filter>
-    </FxCompile>
-    <FxCompile Include="hlsl\ssao.hlsl">
+    </None>
+    <None Include="hlsl\shadowmap.fx">
       <Filter>shader</Filter>
-    </FxCompile>
-    <FxCompile Include="hlsl\castshadow.hlsl">
+    </None>
+    <None Include="hlsl\ssao.hlsl">
       <Filter>shader</Filter>
-    </FxCompile>
+    </None>
   </ItemGroup>
 </Project>
