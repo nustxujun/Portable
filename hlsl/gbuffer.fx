@@ -66,13 +66,35 @@ GBufferPixelShaderOutput ps(GBufferVertexShaderOutput input) : SV_TARGET
 	return output;
 }
 
-
-technique11 albedo_only
+GBufferPixelShaderOutput ps_notex(GBufferVertexShaderOutput input) : SV_TARGET
 {
-	pass pass1
+	GBufferPixelShaderOutput output;
+	output.Color = float4(1,0,0,1);
+	float3 normalFromMap = input.Normal;
+	normalFromMap = mul(normalFromMap, World);
+	normalFromMap = normalize(normalFromMap);
+	output.Normal.rgb = 0.5f * (normalFromMap + 1.0f);
+	output.Normal.a = 1.0f;
+	output.WorldPos = input.WorldPos;
+	return output;
+}
+
+technique11 has_texture
+{
+	pass 
 	{
 		SetVertexShader(CompileShader(vs_5_0, vs()));
 		SetPixelShader(CompileShader(ps_5_0, ps()));
 	}
+
+
 }
 
+technique11 no_texture
+{
+	pass noTexture
+	{
+		SetVertexShader(CompileShader(vs_5_0, vs()));
+		SetPixelShader(CompileShader(ps_5_0, ps_notex()));
+	}
+}

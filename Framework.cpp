@@ -6,6 +6,7 @@
 #include "AO.h"
 #include "VolumetricLighting.h"
 #include "HDR.h"
+#include "GeometryMesh.h"
 Framework::Framework(HWND win)
 {
 	mRenderer = std::make_shared<Renderer>();
@@ -13,7 +14,7 @@ Framework::Framework(HWND win)
 	GetClientRect(win, &rect);
 	mRenderer->init(win, rect.right, rect.bottom);
 
-	mScene = std::make_shared<Scene>(mRenderer);
+	mScene = std::make_shared<Scene>();
 	mPipeline = std::make_unique<Pipeline>(mRenderer, mScene);
 	mInput = std::make_shared<Input>();
 }
@@ -51,11 +52,11 @@ void Framework::init()
 	//});
 
 	mPipeline->pushStage<GBuffer>(albedo, normal, worldpos, depth);
-	mPipeline->pushStage<PBR>(albedo, normal, depth, 0.1f, 1.0f,10.0f);
-	mPipeline->pushStage<AO>(normal, depth,10.0f);
+	mPipeline->pushStage<PBR>(albedo, normal, depth, 0.5f, 0.5f,10.0f);
+	//mPipeline->pushStage<AO>(normal, depth,10.0f);
 	//mPipeline->pushStage<ShadowMap>(worldpos,depth, 2048, 8);
 	//mPipeline->pushStage<VolumetricLighting>();
-	mPipeline->pushStage<HDR>();
+	//mPipeline->pushStage<HDR>();
 
 	mPipeline->pushStage([bb,quad](Renderer::RenderTarget::Ptr rt)
 	{
@@ -65,8 +66,19 @@ void Framework::init()
 
 	Parameters params;
 	//params["file"] = "tiny.x";
-	params["file"] = "sponza/sponza.obj";
-	auto model = mScene->createModel("test", params);
+	//params["file"] = "sponza/sponza.obj";
+	//auto model = mScene->createModel("test", params, [this](const Parameters& p) {
+	//	return Mesh::Ptr(new Mesh(p, mRenderer));
+	//});
+
+	params["geom"] = "sphere";
+	auto model = mScene->createModel("test", params, [this](const Parameters& p)
+	{
+		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+	});
+
+
+
 	model->attach(mScene->getRoot());
 	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
 	auto aabb = model->getWorldAABB();
@@ -76,8 +88,8 @@ void Framework::init()
 	auto cam = mScene->createOrGetCamera("main");
 	DirectX::XMFLOAT3 eye(aabb.second);
 	DirectX::XMFLOAT3 at(aabb.first);
-	cam->lookat(eye, at);
-
+	//cam->lookat(eye, at);
+	cam->lookat({0,0,-15}, {0,0,0});
 	cam->setViewport(0, 0, mRenderer->getWidth(), mRenderer->getHeight());
 	cam->setNearFar(1, vec.Length());
 	cam->setFOVy(0.785398185);
@@ -88,6 +100,7 @@ void Framework::init()
 
 	initInput(std::min(std::min(vec.x, vec.y), vec.z));
 }
+
 
 
 void Framework::update()

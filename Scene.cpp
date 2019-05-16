@@ -1,7 +1,7 @@
 #include "Scene.h"
 #include "MathUtilities.h"
 
-Scene::Scene(Renderer::Ptr r) : mRenderer(r)
+Scene::Scene() 
 {
 	mRoot = Node::Ptr( new Node() );
 
@@ -11,13 +11,13 @@ Scene::~Scene()
 {
 }
 
-Scene::Model::Ptr Scene::createModel(const std::string & name, const Parameters& params)
+Scene::Model::Ptr Scene::createModel(const std::string & name, const Parameters& params, Model::Loader loader)
 {
 	auto ret = mModels.find(name);
 	if (ret != mModels.end())
 		return ret->second;
 
-	Model::Ptr e(new Model(params, mRenderer));
+	Model::Ptr e(new Model(params, loader));
 	Node::Ptr node(new Node());
 	node->mEntity = e;
 	e->mNode = node;
@@ -204,10 +204,9 @@ const Quaternion & Scene::Node::getRealOrientation()
 	return mRealOrientation;
 }
 
-Scene::Model::Model(const Parameters & params, Renderer::Ptr r)
+Scene::Model::Model(const Parameters & params, Loader loader)
 {
-	Mesh* mesh = new Mesh(params, r);
-	mMesh = decltype(mMesh)(mesh);
+	mMesh = loader(params);
 }
 
 Scene::Model::~Model()

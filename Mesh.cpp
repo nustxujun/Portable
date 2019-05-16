@@ -68,21 +68,13 @@ Mesh::Mesh(const Parameters& params, Renderer::Ptr r)
 
 
 
-
-	//	for (int j = 0; j < m->mNumVertices; ++j)
-	//	{
-	//		auto v = m->mVertices[j];
-	//		mAABB.min[0] = std::min(mAABB.min[0], v.x);
-	//		mAABB.min[1] = std::min(mAABB.min[1], v.y);
-	//		mAABB.min[2] = std::min(mAABB.min[2], v.z);
-
-	//		mAABB.max[0] = std::max(mAABB.max[0], v.x);
-	//		mAABB.max[1] = std::max(mAABB.max[1], v.y);
-	//		mAABB.max[2] = std::max(mAABB.max[2], v.z);
-	//	}
-
-
 }
+
+Mesh::Mesh(std::pair<Meshs, AABB >&& meshs):
+	mMeshs(std::move(meshs.first)), mAABB(meshs.second)
+{
+}
+
 
 Mesh::~Mesh()
 {

@@ -84,6 +84,7 @@ void Quad::draw(const std::array<float, 4>& color)
 	mRenderer->setTextures(mSRVs);
 	mRenderer->setSamplers(mSamplers);
 	mRenderer->setPSConstantBuffers(mConstants);
+	mRenderer->setDefaultRasterizer();
 
 	auto context = mRenderer->getContext();
 	context->DrawIndexed(6, 0, 0);

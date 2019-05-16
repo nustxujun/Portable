@@ -32,3 +32,4 @@ void Pipeline::setFrameBuffer(Renderer::RenderTarget::Ptr rt)
 {
 	mFrameBuffer = rt;
 }
+

@@ -160,6 +160,7 @@
     <ClInclude Include="deferredRendering.h" />
     <ClInclude Include="Framework.h" />
     <ClInclude Include="GBuffer.h" />
+    <ClInclude Include="GeometryMesh.h" />
     <ClInclude Include="HDR.h" />
     <ClInclude Include="Input.h" />
     <ClInclude Include="Material.h" />
@@ -182,6 +183,7 @@
     <ClCompile Include="AO.cpp" />
     <ClCompile Include="DeferredRenderer.cpp" />
     <ClCompile Include="GBuffer.cpp" />
+    <ClCompile Include="GeometryMesh.cpp" />
     <ClCompile Include="HDR.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Framework.cpp" />

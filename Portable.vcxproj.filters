@@ -99,6 +99,9 @@
     <ClInclude Include="HDR.h">
       <Filter>Engine</Filter>
     </ClInclude>
+    <ClInclude Include="GeometryMesh.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -156,6 +159,9 @@
       <Filter>Pipeline</Filter>
     </ClCompile>
     <ClCompile Include="HDR.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="GeometryMesh.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

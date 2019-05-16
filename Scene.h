@@ -84,8 +84,9 @@ public:
 	{
 	public:
 		using Ptr = std::shared_ptr<Model>;
+		using Loader = std::function<Mesh::Ptr(const Parameters&)>;
 	public:
-		Model(const Parameters& params, Renderer::Ptr r);
+		Model(const Parameters& params, Loader loader);
 		~Model();
 		Mesh::Ptr getMesh() { return mMesh; };
 		virtual void visitRenderable(std::function<void(const Renderable&)>) override;
@@ -156,10 +157,10 @@ public:
 
 	};
 public:
-	Scene(Renderer::Ptr renderer);
+	Scene();
 	~Scene();
 
-	Model::Ptr createModel(const std::string& name, const Parameters& params);
+	Model::Ptr createModel(const std::string& name, const Parameters& params, Model::Loader loader);
 	Camera::Ptr createOrGetCamera(const std::string& name);
 	Light::Ptr createOrGetLight(const std::string& name);
 	void visitRenderables(std::function<void(const Renderable&)> callback);
@@ -167,7 +168,6 @@ public:
 	Node::Ptr getRoot() { return mRoot; }
 	Node::Ptr createNode();
 private:
-	Renderer::Ptr mRenderer;
 	std::unordered_map<std::string, Model::Ptr> mModels;
 	Node::Ptr mRoot;
 

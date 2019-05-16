@@ -24,8 +24,12 @@ public:
 		DirectX::SimpleMath::Vector3 min;
 		DirectX::SimpleMath::Vector3 max;
 	};
+protected:
+	Mesh(std::pair<Meshs, AABB >&&);
+
 public:
 	Mesh(const Parameters& params, Renderer::Ptr r);
+
 	~Mesh();
 
 	size_t getNumMesh() { return mMeshs.size(); }

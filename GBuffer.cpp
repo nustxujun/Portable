@@ -58,21 +58,46 @@ void GBuffer::render(Renderer::RenderTarget::Ptr rt)
 	mDepth.lock()->clearDepth(1.0f);
 	renderer->setRenderTargets(rts, mDepth);
 	renderer->setDefaultDepthStencilState();
+	renderer->setDefaultRasterizer();
 	renderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
+	//D3D11_RASTERIZER_DESC rasterDesc;
+	//rasterDesc.AntialiasedLineEnable = false;
+	//rasterDesc.CullMode = D3D11_CULL_BACK;
+	//rasterDesc.DepthBias = 0;
+	//rasterDesc.DepthBiasClamp = 0.0f;
+	//rasterDesc.DepthClipEnable = true;
+	//rasterDesc.FillMode = D3D11_FILL_WIREFRAME;
+	//rasterDesc.FrontCounterClockwise = false;
+	//rasterDesc.MultisampleEnable = false;
+	//rasterDesc.ScissorEnable = false;
+	//rasterDesc.SlopeScaledDepthBias = 0.0f;
+	//renderer->setRasterizer(renderer->createOrGetRasterizer(rasterDesc));
 
 	getScene()->visitRenderables([world, this, e](const Renderable& r)
 	{
 		world->SetMatrix((const float*)&r.tranformation);
 		getRenderer()->setIndexBuffer(r.indices, DXGI_FORMAT_R32_UINT, 0);
 		getRenderer()->setVertexBuffer(r.vertices, r.layout.lock()->getSize(), 0);
-
-		e->render(getRenderer(), [world, this, &r](ID3DX11EffectPass* pass)
+		if (r.material)
 		{
-			getRenderer()->setTextures(r.material->mTextures);
-			getRenderer()->setLayout(mLayout.lock()->bind(pass));
-			getRenderer()->getContext()->DrawIndexed(r.numIndices, 0, 0);
-		});
+			e->setTech("has_texture");
+			e->render(getRenderer(), [world, this, &r](ID3DX11EffectPass* pass)
+			{
+				getRenderer()->setTextures(r.material->mTextures);
+				getRenderer()->setLayout(mLayout.lock()->bind(pass));
+				getRenderer()->getContext()->DrawIndexed(r.numIndices, 0, 0);
+			});
+		}
+		else
+		{
+			e->setTech("no_texture");
+			e->render(getRenderer(), [world, this, &r](ID3DX11EffectPass* pass)
+			{
+				getRenderer()->setLayout(mLayout.lock()->bind(pass));
+				getRenderer()->getContext()->DrawIndexed(r.numIndices, 0, 0);
+			});
+		}
 	});
 
 	renderer->removeRenderTargets();
