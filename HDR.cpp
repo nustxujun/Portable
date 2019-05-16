@@ -68,13 +68,13 @@ void HDR::renderLuminance(Renderer::RenderTarget::Ptr rt)
 
 	mQuad.setRenderTarget(mLuminance.back());
 	mQuad.setSamplers({ mPoint });
-	mQuad.setPixelShader(mDownSamplePS3x3);
+	mQuad.setPixelShader(mDownSamplePS2x2);
 	mQuad.setTextures({rt });
 
 	mQuad.setViewport({0,0,len ,len ,0,1.0f});
 	mQuad.draw();
 
-	mQuad.setPixelShader(mDownSamplePS2x2);
+	mQuad.setPixelShader(mDownSamplePS3x3);
 	for (size_t i = mLuminance.size() - 1; i > 0; --i)
 	{
 		len /= 3;

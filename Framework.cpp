@@ -51,8 +51,8 @@ void Framework::init()
 	//});
 
 	mPipeline->pushStage<GBuffer>(albedo, normal, worldpos, depth);
-	mPipeline->pushStage<PBR>(albedo, normal, depth, 0.5f, 0.5f,10.0f);
-	//mPipeline->pushStage<AO>(normal, depth,10.0f);
+	mPipeline->pushStage<PBR>(albedo, normal, depth, 0.1f, 1.0f,10.0f);
+	mPipeline->pushStage<AO>(normal, depth,10.0f);
 	//mPipeline->pushStage<ShadowMap>(worldpos,depth, 2048, 8);
 	//mPipeline->pushStage<VolumetricLighting>();
 	mPipeline->pushStage<HDR>();
@@ -64,8 +64,8 @@ void Framework::init()
 	});
 
 	Parameters params;
-	params["file"] = "tiny.x";
-	//params["file"] = "media/sponza/sponza.obj";
+	//params["file"] = "tiny.x";
+	params["file"] = "sponza/sponza.obj";
 	auto model = mScene->createModel("test", params);
 	model->attach(mScene->getRoot());
 	model->getNode()->setPosition(0.0f, 0.f, 0.0f);

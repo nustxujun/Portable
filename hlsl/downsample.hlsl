@@ -23,7 +23,7 @@ float4 downSample2x2(PS_INPUT Input): SV_TARGET
 			// Compute the sum of color values
 			vColor = frameTex.Sample(sampPoint, Input.Tex, int2(x,y));
 
-			fAvg += dot(vColor.r, LUM_VECTOR);
+			fAvg += dot(vColor, LUM_VECTOR);
 		}
 	}
 
