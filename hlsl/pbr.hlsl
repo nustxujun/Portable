@@ -61,16 +61,24 @@ float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
 
 	return ggx1 * ggx2;
 }
-
-
+#define kPI 3.1415926536f
+float3 decode(float2 enc)
+{
+	float3 n;
+	n.xy = enc * 2 - 1;
+	n.z = sqrt(1 - dot(n.xy, n.xy));
+	return n;
+}
 float4 main(PS_INPUT input) : SV_TARGET
 {
 	float4 texcolor = albedoTexture.Sample(sampLinear, input.Tex);
 	float3 albedo = pow(texcolor.rgb, 2.2);
 
 	float4 normalData = normalTexture.Sample(sampPoint, input.Tex);
-	float3 N = 2.0f * normalData.xyz - 1.0f;
+	float3 N = decode(normalData.rg);
+	N = normalize(N);
 
+	return float4(N,1);
 	float depthVal = depthTexture.Sample(sampPoint, input.Tex).r;
 	float4 worldPos;
 	worldPos.x = input.Tex.x * 2.0f - 1.0f;
@@ -95,6 +103,9 @@ float4 main(PS_INPUT input) : SV_TARGET
 	//float attenuation = 1.0 / (distance * distance);
 	//float3 radiance = lightColors[i] * attenuation;
 	//float3 radiance = 3;
+
+
+	//return pow(max(dot(H, N), 0), 10);
 
 	// cook-torrance brdf
 	float NDF = DistributionGGX(N, H, roughness);

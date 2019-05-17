@@ -52,6 +52,11 @@ struct GBufferPixelShaderOutput
 	float4 WorldPos: COLOR2;
 };
 
+#define kPI 3.1415926536f
+float4 encode(float3 n)
+{
+	return float4(n.xy*0.5 + 0.5, 0, 0);
+}
 GBufferPixelShaderOutput ps(GBufferVertexShaderOutput input) : SV_TARGET
 {
 	GBufferPixelShaderOutput output;
@@ -59,9 +64,7 @@ GBufferPixelShaderOutput ps(GBufferVertexShaderOutput input) : SV_TARGET
 	output.Color.a = 1.0f;
 	float3 normalFromMap = input.Normal;
 	normalFromMap = mul(normalFromMap, World);
-	normalFromMap = normalize(normalFromMap);
-	output.Normal.rgb = 0.5f * (normalFromMap + 1.0f);
-	output.Normal.a = 1.0f;
+	output.Normal = encode(normalize(normalFromMap));
 	output.WorldPos = input.WorldPos;
 	return output;
 }
@@ -72,9 +75,7 @@ GBufferPixelShaderOutput ps_notex(GBufferVertexShaderOutput input) : SV_TARGET
 	output.Color = float4(1,0,0,1);
 	float3 normalFromMap = input.Normal;
 	normalFromMap = mul(normalFromMap, World);
-	normalFromMap = normalize(normalFromMap);
-	output.Normal.rgb = 0.5f * (normalFromMap + 1.0f);
-	output.Normal.a = 1.0f;
+	output.Normal = encode(normalize(normalFromMap));
 	output.WorldPos = input.WorldPos;
 	return output;
 }

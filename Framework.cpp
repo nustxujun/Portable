@@ -30,7 +30,7 @@ void Framework::init()
 	auto w = mRenderer->getWidth();
 	auto h = mRenderer->getHeight();
 	auto albedo = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
-	auto normal = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
+	auto normal = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	auto worldpos = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R32_TYPELESS,true);
 	auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
@@ -71,7 +71,7 @@ void Framework::init()
 	//	return Mesh::Ptr(new Mesh(p, mRenderer));
 	//});
 
-	params["geom"] = "plane";
+	params["geom"] = "sphere";
 	auto model = mScene->createModel("test", params, [this](const Parameters& p)
 	{
 		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
@@ -81,6 +81,9 @@ void Framework::init()
 
 	model->attach(mScene->getRoot());
 	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+	Matrix mat = Matrix::CreateFromYawPitchRoll(0,-3.14/2,0);
+	//model->getNode()->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
+
 	auto aabb = model->getWorldAABB();
 
 	Vector3 vec = aabb.second - aabb.first;
@@ -88,15 +91,15 @@ void Framework::init()
 	auto cam = mScene->createOrGetCamera("main");
 	DirectX::XMFLOAT3 eye(aabb.second);
 	DirectX::XMFLOAT3 at(aabb.first);
-	cam->lookat(eye, at);
-	//cam->lookat({0,0,-15}, {0,0,0});
+	//cam->lookat(eye, at);
+	cam->lookat({0,0,-20}, {0,0,0});
 	cam->setViewport(0, 0, mRenderer->getWidth(), mRenderer->getHeight());
-	cam->setNearFar(1, vec.Length());
+	cam->setNearFar(0.01,10000);
 	cam->setFOVy(0.785398185);
 
 
 	auto light = mScene->createOrGetLight("main");
-	light->setDirection({ 0.5,-1,0.5 });
+	light->setDirection({ 0,0,1 });
 
 	initInput(std::max(std::max(vec.x, vec.y), vec.z));
 }

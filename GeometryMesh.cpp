@@ -23,7 +23,7 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 	if (geom->second == "sphere")
 	{
 		int radius = 10;
-		int resolution = 100;
+		int resolution = 10;
 		if (params.find("radius") != end)
 		{
 			radius = atoi(params.find("radius")->second.c_str());
@@ -43,7 +43,8 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 			float cosy = cos(degy);
 			float y = cosy * radius;
 			float r = siny * radius;
-
+			//float r = radius;
+			//float y = resolution - j ;
 			for (int i = 0; i <= resolution; ++i)
 			{
 				float degx = i * 2 * pi / resolution;

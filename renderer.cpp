@@ -508,7 +508,7 @@ Renderer::SharedCompiledData Renderer::compileFile(const std::string& filename, 
 {
 	int flags = D3DCOMPILE_ENABLE_STRICTNESS;
 #ifdef _DEBUG
-	flags |= D3DCOMPILE_DEBUG;
+	flags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #endif
 
 	ID3D10Blob* blob;
