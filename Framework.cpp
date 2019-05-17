@@ -52,7 +52,7 @@ void Framework::init()
 	//});
 
 	mPipeline->pushStage<GBuffer>(albedo, normal, worldpos, depth);
-	mPipeline->pushStage<PBR>(albedo, normal, depth, 0.5f, 0.5f,10.0f);
+	mPipeline->pushStage<PBR>(albedo, normal, depth, 0.1f, 0.9f,10.0f);
 	//mPipeline->pushStage<AO>(normal, depth,10.0f);
 	//mPipeline->pushStage<ShadowMap>(worldpos,depth, 2048, 8);
 	//mPipeline->pushStage<VolumetricLighting>();
@@ -71,7 +71,7 @@ void Framework::init()
 	//	return Mesh::Ptr(new Mesh(p, mRenderer));
 	//});
 
-	params["geom"] = "sphere";
+	params["geom"] = "plane";
 	auto model = mScene->createModel("test", params, [this](const Parameters& p)
 	{
 		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
@@ -88,8 +88,8 @@ void Framework::init()
 	auto cam = mScene->createOrGetCamera("main");
 	DirectX::XMFLOAT3 eye(aabb.second);
 	DirectX::XMFLOAT3 at(aabb.first);
-	//cam->lookat(eye, at);
-	cam->lookat({0,0,-15}, {0,0,0});
+	cam->lookat(eye, at);
+	//cam->lookat({0,0,-15}, {0,0,0});
 	cam->setViewport(0, 0, mRenderer->getWidth(), mRenderer->getHeight());
 	cam->setNearFar(1, vec.Length());
 	cam->setFOVy(0.785398185);
@@ -98,7 +98,7 @@ void Framework::init()
 	auto light = mScene->createOrGetLight("main");
 	light->setDirection({ 0.5,-1,0.5 });
 
-	initInput(std::min(std::min(vec.x, vec.y), vec.z));
+	initInput(std::max(std::max(vec.x, vec.y), vec.z));
 }
 
 
