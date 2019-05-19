@@ -43,16 +43,19 @@ float4 ps(PS_INPUT input) : SV_TARGET
 
 		pos.x = (pos.x + 1) * 0.5;
 		pos.y = (1 - pos.y) * 0.5;
+		//if (pos.x > 1 || pos.x < -1 || pos.y > 1 || pos.y < -1)
+		//	continue;
+
 		float2 uv = (pos.xy + float2(i, 0)) * float2(scale, 1);
-		float depth = shadowmapTex.Sample(sampLinear, uv).r;
-		if (depth + 0.0001 < pos.z)
-			return 0.3;
+		float sampledepth = shadowmapTex.Sample(sampLinear, uv).r;
+		if ( sampledepth < 1.0f && sampledepth + 0.01 < pos.z)
+			return 0.01;
 		else
 			return 1;
 		
 	}
 
-	return 0;
+	return 1;
 }
 
 

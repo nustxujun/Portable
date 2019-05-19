@@ -64,21 +64,22 @@ float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
 #define kPI 3.1415926536f
 float3 decode(float2 enc)
 {
-	float3 n;
-	n.xy = enc * 2 - 1;
-	n.z = sqrt(1 - dot(n.xy, n.xy));
-	return n;
+	float2 ang = enc;
+	float2 scth;
+	sincos(ang.x * kPI, scth.x, scth.y);
+	float2 scphi = float2(sqrt(1.0 - ang.y*ang.y), ang.y);
+	return float3(scth.y*scphi.x, scth.x*scphi.x, scphi.y);
 }
+
 float4 main(PS_INPUT input) : SV_TARGET
 {
 	float4 texcolor = albedoTexture.Sample(sampLinear, input.Tex);
 	float3 albedo = pow(texcolor.rgb, 2.2);
 
 	float4 normalData = normalTexture.Sample(sampPoint, input.Tex);
-	float3 N = decode(normalData.rg);
+	float3 N = decode(normalData.xy);
 	N = normalize(N);
 
-	return float4(N,1);
 	float depthVal = depthTexture.Sample(sampPoint, input.Tex).r;
 	float4 worldPos;
 	worldPos.x = input.Tex.x * 2.0f - 1.0f;
@@ -124,11 +125,13 @@ float4 main(PS_INPUT input) : SV_TARGET
 	float NdotL = max(dot(N, L), 0.0);
 	Lo += (kD * albedo / PI + specular)  * NdotL * radiance;
 
-	float3 ambient = 0.03 * albedo;// *ao;
+	float3 ambient = 0.01 * albedo;// *ao;
 	float3 color = ambient + Lo;
 
-	color = color / (color + 1);
-	color = pow(color, 1.0 / 2.2);
+
+	//float3 color = Lo;
+	//color = color / (color + 1);
+	//color = pow(color, 1.0 / 2.2);
 
 	return float4(color, texcolor.a);
 }

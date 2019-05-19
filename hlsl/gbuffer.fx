@@ -48,14 +48,15 @@ GBufferVertexShaderOutput vs(GBufferVertexShaderInput input)
 struct GBufferPixelShaderOutput
 {
 	float4 Color : COLOR0;
-	float4 Normal : COLOR1;
+	float2 Normal : COLOR1;
 	float4 WorldPos: COLOR2;
 };
 
 #define kPI 3.1415926536f
-float4 encode(float3 n)
+float2 encode(float3 n)
 {
-	return float4(n.xy*0.5 + 0.5, 0, 0);
+	float tan = atan2(n.y, n.x);
+	return float2(tan / kPI, n.z);
 }
 GBufferPixelShaderOutput ps(GBufferVertexShaderOutput input) : SV_TARGET
 {

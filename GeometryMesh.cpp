@@ -22,8 +22,8 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 	DirectX::SimpleMath::Matrix trans = DirectX::SimpleMath::Matrix::Identity;
 	if (geom->second == "sphere")
 	{
-		int radius = 10;
-		int resolution = 10;
+		int radius = 5;
+		int resolution = 100;
 		if (params.find("radius") != end)
 		{
 			radius = atoi(params.find("radius")->second.c_str());
@@ -91,8 +91,7 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 	else if (geom->second == "plane")
 	{
 		int size = 10;
-		int resolution = 100;
-		trans.Translation({ -size * 0.5f, 0, -size * 0.5f });
+		int resolution = 10;
 
 		if (params.find("size") != end)
 		{
@@ -104,6 +103,7 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 			resolution = atoi(params.find("resolution")->second.c_str());
 		}
 
+		trans.Translation({ -size * 0.5f, 0, -size * 0.5f });
 
 		float tilesize = (float)size / (float)resolution;
 		for (int j = 0; j <= resolution; ++j)
@@ -166,12 +166,13 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 	auto lo = r->createLayout(layout, 2);
 
 	Mesh::Meshs meshs;
+	auto material = Material::create();
 	meshs.push_back({
 		vb,
 		ib,
 		vertices.size() / 6,
 		indices.size(),
-		{},
+		material,
 		lo,
 		trans,
 	});

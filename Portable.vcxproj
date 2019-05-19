@@ -167,8 +167,10 @@
     <ClInclude Include="MathUtilities.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="MeshBuilder.h" />
+    <ClInclude Include="Observer.h" />
     <ClInclude Include="PBR.h" />
     <ClInclude Include="Pipeline.h" />
+    <ClInclude Include="PostProcessing.h" />
     <ClInclude Include="Quad.h" />
     <ClInclude Include="renderer.h" />
     <ClInclude Include="Resource.h" />
@@ -193,6 +195,7 @@
     <ClCompile Include="MeshBuilder.cpp" />
     <ClCompile Include="PBR.cpp" />
     <ClCompile Include="Pipeline.cpp" />
+    <ClCompile Include="PostProcessing.cpp" />
     <ClCompile Include="Quad.cpp" />
     <ClCompile Include="renderer.cpp" />
     <ClCompile Include="Scene.cpp" />

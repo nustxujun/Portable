@@ -27,6 +27,15 @@ Scene::Model::Ptr Scene::createModel(const std::string & name, const Parameters&
 	return e;
 }
 
+Scene::Model::Ptr Scene::getModel(const std::string& name)
+{
+	auto ret = mModels.find(name);
+	if (ret != mModels.end())
+		return ret->second;
+	else
+		return {};
+}
+
 Scene::Camera::Ptr Scene::createOrGetCamera(const std::string & name)
 {
 	auto ret = mCameras.find(name);
@@ -55,18 +64,18 @@ Scene::Light::Ptr Scene::createOrGetLight(const std::string & name)
 	return c;
 }
 
-void Scene::visitRenderables(std::function<void(const Renderable&)> callback)
+void Scene::visitRenderables(std::function<void(const Renderable&)> callback, std::function<bool(Entity::Ptr)> cond)
 {
 	std::vector<Renderable> rends;
 
 	std::function<void(Node::Ptr)> visitor;
-	visitor = [&rends, &visitor](Node::Ptr node) {
-		if (node->mEntity)
+	visitor = [&rends, &visitor,cond](Node::Ptr node) {
+		if (node->mEntity && (!cond || cond(node->mEntity)))
 		{
 			auto mat = node->mEntity->getNode()->getTransformation();
-			node->mEntity->visitRenderable([&rends, mat](const Renderable& r) {
+			node->mEntity->visitRenderable([&rends, mat,cond](const Renderable& r) {
 				Renderable rend = r;
-				rend.tranformation = mat;
+				rend.tranformation *= mat;
 				rends.emplace_back(std::move(rend));
 			});
 		}
@@ -86,9 +95,25 @@ void Scene::visitRenderables(std::function<void(const Renderable&)> callback)
 	}
 }
 
-Scene::Node::Ptr Scene::createNode()
+void Scene::visitLights(std::function<void(Light::Ptr)> callback)
 {
-	Node::Ptr ptr(new Node());
+	for (auto& i : mLights)
+	{
+		callback(i.second);
+	}
+}
+
+Scene::Node::Ptr Scene::createNode(const std::string& name)
+{
+	if (name.size() == 0)
+		return std::make_shared<Node>();
+
+	auto ret = mNodes.find(name);
+	if (ret != mNodes.end())
+		return ret->second;
+
+	auto ptr = std::make_shared<Node>();
+	mNodes[name] = ptr;
 	return ptr;
 }
 
@@ -138,6 +163,27 @@ void Scene::Camera::visitVisibleObject(std::function<void(Entity::Ptr)> visit)
 }
 
 
+std::pair<Vector3, Vector3> Scene::Node::getWorldAABB() const
+{
+	std::pair<Vector3, Vector3> aabb = { {FLT_MAX,FLT_MAX,FLT_MAX}, {FLT_MIN,FLT_MIN,FLT_MIN} };
+
+	for (auto &i : mChildren)
+	{
+		auto bb = i->getWorldAABB();
+		aabb.first = Vector3::Min(aabb.first, bb.first);
+		aabb.second = Vector3::Max(aabb.second, bb.second);
+	}
+
+	if (mEntity)
+	{
+		auto bb = mEntity->getWorldAABB();
+		aabb.first = Vector3::Min(aabb.first, bb.first);
+		aabb.second = Vector3::Max(aabb.second, bb.second);
+	}
+
+	return aabb;
+}
+
 void Scene::Node::dirty(size_t s)
 {
 	mDirty |= s;
@@ -159,8 +205,8 @@ const Matrix & Scene::Node::getTransformation()
 	{
 		FXMVECTOR scaling = XMVectorSet(1, 1, 1, 0);
 		FXMVECTOR o = XMVectorSet(0, 0, 0, 0);
-		FXMVECTOR rot = getRealOrientation();
-		GXMVECTOR pos = getRealPosition();
+		FXMVECTOR rot = getOrientation();
+		GXMVECTOR pos = getPosition();
 		XMMATRIX mat = DirectX::XMMatrixAffineTransformation(scaling,o,rot, pos);
 		if (mParent)
 		{
@@ -203,6 +249,7 @@ const Quaternion & Scene::Node::getRealOrientation()
 
 	return mRealOrientation;
 }
+
 
 Scene::Model::Model(const Parameters & params, Loader loader)
 {

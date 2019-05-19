@@ -14,6 +14,11 @@ void Renderer::checkResult(HRESULT hr)
 	abort();
 }
 
+void Renderer::error(const std::string& err)
+{
+	MessageBoxA(NULL, err.c_str(), NULL, MB_ICONERROR);
+	abort();
+}
 
 void Renderer::init(HWND win, int width, int height)
 {
@@ -71,7 +76,7 @@ void Renderer::init(HWND win, int width, int height)
 	checkResult( mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backbuffer) );
 
 	checkResult(mDevice->CreateRenderTargetView(backbuffer, NULL, &bbv));
-	auto shared = std::shared_ptr<RenderTarget>(new RenderTarget(mDevice, backbuffer, bbv, nullptr));
+	auto shared = std::shared_ptr<RenderTarget>(new RenderTarget(this, backbuffer, bbv, nullptr));
 	mRenderTargets.insert(shared);
 	mBackbuffer = shared;
 
@@ -488,7 +493,7 @@ Renderer::Texture::Ptr Renderer::createTexture(const std::string& name, const D3
 Renderer::RenderTarget::Ptr Renderer::createRenderTarget(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage)
 {
 
-	auto ret = mRenderTargets.emplace(new RenderTarget(mDevice,  width,  height,  format,  usage));
+	auto ret = mRenderTargets.emplace(new RenderTarget(this,  width,  height,  format,  usage));
 	return RenderTarget::Ptr(*ret.first);
 }
 
@@ -500,7 +505,7 @@ Renderer::Buffer::Ptr Renderer::createBuffer(int size, D3D11_BIND_FLAG flag, con
 	bd.ByteWidth = size;
 	bd.BindFlags = flag;
 	bd.CPUAccessFlags = CPUaccess;
-	auto ret = mBuffers.emplace(new Buffer(mDevice, bd, initialdata));
+	auto ret = mBuffers.emplace(new Buffer(this, bd, initialdata));
 	return Buffer::Ptr(*ret.first);
 }
 
@@ -530,7 +535,7 @@ Renderer::SharedCompiledData Renderer::compileFile(const std::string& filename, 
 
 Renderer::Effect::Ptr Renderer::createEffect(void* data, size_t size)
 {
-	auto ret = mEffects.emplace( new Effect(mDevice,data, size));
+	auto ret = mEffects.emplace( new Effect(this,data, size));
 	return Effect::Ptr(*ret.first);
 }
 
@@ -552,7 +557,7 @@ Renderer::PixelShader::Weak Renderer::createPixelShader(const void * data, size_
 
 Renderer::Layout::Ptr Renderer::createLayout(const D3D11_INPUT_ELEMENT_DESC * descarray, size_t count)
 {
-	auto ret = mLayouts.emplace(new Layout(mDevice, descarray, count));
+	auto ret = mLayouts.emplace(new Layout(this, descarray, count));
 	return Layout::Ptr(*ret.first);
 }
 
@@ -562,7 +567,7 @@ Renderer::Font::Ptr Renderer::createOrGetFont(const std::wstring & font)
 	if (ret != mFonts.end())
 		return ret->second;
 
-	std::shared_ptr<Font> shared (new Font(mDevice,font));
+	std::shared_ptr<Font> shared (new Font(this,font));
 	mFonts.emplace(font, shared);
 	return Font::Ptr(shared);
 }
@@ -587,7 +592,7 @@ Renderer::Rasterizer::Ptr Renderer::createOrGetRasterizer(const D3D11_RASTERIZER
 	//rasterDesc.ScissorEnable = false;
 	//rasterDesc.SlopeScaledDepthBias = 0.0f;
 
-	std::shared_ptr<Rasterizer> shared(new Rasterizer(mDevice, desc));
+	std::shared_ptr<Rasterizer> shared(new Rasterizer(this, desc));
 	mRasterizers.emplace(key, shared);
 
 	return Rasterizer::Ptr(shared);
@@ -614,7 +619,7 @@ Renderer::DepthStencil::Ptr Renderer::createDepthStencil(int width, int height, 
 	if (ret != mDepthStencils.end())
 		return ret->second;
 
-	auto ins = mDepthStencils.emplace(key, std::shared_ptr<DepthStencil>(new DepthStencil(mDevice, descDepth)));
+	auto ins = mDepthStencils.emplace(key, std::shared_ptr<DepthStencil>(new DepthStencil(this, descDepth)));
 	
 	return ins.first->second;
 }
@@ -631,7 +636,7 @@ Renderer::ShaderResource::~ShaderResource()
 	mSRView = nullptr;
 }
 
-Renderer::RenderTarget::RenderTarget(ID3D11Device* d, int width, int height, DXGI_FORMAT format, D3D11_USAGE usage):D3DObject(d), ShaderResource(nullptr)
+Renderer::RenderTarget::RenderTarget(Renderer* renderer, int width, int height, DXGI_FORMAT format, D3D11_USAGE usage):D3DObject(renderer), ShaderResource(nullptr)
 {
 	// Create the final texture.
 	D3D11_TEXTURE2D_DESC descFinalTexture;
@@ -648,7 +653,9 @@ Renderer::RenderTarget::RenderTarget(ID3D11Device* d, int width, int height, DXG
 	descFinalTexture.CPUAccessFlags = 0;
 	descFinalTexture.MiscFlags = 0;
 
-	checkResult(d->CreateTexture2D(&descFinalTexture, NULL, &mTexture));
+	mDesc = descFinalTexture;
+
+	checkResult(getDevice()->CreateTexture2D(&descFinalTexture, NULL, &mTexture));
 
 	// Create the final render target.
 	D3D11_RENDER_TARGET_VIEW_DESC finalRTVDesc;
@@ -657,15 +664,15 @@ Renderer::RenderTarget::RenderTarget(ID3D11Device* d, int width, int height, DXG
 	finalRTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
 	finalRTVDesc.Texture2D.MipSlice = 0;
 
-	checkResult(d->CreateRenderTargetView(mTexture, &finalRTVDesc, &mRTView));
+	checkResult(getDevice()->CreateRenderTargetView(mTexture, &finalRTVDesc, &mRTView));
 
 
 	// Create the final shader resource view
-	checkResult(d->CreateShaderResourceView(mTexture, nullptr, &mSRView));
+	checkResult(getDevice()->CreateShaderResourceView(mTexture, nullptr, &mSRView));
 
 }
 
-Renderer::RenderTarget::RenderTarget(ID3D11Device* d, ID3D11Texture2D* t, ID3D11RenderTargetView* rt, ID3D11ShaderResourceView* srv):D3DObject(d), ShaderResource(srv)
+Renderer::RenderTarget::RenderTarget(Renderer* renderer, ID3D11Texture2D* t, ID3D11RenderTargetView* rt, ID3D11ShaderResourceView* srv):D3DObject(renderer), ShaderResource(srv)
 {
 	mTexture = t;
 	mRTView = rt;
@@ -683,11 +690,33 @@ void Renderer::RenderTarget::clear(const std::array<float, 4> c)
 	getContext()->ClearRenderTargetView(mRTView, c.data());
 }
 
+Renderer::RenderTarget::Ptr Renderer::RenderTarget::clone() const
+{
+	return getRenderer()->createRenderTarget(mDesc.Width, mDesc.Height, mDesc.Format, mDesc.Usage);
+}
 
-Renderer::Buffer::Buffer(ID3D11Device * d, const D3D11_BUFFER_DESC& desc, const D3D11_SUBRESOURCE_DATA* data):D3DObject(d)
+void Renderer::RenderTarget::swap(RenderTarget::Ptr rt, bool force)
+{
+	auto ptr = rt.lock();
+	if (ptr == nullptr) return;
+	if (memcmp(&mDesc, &ptr->mDesc, sizeof(mDesc)) != 0 && !force)
+	{
+		error("only can swap the same rts.");
+		return;
+	}
+
+	std::swap(mTexture, ptr->mTexture);
+	std::swap(mRTView, ptr->mRTView);
+	std::swap(mSRView, ptr->mSRView);
+	std::swap(mDesc, ptr->mDesc);
+
+}
+
+
+Renderer::Buffer::Buffer(Renderer* renderer, const D3D11_BUFFER_DESC& desc, const D3D11_SUBRESOURCE_DATA* data):D3DObject(renderer)
 {
 	mDesc = desc;
-	checkResult(d->CreateBuffer(&desc, data, &mBuffer));
+	checkResult(getDevice()->CreateBuffer(&desc, data, &mBuffer));
 }
 
 Renderer::Buffer::~Buffer()
@@ -709,7 +738,7 @@ void Renderer::Buffer::blit(const void * data, size_t size)
 
 
 
-Renderer::Effect::Effect(ID3D11Device * d,const void* compiledshader, size_t size) :D3DObject(d)
+Renderer::Effect::Effect(Renderer* renderer,const void* compiledshader, size_t size) :D3DObject(renderer)
 {
 	mCompiledShader.resize(size);
 	memcpy(mCompiledShader.data(), compiledshader, size);
@@ -784,7 +813,7 @@ ID3DX11EffectConstantBuffer * Renderer::Effect::getConstantBuffer(const std::str
 	return mEffect->GetConstantBufferByName(name.c_str());
 }
 
-Renderer::Layout::Layout(ID3D11Device * device, const D3D11_INPUT_ELEMENT_DESC * descarray, size_t count): D3DObject(device)
+Renderer::Layout::Layout(Renderer* renderer, const D3D11_INPUT_ELEMENT_DESC * descarray, size_t count): D3DObject(renderer)
 {
 	mElements.resize(count);
 	memcpy(mElements.data(), descarray, count * sizeof(D3D11_INPUT_ELEMENT_DESC));
@@ -833,16 +862,15 @@ ID3D11InputLayout * Renderer::Layout::bind(VertexShader::Weak vs)
 	return *insert.first->second;
 }
 
-Renderer::Font::Font(ID3D11Device * d, const std::wstring & font):D3DObject(d)
+Renderer::Font::Font(Renderer* renderer, const std::wstring & font):D3DObject(renderer)
 {
 	try {
-		mFont = std::make_unique<DirectX::SpriteFont>(d, font.c_str());
+		mFont = std::make_unique<DirectX::SpriteFont>(getDevice(), font.c_str());
 		mBatch = std::make_unique<DirectX::SpriteBatch>(getContext());
 	}
 	catch (std::exception& e)
 	{
-		MessageBoxA(NULL, e.what(), NULL, NULL);
-		abort();
+		error(e.what());
 	}
 }
 
@@ -871,9 +899,9 @@ void Renderer::Font::drawText(const std::string & text, const DirectX::SimpleMat
 	}
 }
 
-Renderer::Rasterizer::Rasterizer(ID3D11Device * d, const D3D11_RASTERIZER_DESC & desc):D3DObject(d)
+Renderer::Rasterizer::Rasterizer(Renderer* renderer, const D3D11_RASTERIZER_DESC & desc):D3DObject(renderer)
 {
-	checkResult(d->CreateRasterizerState(&desc, &mRasterizer));
+	checkResult(getDevice()->CreateRasterizerState(&desc, &mRasterizer));
 }
 
 Renderer::Rasterizer::~Rasterizer()
@@ -881,7 +909,7 @@ Renderer::Rasterizer::~Rasterizer()
 	mRasterizer->Release();
 }
 
-Renderer::DepthStencil::DepthStencil(ID3D11Device * d, const D3D11_TEXTURE2D_DESC & desc):D3DObject(d), ShaderResource(nullptr)
+Renderer::DepthStencil::DepthStencil(Renderer* renderer, const D3D11_TEXTURE2D_DESC & desc):D3DObject(renderer), ShaderResource(nullptr)
 {
 	bool access = (desc.BindFlags & D3D11_BIND_SHADER_RESOURCE) != 0;
 
@@ -921,14 +949,14 @@ Renderer::DepthStencil::DepthStencil(ID3D11Device * d, const D3D11_TEXTURE2D_DES
 	}
 
 	mDesc = desc;
-	checkResult(d->CreateTexture2D(&desc, NULL, &mTexture));
+	checkResult(getDevice()->CreateTexture2D(&desc, NULL, &mTexture));
 	
 	D3D11_DEPTH_STENCIL_VIEW_DESC descDSV;
 	ZeroMemory(&descDSV, sizeof(descDSV));
 	descDSV.Format = DSVfmt;
 	descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 	descDSV.Texture2D.MipSlice = 0;
-	checkResult(d->CreateDepthStencilView(mTexture, &descDSV, &mDSView));
+	checkResult(getDevice()->CreateDepthStencilView(mTexture, &descDSV, &mDSView));
 
 	if (access)
 	{
@@ -938,7 +966,7 @@ Renderer::DepthStencil::DepthStencil(ID3D11Device * d, const D3D11_TEXTURE2D_DES
 		srvd.Texture2D.MostDetailedMip = 0;
 		srvd.Texture2D.MipLevels = 1;
 
-		checkResult(d->CreateShaderResourceView(mTexture, &srvd, &mSRView));
+		checkResult(getDevice()->CreateShaderResourceView(mTexture, &srvd, &mSRView));
 	}
 
 }

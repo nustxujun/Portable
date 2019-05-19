@@ -38,10 +38,12 @@ public:
 		void setOrientation(const Args& ... args) { dirty(DT_ORIENTATION); mOrientation = { args... }; }
 		const Quaternion& getOrientation() { return mOrientation; }
 		const Quaternion& getRealOrientation();
-		
+		void rotate(const Quaternion& rot) { setOrientation( mOrientation * rot); }
 
 		void addChild(Ptr p) { mChildren.insert(p); p->mParent = this; p->dirty(DT_PARENT); }
 		void removeChild(Ptr p) { mChildren.erase(p); p->mParent = nullptr; p->dirty(DT_PARENT); }
+
+		std::pair<Vector3, Vector3> getWorldAABB()const;
 	private:
 		void dirty(size_t s);
 		bool isDirty(size_t s = DT_ALL);
@@ -76,8 +78,11 @@ public:
 		Vector3 getDirection();
 		void setDirection(const Vector3& dir);
 
+		bool isCastShadow()const { return mCastShadow; }
+		void setCastShadow(bool s) { mCastShadow = s; }
 	private:
 		Node::Ptr mNode;
+		bool mCastShadow = true;
 	};
 
 	class Model : public Entity
@@ -161,17 +166,19 @@ public:
 	~Scene();
 
 	Model::Ptr createModel(const std::string& name, const Parameters& params, Model::Loader loader);
+	Model::Ptr getModel(const std::string& name);
 	Camera::Ptr createOrGetCamera(const std::string& name);
 	Light::Ptr createOrGetLight(const std::string& name);
-	void visitRenderables(std::function<void(const Renderable&)> callback);
-
+	void visitRenderables(std::function<void(const Renderable&)> callback, std::function<bool(Entity::Ptr)> cond = {});
+	void visitLights(std::function<void(Light::Ptr)> callback);
 	Node::Ptr getRoot() { return mRoot; }
-	Node::Ptr createNode();
+	Node::Ptr createNode(const std::string& name = {});
 private:
 	std::unordered_map<std::string, Model::Ptr> mModels;
 	Node::Ptr mRoot;
 
 	std::unordered_map<std::string, Camera::Ptr> mCameras;
 	std::unordered_map<std::string, Light::Ptr> mLights;
+	std::unordered_map<std::string, Node::Ptr> mNodes;
 
 };

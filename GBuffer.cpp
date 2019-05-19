@@ -54,13 +54,15 @@ void GBuffer::render(Renderer::RenderTarget::Ptr rt)
 
 	std::vector<Renderer::RenderTarget::Ptr> rts = { mAlbedo, mNormal,mWorldPos};
 	mAlbedo.lock()->clear({ 0,0,0,0 });
-	mNormal.lock()->clear({ 0.5,0.5,1,0 });
+	mNormal.lock()->clear({ 0,0,0,0 });
+	mWorldPos.lock()->clear({ 0,0,0 });
+
 	mDepth.lock()->clearDepth(1.0f);
 	renderer->setRenderTargets(rts, mDepth);
 	renderer->setDefaultDepthStencilState();
 	renderer->setDefaultRasterizer();
 	renderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
+	renderer->setDefaultBlendState();
 	//D3D11_RASTERIZER_DESC rasterDesc;
 	//rasterDesc.AntialiasedLineEnable = false;
 	//rasterDesc.CullMode = D3D11_CULL_BACK;
@@ -79,7 +81,7 @@ void GBuffer::render(Renderer::RenderTarget::Ptr rt)
 		world->SetMatrix((const float*)&r.tranformation);
 		getRenderer()->setIndexBuffer(r.indices, DXGI_FORMAT_R32_UINT, 0);
 		getRenderer()->setVertexBuffer(r.vertices, r.layout.lock()->getSize(), 0);
-		if (r.material)
+		if (r.material->hasTexture())
 		{
 			e->setTech("has_texture");
 			e->render(getRenderer(), [world, this, &r](ID3DX11EffectPass* pass)

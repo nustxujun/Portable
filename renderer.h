@@ -33,17 +33,13 @@ private:
 	class D3DObject
 	{
 	public:
-		D3DObject(ID3D11Device* device): mDevice(device){}
+		D3DObject(Renderer* renderer): mRenderer(renderer){}
 	protected:
-		ID3D11Device* getDevice()const { return mDevice; }
-		ID3D11DeviceContext* getContext()const {
-			ID3D11DeviceContext* c;
-			mDevice->GetImmediateContext(&c);
-			c->Release();
-			return c;
-		}
+		ID3D11Device* getDevice()const { return mRenderer->mDevice; }
+		ID3D11DeviceContext* getContext()const { return mRenderer->mContext; }
+		Renderer* getRenderer()const { return mRenderer; }
 	private:
-		ID3D11Device* mDevice;
+		Renderer* mRenderer;
 	};
 public:
 	template<class T>
@@ -79,8 +75,8 @@ public:
 	public:
 		using Ptr = std::weak_ptr<RenderTarget>;
 	public:
-		RenderTarget(ID3D11Device* d, int width, int height, DXGI_FORMAT format, D3D11_USAGE usage);
-		RenderTarget(ID3D11Device* d, ID3D11Texture2D* t, ID3D11RenderTargetView* rt, ID3D11ShaderResourceView* srv);
+		RenderTarget(Renderer* renderer, int width, int height, DXGI_FORMAT format, D3D11_USAGE usage);
+		RenderTarget(Renderer* renderer, ID3D11Texture2D* t, ID3D11RenderTargetView* rt, ID3D11ShaderResourceView* srv);
 		~RenderTarget();
 		operator ID3D11RenderTargetView*() { return mRTView; }
 		
@@ -88,9 +84,13 @@ public:
 		ID3D11RenderTargetView* getRenderTargetView() const{ return mRTView; }
 
 		void clear(const std::array<float,4> c);
+
+		RenderTarget::Ptr clone()const;
+		void swap(RenderTarget::Ptr rt, bool force = false);
 	private:
 		ID3D11Texture2D* mTexture;
 		ID3D11RenderTargetView* mRTView;
+		D3D11_TEXTURE2D_DESC mDesc;
 	};
 
 	class Buffer final : public NODefault, public D3DObject
@@ -98,7 +98,7 @@ public:
 	public: 
 		using Ptr = std::weak_ptr<Buffer>;
 	public:
-		Buffer(ID3D11Device * d, const D3D11_BUFFER_DESC& desc, const D3D11_SUBRESOURCE_DATA* data);
+		Buffer(Renderer* renderer, const D3D11_BUFFER_DESC& desc, const D3D11_SUBRESOURCE_DATA* data);
 		~Buffer();
 
 		void blit(const void* data, size_t size);
@@ -115,7 +115,7 @@ public:
 	public:
 		using Ptr = std::weak_ptr<Effect>;
 	public:
-		Effect(ID3D11Device* d,const void* compiledshader, size_t size);
+		Effect(Renderer* renderer, const void* compiledshader, size_t size);
 		~Effect();
 		void render(Renderer::Ptr renderer, std::function<void(ID3DX11EffectPass*)> draw);
 
@@ -184,7 +184,7 @@ public:
 	public:
 		using Ptr = std::weak_ptr<Layout>;
 	public:
-		Layout(ID3D11Device* device, const D3D11_INPUT_ELEMENT_DESC * descarray, size_t count);
+		Layout(Renderer* renderer, const D3D11_INPUT_ELEMENT_DESC * descarray, size_t count);
 		~Layout(){}
 
 		ID3D11InputLayout* bind(ID3DX11EffectPass* pass);
@@ -203,7 +203,7 @@ public:
 		using Ptr = std::weak_ptr<Font>;
 
 	public:
-		Font(ID3D11Device* d, const std::wstring& font);
+		Font(Renderer* renderer, const std::wstring& font);
 		~Font();
 
 		void drawText(
@@ -228,7 +228,7 @@ public:
 	public:
 		using Ptr = std::weak_ptr<Rasterizer>;
 	public:
-		Rasterizer(ID3D11Device* d, const D3D11_RASTERIZER_DESC& desc);
+		Rasterizer(Renderer* renderer, const D3D11_RASTERIZER_DESC& desc);
 		~Rasterizer();
 
 		operator ID3D11RasterizerState*()const { return mRasterizer; }
@@ -242,7 +242,7 @@ public:
 	public:
 		using Ptr = std::weak_ptr<DepthStencil>;
 	public:
-		DepthStencil(ID3D11Device* d, const D3D11_TEXTURE2D_DESC& desc);
+		DepthStencil(Renderer* renderer, const D3D11_TEXTURE2D_DESC& desc);
 		~DepthStencil();
 
 		operator ID3D11DepthStencilView* () const { return mDSView; }
@@ -337,6 +337,7 @@ public:
 	DepthStencil::Ptr createDepthStencil(int width, int height, DXGI_FORMAT format, bool access = false);
  private:
 	static void checkResult(HRESULT hr);
+	static void error(const std::string& err);
 
 	void setConstantBuffersImpl(const std::vector<Buffer::Ptr>& bs, std::function<void(size_t, ID3D11Buffer**)> f);
 private:

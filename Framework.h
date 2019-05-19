@@ -13,7 +13,9 @@ public:
 	virtual void init();
 	virtual void update();
 protected:
-	virtual void initInput(float speed);
+	virtual void initPipeline();
+	virtual void initScene();
+	virtual void initInput();
 private:
 	void showFPS();
 	void calFPS();

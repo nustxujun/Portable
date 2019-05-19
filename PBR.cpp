@@ -35,43 +35,47 @@ void PBR::render(Renderer::RenderTarget::Ptr rt)
 	using namespace DirectX;
 	using namespace DirectX::SimpleMath;
 	auto cam = getScene()->createOrGetCamera("main");
-	auto light = getScene()->createOrGetLight("main");
 
-	Constants constants;
-	constants.radiance = mRadiance;
-	constants.roughness = mRoughness;
-	constants.metallic = mMetallic;
 
-	auto dir = light->getDirection();
-	dir.Normalize();
-	constants.lightDir = { dir.x, dir.y,dir.z ,0};
-	auto campos = cam->getNode()->getRealPosition();
-	constants.cameraPos = {campos.x, campos.y, campos.z, 1.0f};
-	Matrix viewproj = cam->getViewMatrix() * cam->getProjectionMatrix();
-	constants.invertViewPorj = viewproj.Invert().Transpose();
 
-	mConstants.lock()->blit(&constants, sizeof(constants));
+	getScene()->visitLights([this,cam,rt](Scene::Light::Ptr light) {
+		Constants constants;
+		constants.radiance = mRadiance;
+		constants.roughness = mRoughness;
+		constants.metallic = mMetallic;
 
-	mQuad.setRenderTarget(rt);
-	mQuad.setTextures({ mAlbedo, mNormal, mDepth });
-	mQuad.setPixelShader(mPS);
-	mQuad.setSamplers({ mLinear, mPoint});
-	mQuad.setConstant(mConstants);
+		auto dir = light->getDirection();
+		dir.Normalize();
+		constants.lightDir = { dir.x, dir.y,dir.z ,0 };
+		auto campos = cam->getNode()->getRealPosition();
+		constants.cameraPos = { campos.x, campos.y, campos.z, 1.0f };
+		Matrix viewproj = cam->getViewMatrix() * cam->getProjectionMatrix();
+		constants.invertViewPorj = viewproj.Invert().Transpose();
 
-	D3D11_BLEND_DESC desc = { 0 };
+		mConstants.lock()->blit(&constants, sizeof(constants));
 
-	desc.RenderTarget[0] = {
-		TRUE,
-		D3D11_BLEND_SRC_ALPHA,
-		D3D11_BLEND_INV_SRC_ALPHA,
-		D3D11_BLEND_OP_ADD,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_OP_ADD,
-		D3D11_COLOR_WRITE_ENABLE_ALL
-	};
+		mQuad.setRenderTarget(rt);
+		mQuad.setTextures({ mAlbedo, mNormal, mDepth });
+		mQuad.setPixelShader(mPS);
+		mQuad.setSamplers({ mLinear, mPoint });
+		mQuad.setConstant(mConstants);
 
-	mQuad.setBlend(desc);
-	mQuad.draw();
+		D3D11_BLEND_DESC desc = { 0 };
+
+		desc.RenderTarget[0] = {
+			TRUE,
+			D3D11_BLEND_SRC_ALPHA,
+			D3D11_BLEND_DEST_ALPHA,
+			D3D11_BLEND_OP_ADD,
+			D3D11_BLEND_ONE,
+			D3D11_BLEND_ONE,
+			D3D11_BLEND_OP_ADD,
+			D3D11_COLOR_WRITE_ENABLE_ALL
+		};
+
+		mQuad.setBlend(desc);
+		mQuad.draw();
+	});
+
 
 }

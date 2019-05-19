@@ -87,6 +87,8 @@ void ShadowMap::fitToScene()
 	Vector3 scenemax = { FLT_MIN, FLT_MIN, FLT_MIN };
 	cam->visitVisibleObject([&scenemin,&scenemax, worldtolight](Scene::Entity::Ptr e)
 	{
+		if (!e->isCastShadow()) return;
+
 		auto aabb = e->getWorldAABB();
 		const auto& omin = aabb.first;
 		const auto& omax = aabb.second;
@@ -105,8 +107,8 @@ void ShadowMap::fitToScene()
 		for (const auto& i : corners)
 		{
 			Vector3 tc = Vector3::Transform(i, worldtolight);
-			scenemin = Vector3::Min(scenemin, i);
-			scenemax = Vector3::Max(scenemax, i);
+			scenemin = Vector3::Min(scenemin, tc);
+			scenemax = Vector3::Max(scenemax, tc);
 		}
 	});
 
@@ -147,7 +149,7 @@ void ShadowMap::fitToScene()
 		}
 
 
-		mProjections[i] = DirectX::XMMatrixOrthographicOffCenterLH(min.x, max.x, min.y, max.y,  scenemin.z, scenemax.z);
+		mProjections[i] = DirectX::XMMatrixOrthographicOffCenterLH(min.x, max.x, min.y, max.y, scenemin.z, scenemax.z);
 
 		Vector4 range = { 0,0,f ,1};
 		range = Vector4::Transform(range, camproj);
@@ -191,6 +193,7 @@ void ShadowMap::renderToShadowMap()
 		constant.proj = mProjections[i].Transpose();
 
 
+		
 		getScene()->visitRenderables([&constant, this](const Renderable& r)
 		{
 			constant.world = r.tranformation.Transpose();
@@ -200,7 +203,7 @@ void ShadowMap::renderToShadowMap()
 			getRenderer()->setIndexBuffer(r.indices, DXGI_FORMAT_R32_UINT, 0);
 			getRenderer()->setVertexBuffer(r.vertices, r.layout.lock()->getSize(), 0);
 			getRenderer()->getContext()->DrawIndexed(r.numIndices, 0, 0);
-		});
+		}, [](Scene::Entity::Ptr e) {return e->isCastShadow(); });
 
 	}
 
@@ -244,29 +247,29 @@ void ShadowMap::render(Renderer::RenderTarget::Ptr rt)
 	renderShadow(rt);
 
 
-
-	//float w = getRenderer()->getWidth();
-	//float h = getRenderer()->getHeight();
-
-
-	//D3D11_BLEND_DESC desc = { 0 };
-	//desc.RenderTarget[0] = {
-	//	FALSE,
-	//	D3D11_BLEND_ONE,
-	//	D3D11_BLEND_ZERO,
-	//	D3D11_BLEND_OP_ADD,
-	//	D3D11_BLEND_ONE,
-	//	D3D11_BLEND_ZERO,
-	//	D3D11_BLEND_OP_ADD,
-	//	D3D11_COLOR_WRITE_ENABLE_ALL,
-	//};
-
-	//mQuad.setBlend(desc);
-	//mQuad.setDefaultPixelShader();
-	//mQuad.setDefaultSampler();
-	//mQuad.setViewport({
-	//	0.0f,0,w, h *0.3f,0.0f, 1.0f
-	//});
-	//mQuad.setTextures({ mShadowMap });
-	//mQuad.draw();
+//
+//	float w = getRenderer()->getWidth();
+//	float h = getRenderer()->getHeight();
+//
+//
+//	D3D11_BLEND_DESC desc = { 0 };
+//	desc.RenderTarget[0] = {
+//		FALSE,
+//		D3D11_BLEND_ONE,
+//		D3D11_BLEND_ZERO,
+//		D3D11_BLEND_OP_ADD,
+//		D3D11_BLEND_ONE,
+//		D3D11_BLEND_ZERO,
+//		D3D11_BLEND_OP_ADD,
+//		D3D11_COLOR_WRITE_ENABLE_ALL,
+//	};
+//
+//	mQuad.setBlend(desc);
+//	mQuad.setDefaultPixelShader();
+//	mQuad.setDefaultSampler();
+//	mQuad.setViewport({
+//		0.0f,0,w, h *0.3f,0.0f, 1.0f
+//	});
+//	mQuad.setTextures({ mShadowMap });
+//	mQuad.draw();
 }
