@@ -69,6 +69,7 @@ public:
 		~Entity();
 
 		virtual void visitRenderable(std::function<void(const Renderable&)>) = 0;
+		virtual void setMaterial(Material::Ptr mat) { abort(); };
 		virtual std::pair<Vector3, Vector3> getWorldAABB()const = 0;
 		void attach(Node::Ptr n) { n->addChild(mNode); };
 		void detach() { if (!mNode->mParent) return; mNode->mParent->removeChild(mNode); }
@@ -80,6 +81,7 @@ public:
 
 		bool isCastShadow()const { return mCastShadow; }
 		void setCastShadow(bool s) { mCastShadow = s; }
+
 	private:
 		Node::Ptr mNode;
 		bool mCastShadow = true;
@@ -95,7 +97,8 @@ public:
 		~Model();
 		Mesh::Ptr getMesh() { return mMesh; };
 		virtual void visitRenderable(std::function<void(const Renderable&)>) override;
-		virtual std::pair<Vector3, Vector3> getWorldAABB()const;
+		virtual void setMaterial(Material::Ptr mat) override;
+		virtual std::pair<Vector3, Vector3> getWorldAABB()const override;
 
 
 	private:
@@ -153,13 +156,29 @@ public:
 	{
 	public:
 		using Ptr = std::shared_ptr<Light>;
+		enum LightType
+		{
+			LT_POINT,
+			LT_DIR,
+			LT_SPOT,
+		};
 	public:
 		Light();
 		~Light();
 
 		void visitRenderable(std::function<void(const Renderable&)>)override {};
 		std::pair<Vector3, Vector3> getWorldAABB()const override { return std::pair<Vector3, Vector3>(); };
+		void setColor(const Vector3& c) { mColor = c; }
+		const Vector3& getColor()const { return mColor; }
+		void setRange(float r) { mRange = r; }
+		float getRange()const { return mRange; }
+		void setType(LightType t) { mType = t; }
+		LightType getType()const { return mType; }
 
+	private:
+		Vector3 mColor = {1,1,1};
+		float mRange = 1000.0f;
+		LightType mType = LT_DIR;
 	};
 public:
 	Scene();

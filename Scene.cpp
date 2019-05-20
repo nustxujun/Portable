@@ -72,10 +72,10 @@ void Scene::visitRenderables(std::function<void(const Renderable&)> callback, st
 	visitor = [&rends, &visitor,cond](Node::Ptr node) {
 		if (node->mEntity && (!cond || cond(node->mEntity)))
 		{
-			auto mat = node->mEntity->getNode()->getTransformation();
-			node->mEntity->visitRenderable([&rends, mat,cond](const Renderable& r) {
+			auto matrix = node->mEntity->getNode()->getTransformation();
+			node->mEntity->visitRenderable([=, &rends](const Renderable& r) {
 				Renderable rend = r;
-				rend.tranformation *= mat;
+				rend.tranformation *= matrix;
 				rends.emplace_back(std::move(rend));
 			});
 		}
@@ -156,6 +156,7 @@ void Scene::Entity::setDirection(const Vector3 & dir)
 	t = Vector3::Transform(t, mNode->getOrientation());
 }
 
+
 void Scene::Camera::visitVisibleObject(std::function<void(Entity::Ptr)> visit)
 {
 	for (auto& e : mScene->mModels)
@@ -215,6 +216,8 @@ const Matrix & Scene::Node::getTransformation()
 		}
 
 		XMStoreFloat4x4(&mTranformation, mat);
+		getRealPosition();
+		getRealOrientation();
 		mDirty = 0;
 	}
 	return mTranformation;
@@ -266,6 +269,11 @@ void Scene::Model::visitRenderable(std::function<void(const Renderable&)> v)
 	{
 		v(mMesh->getMesh(i));
 	}
+}
+
+void Scene::Model::setMaterial(Material::Ptr mat)
+{
+	mMesh->setMaterial(mat);
 }
 
 std::pair<Vector3, Vector3> Scene::Model::getWorldAABB() const

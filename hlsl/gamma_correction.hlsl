@@ -7,8 +7,6 @@ struct PS_INPUT
 	float2 Tex: TEXCOORD0;
 };
 
-#define GAMMA 2.2f
-
 
 float3 LinearTosRGB(in float3 color)
 {

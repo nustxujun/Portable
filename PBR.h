@@ -8,9 +8,9 @@ class PBR:public Pipeline::Stage
 	struct Constants
 	{
 		Matrix invertViewPorj;
-		Vector4 lightDir;
+		Vector4 lightpos;
 		Vector4 cameraPos;
-		float radiance;
+		Vector3 radiance;
 		float roughness;
 		float metallic;
 	};
@@ -23,8 +23,7 @@ public:
 		Renderer::RenderTarget::Ptr n,
 		Renderer::DepthStencil::Ptr d, 
 		float roughness,
-		float metallic,
-		float radiance);
+		float metallic);
 	~PBR();
 
 	void render(Renderer::RenderTarget::Ptr rt) override final;
@@ -34,9 +33,8 @@ private:
 	Renderer::DepthStencil::Ptr mDepth;
 	float mRoughness;
 	float mMetallic;
-	float mRadiance;
 
-	Renderer::PixelShader::Weak mPS;
+	std::array<Renderer::PixelShader::Weak,3> mPSs;
 	Renderer::Sampler::Ptr mLinear;
 	Renderer::Sampler::Ptr mPoint;
 	Renderer::Buffer::Ptr mConstants;

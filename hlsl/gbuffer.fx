@@ -73,7 +73,7 @@ GBufferPixelShaderOutput ps(GBufferVertexShaderOutput input) : SV_TARGET
 GBufferPixelShaderOutput ps_notex(GBufferVertexShaderOutput input) : SV_TARGET
 {
 	GBufferPixelShaderOutput output;
-	output.Color = float4(1,0,0,1);
+	output.Color = float4(1, 1, 1,1);
 	float3 normalFromMap = input.Normal;
 	normalFromMap = mul(normalFromMap, World);
 	output.Normal = encode(normalize(normalFromMap));

@@ -64,7 +64,7 @@ void Framework::initPipeline()
 
 
 	mPipeline->pushStage<GBuffer>(albedo, normal, worldpos, depth);
-	mPipeline->pushStage<PBR>(albedo, normal, depth, 0.5f, 0.5f, 2.0f);
+	mPipeline->pushStage<PBR>(albedo, normal, depth, 0.5f, 0.5f);
 	//mPipeline->pushStage<AO>(normal, depth,10.0f);
 	mPipeline->pushStage<ShadowMap>(worldpos, depth, 2048, 8);
 	//mPipeline->pushStage<VolumetricLighting>();
@@ -83,7 +83,7 @@ void Framework::initScene()
 {
 	Parameters params;
 	//params["file"] = "tiny.x";
-	params["file"] = "media/sponza/sponza.obj";
+	params["file"] = "sponza/sponza.obj";
 	auto model = mScene->createModel("test", params, [this](const Parameters& p) {
 		return Mesh::Ptr(new Mesh(p, mRenderer));
 	});

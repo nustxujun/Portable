@@ -23,8 +23,8 @@ std::string show;
 void initRenderer(HWND win)
 {
 	
-	//framework = std::shared_ptr<Framework>(new Observer(win));
-	framework = std::make_shared<Framework>(win);
+	framework = std::shared_ptr<Framework>(new Observer(win));
+	//framework = std::make_shared<Framework>(win);
 	framework->init();
 }
 

@@ -60,8 +60,22 @@ public :
 
 		auto light = mScene->createOrGetLight("main");
 		light->setDirection({ 0.5,-1,0.5 });
+		light->setColor({10,0,0});
+		light->setType(Scene::Light::LT_POINT);
+		light->attach(mScene->getRoot());
+
+		params["geom"] = "sphere";
+		params["radius"] = "1";
+		model = mScene->createModel("light", params, [this](const Parameters& p)
+		{
+			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+		});
+
+		model->attach(light->getNode());
+
 		light = mScene->createOrGetLight("head");
 		light->setDirection({ 0, -1, 0 });
+		light->setColor({ 0,1,0 });
 
 	}
 
@@ -84,7 +98,7 @@ public :
 		});
 
 		mPipeline->pushStage<GBuffer>(albedo, normal, worldpos, depth);
-		mPipeline->pushStage<PBR>(albedo, normal, depth, 0.5f, 0.5f, 1.0f);
+		mPipeline->pushStage<PBR>(albedo, normal, depth, 0.5f, 0.9f);
 		//mPipeline->pushStage<AO>(normal, depth,10.0f);
 		//mPipeline->pushStage<ShadowMap>(worldpos,depth, 2048, 8);
 		//mPipeline->pushStage<VolumetricLighting>();
@@ -156,25 +170,30 @@ public :
 			}
 			if (m.rightButton)
 			{
-				//static Vector3 ldir = { 0,0,1 };
-				//static Vector3 o = { 0,0,maxlen };
+				static Vector3 ldir = { 0,0,1 };
+				static Vector3 o = { 0,0,maxlen };
+				const float degree = 3.14f * 0.5f;
 
-				//o.x += d.x * 0.005;
-				//o.y += d.y * 0.005;
-				////o.y = std::max(-degree, std::min(degree, o.y));
-				//float r = cos(o.y) * radius;
-				//ldir = { cos(o.x) * r, sin(o.y) * radius, sin(o.x) * r };
+				o.x += d.x * 0.005;
+				o.y -= d.y * 0.005;
+				o.y = std::max(-degree, std::min(degree, o.y));
+				float r = cos(o.y) * maxlen;
+				ldir = { cos(o.x) * r, sin(o.y) * maxlen, sin(o.x) * r };
+				ldir *= 0.25f;
+				light->getNode()->setPosition(ldir);
+				ldir.Normalize();
+				light->setDirection(-ldir);
 
-				//ldir.Normalize();
-				//light->setDirection(ldir);
-				Vector3 up = Vector3::Transform({0,1,0}, cam->getNode()->getRealOrientation());
-				Quaternion q1 = Quaternion::CreateFromAxisAngle(up, -d.x * 0.005);
-				//node->rotate(q1);
-				Vector3 right = { 1,0,0 };
-				right = Vector3::Transform(right, cam->getNode()->getRealOrientation());
 
-				Quaternion q2 = Quaternion::CreateFromAxisAngle(right, -d.y * 0.005);
-				light->getNode()->rotate(q1 *q2);
+
+				//Vector3 up = Vector3::Transform({0,1,0}, cam->getNode()->getRealOrientation());
+				//Quaternion q1 = Quaternion::CreateFromAxisAngle(up, -d.x * 0.005);
+				////node->rotate(q1);
+				//Vector3 right = { 1,0,0 };
+				//right = Vector3::Transform(right, cam->getNode()->getRealOrientation());
+
+				//Quaternion q2 = Quaternion::CreateFromAxisAngle(right, -d.y * 0.005);
+				//light->getNode()->rotate(q1 *q2);
 	
 			}
 			cam->lookat(dir * radius, { 0,0,0 });

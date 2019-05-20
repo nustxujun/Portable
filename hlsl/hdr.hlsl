@@ -28,18 +28,16 @@ float3 CalcExposedColor(in float3 color, in float avgLuminance, in float offset,
 	return exp2(exposure) * color;
 }
 
-//float3 ACESToneMapping(float3 color, float avglum)
-//{
-//	float exposure = 0;
-//	color = CalcExposedColor(color, avglum, 0, exposure);
-//
-//	const float A = 2.51f;
-//	const float B = 0.03f;
-//	const float C = 2.43f;
-//	const float D = 0.59f;
-//	const float E = 0.14f;
-//	return (color * (A * color + B)) / (color * (C * color + D) + E);
-//}
+float3 ACESToneMapping(float3 color)
+{
+
+	const float A = 2.51f;
+	const float B = 0.03f;
+	const float C = 2.43f;
+	const float D = 0.59f;
+	const float E = 0.14f;
+	return (color * (A * color + B)) / (color * (C * color + D) + E);
+}
 
 
 
@@ -67,12 +65,12 @@ float3 RRTAndODTFit(float3 v)
 
 float3 ACESFitted(float3 color)
 {
-	color = mul(ACESInputMat, color);
+	//color = mul(ACESInputMat, color);
 
 	// Apply RRT and ODT
 	color = RRTAndODTFit(color);
 
-	color = mul(ACESOutputMat, color);
+	//color = mul(ACESOutputMat, color);
 
 	// Clamp to [0, 1]
 	color = saturate(color);
@@ -84,7 +82,8 @@ float3 tonemappnig(float3 color, float avglum)
 {
 	float exposure = 0;
 	color = CalcExposedColor(color, avglum, 0, exposure);
-	return ACESFitted(color);
+	//return ACESFitted(color);
+	return ACESToneMapping(color);
 }
 
 float4 main(PS_INPUT Input) : SV_TARGET

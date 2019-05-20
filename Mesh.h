@@ -35,6 +35,8 @@ public:
 	size_t getNumMesh() { return mMeshs.size(); }
 	const Renderable& getMesh(size_t index) { return mMeshs[index]; }
 	const AABB & getAABB() const{ return mAABB; }
+
+	void setMaterial(Material::Ptr m);
 private:
 	AABB mAABB;
 	Meshs mMeshs;

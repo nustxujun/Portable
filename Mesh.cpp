@@ -79,3 +79,9 @@ Mesh::Mesh(std::pair<Meshs, AABB >&& meshs):
 Mesh::~Mesh()
 {
 }
+
+void Mesh::setMaterial(Material::Ptr m)
+{
+	for (auto&i : mMeshs)
+		i.material = m;
+}

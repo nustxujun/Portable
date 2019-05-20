@@ -8,11 +8,12 @@ SamplerState sampPoint: register(s1);
 cbuffer ConstantBuffer: register(b0)
 {
 	matrix invertViewProj;
-	float4 lightDir;
+	float4 lightpos;
 	float4 cameraPos;
-	float radiance;
+	float3 lightcolor;
 	float roughness;
 	float metallic;
+
 }
 
 struct PS_INPUT
@@ -91,22 +92,31 @@ float4 main(PS_INPUT input) : SV_TARGET
 
 
 	float3 V = normalize(cameraPos.xyz - worldPos.xyz);
-
 	float3 F0 = 0.04;
 	F0 = lerp(F0, albedo, metallic);
 
 	float3 Lo = 0;
 
-	// calculate per-light radiance
-	float3 L = -normalize(lightDir.xyz);
+
+#ifdef POINT
+	float3 L = normalize(lightpos.xyz - worldPos.xyz);
+
+	float distance = length(lightpos.xyz - worldPos.xyz);
+	float attenuation = 1.0 / (distance * distance);
+	float3 radiance = lightcolor * attenuation;
+#endif
+#ifdef DIR
+	float3 L = -normalize(lightpos.xyz);
+	float3 radiance = lightcolor;
+
+#endif
+#ifdef SPOT
+	float3 L = -normalize(lightpos.xyz - worldPos);
+	float3 radiance = lightcolor;
+
+#endif
 	float3 H = normalize(V + L);
-	//float distance = length(lightPositions[i] - WorldPos);
-	//float attenuation = 1.0 / (distance * distance);
-	//float3 radiance = lightColors[i] * attenuation;
-	//float3 radiance = 3;
 
-
-	//return pow(max(dot(H, N), 0), 10);
 
 	// cook-torrance brdf
 	float NDF = DistributionGGX(N, H, roughness);

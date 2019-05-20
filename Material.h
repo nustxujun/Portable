@@ -20,6 +20,10 @@ public:
 
 	void setTexture(size_t index, Renderer::Texture::Ptr tex);
 	bool hasTexture() { return !mTextures.empty(); }
+
+	void enableLighting(bool l) { mLighting = l; }
+	bool isLightingEnabled()const { return mLighting; }
 public:
 	std::vector<Renderer::Texture::Ptr> mTextures;
+	bool mLighting = true;
 };
