@@ -156,7 +156,6 @@
     <ClInclude Include="AO.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="D3D11Helper.h" />
-    <ClInclude Include="DeferredRenderer.h" />
     <ClInclude Include="deferredRendering.h" />
     <ClInclude Include="Framework.h" />
     <ClInclude Include="GBuffer.h" />
@@ -167,6 +166,7 @@
     <ClInclude Include="MathUtilities.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="MeshBuilder.h" />
+    <ClInclude Include="MultipleLights.h" />
     <ClInclude Include="Observer.h" />
     <ClInclude Include="PBR.h" />
     <ClInclude Include="Pipeline.h" />
@@ -183,7 +183,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AO.cpp" />
-    <ClCompile Include="DeferredRenderer.cpp" />
     <ClCompile Include="GBuffer.cpp" />
     <ClCompile Include="GeometryMesh.cpp" />
     <ClCompile Include="HDR.cpp" />
@@ -193,6 +192,7 @@
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="MeshBuilder.cpp" />
+    <ClCompile Include="MultipleLights.cpp" />
     <ClCompile Include="PBR.cpp" />
     <ClCompile Include="Pipeline.cpp" />
     <ClCompile Include="PostProcessing.cpp" />

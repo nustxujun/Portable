@@ -48,16 +48,11 @@ GBufferVertexShaderOutput vs(GBufferVertexShaderInput input)
 struct GBufferPixelShaderOutput
 {
 	float4 Color : COLOR0;
-	float2 Normal : COLOR1;
+	float4 Normal : COLOR1;
 	float4 WorldPos: COLOR2;
 };
 
-#define kPI 3.1415926536f
-float2 encode(float3 n)
-{
-	float tan = atan2(n.y, n.x);
-	return float2(tan / kPI, n.z);
-}
+
 GBufferPixelShaderOutput ps(GBufferVertexShaderOutput input) : SV_TARGET
 {
 	GBufferPixelShaderOutput output;
@@ -65,7 +60,7 @@ GBufferPixelShaderOutput ps(GBufferVertexShaderOutput input) : SV_TARGET
 	output.Color.a = 1.0f;
 	float3 normalFromMap = input.Normal;
 	normalFromMap = mul(normalFromMap, World);
-	output.Normal = encode(normalize(normalFromMap));
+	output.Normal.xyz = normalize(normalFromMap);
 	output.WorldPos = input.WorldPos;
 	return output;
 }
@@ -76,7 +71,7 @@ GBufferPixelShaderOutput ps_notex(GBufferVertexShaderOutput input) : SV_TARGET
 	output.Color = float4(1, 1, 1,1);
 	float3 normalFromMap = input.Normal;
 	normalFromMap = mul(normalFromMap, World);
-	output.Normal = encode(normalize(normalFromMap));
+	output.Normal.xyz = normalize(normalFromMap);
 	output.WorldPos = input.WorldPos;
 	return output;
 }

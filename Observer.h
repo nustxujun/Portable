@@ -66,12 +66,12 @@ public :
 
 		params["geom"] = "sphere";
 		params["radius"] = "1";
-		model = mScene->createModel("light", params, [this](const Parameters& p)
-		{
-			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		});
+		//model = mScene->createModel("light", params, [this](const Parameters& p)
+		//{
+		//	return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+		//});
 
-		model->attach(light->getNode());
+		//model->attach(light->getNode());
 
 		light = mScene->createOrGetLight("head");
 		light->setDirection({ 0, -1, 0 });
@@ -85,7 +85,7 @@ public :
 		auto w = mRenderer->getWidth();
 		auto h = mRenderer->getHeight();
 		auto albedo = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
-		auto normal = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R16G16_FLOAT);
+		auto normal = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
 		auto worldpos = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 		auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R32_TYPELESS, true);
 		auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
@@ -102,8 +102,8 @@ public :
 		//mPipeline->pushStage<AO>(normal, depth,10.0f);
 		//mPipeline->pushStage<ShadowMap>(worldpos,depth, 2048, 8);
 		//mPipeline->pushStage<VolumetricLighting>();
-		mPipeline->pushStage<HDR>();
-		mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
+		//mPipeline->pushStage<HDR>();
+		//mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 
 		mPipeline->pushStage([bb, quad](Renderer::RenderTarget::Ptr rt)
 		{

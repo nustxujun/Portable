@@ -1,5 +1,5 @@
 #include "GeometryMesh.h"
-
+#include <sstream>
 GeometryMesh::GeometryMesh(const Parameters & params, Renderer::Ptr r):Mesh(generateGeometry(params,r))
 {
 }
@@ -22,11 +22,13 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 	DirectX::SimpleMath::Matrix trans = DirectX::SimpleMath::Matrix::Identity;
 	if (geom->second == "sphere")
 	{
-		int radius = 5;
+		float radius = 5;
 		int resolution = 100;
 		if (params.find("radius") != end)
 		{
-			radius = atoi(params.find("radius")->second.c_str());
+			std::stringstream ss;
+			ss << params.find("radius")->second;
+			ss >> radius;
 		}
 
 		if (params.find("resolution") != end)
@@ -53,9 +55,6 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 
 				float z = cosx * r;
 				float x = sinx * r;
-
-				aabb.min = DirectX::SimpleMath::Vector3::Min(aabb.min, { x,y,z });
-				aabb.max = DirectX::SimpleMath::Vector3::Max(aabb.max, { x,y,z });
 
 				vertices.push_back(x);
 				vertices.push_back(y);
@@ -112,8 +111,6 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 			{
 				float x = i * tilesize;
 				float z = j * tilesize;
-				aabb.min = DirectX::SimpleMath::Vector3::Min(aabb.min, { x,0,z });
-				aabb.max = DirectX::SimpleMath::Vector3::Max(aabb.max, { x,0,z });
 				vertices.push_back(x );
 				vertices.push_back(0);
 				vertices.push_back(z);
@@ -144,11 +141,91 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 		aabb.min.y = -0.1;
 		aabb.max.y = 0.1;
 	}
+	else if (geom->second == "room" || geom->second == "cube")
+	{
+		int size = 10;
+		if (params.find("size") != end)
+		{
+			size = atoi(params.find("size")->second.c_str());
+		}
+		float half = size *0.5f;
+		float sign = 1.0f;
+		if (geom->second == "room")
+		{
+			sign = -1.0f;
+			for (int i = 0; i < 8; ++i)
+			{
+				indices.push_back(0 + i * 4);
+				indices.push_back(3 + i * 4);
+				indices.push_back(1 + i * 4);
+				indices.push_back(0 + i * 4);
+				indices.push_back(2 + i * 4);
+				indices.push_back(3 + i * 4);
+			}
+		}
+		else
+		{
+			for (int i = 0; i < 8; ++i)
+			{
+				indices.push_back(0 + i * 4);
+				indices.push_back(1 + i * 4);
+				indices.push_back(3 + i * 4);
+				indices.push_back(0 + i * 4);
+				indices.push_back(3 + i * 4);
+				indices.push_back(2 + i * 4);
+			}
+		}
+		vertices = {
+			// -z
+			-half,  half, -half,	0,0,-sign,
+			 half,  half, -half,	0,0,-sign,
+			-half, -half, -half,	0,0,-sign,
+			 half, -half, -half,	0,0,-sign,
+			// z
+			 half,  half,  half,	0,0, sign,
+			-half,  half,  half,	0,0, sign,
+			 half, -half,  half,	0,0, sign,
+			-half, -half,  half,	0,0, sign,
+			// -x
+			-half,  half,  half,	-sign,0, 0,
+			-half,  half, -half,	-sign,0, 0,
+			-half, -half,  half,	-sign,0, 0,
+			-half, -half, -half,	-sign,0, 0,
+			// x
+			 half,  half, -half,	sign,0, 0,
+			 half,  half,  half,	sign,0, 0,
+			 half, -half, -half,	sign,0, 0,
+			 half, -half,  half,	sign,0, 0,
+
+			 // y
+			 -half,  half,  half,	0,sign, 0,
+			  half,  half,  half,	0,sign, 0,
+			 -half,  half, -half,	0,sign, 0,
+			  half,  half, -half,	0,sign, 0,
+			 // -y
+			  half, -half,  half,	0,-sign, 0,
+			 -half, -half,  half,	0,-sign, 0,
+			  half, -half, -half,	0,-sign, 0,
+			 -half, -half, -half,	0,-sign, 0,
+		};
+
+
+
+
+		trans = DirectX::SimpleMath::Matrix::CreateFromAxisAngle({ 1,0,0 },0);
+	}
 	else
 		abort();
 
-
-	size_t numVertices = vertices.size() / 3;
+	size_t numVertices = vertices.size() / 6;
+	for (size_t i = 0; i < numVertices; ++i)
+	{
+		auto x = vertices[0 + i * 6];
+		auto y = vertices[1 + i * 6];
+		auto z = vertices[2 + i * 6];
+		aabb.min = DirectX::SimpleMath::Vector3::Min(aabb.min, { x,y,z });
+		aabb.max = DirectX::SimpleMath::Vector3::Max(aabb.max, { x,y,z });
+	}
 	D3D11_SUBRESOURCE_DATA InitQuadData;
 	ZeroMemory(&InitQuadData, sizeof(InitQuadData));
 	InitQuadData.pSysMem = vertices.data();
@@ -170,7 +247,7 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 	meshs.push_back({
 		vb,
 		ib,
-		vertices.size() / 6,
+		numVertices,
 		indices.size(),
 		material,
 		lo,

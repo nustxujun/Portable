@@ -26,19 +26,11 @@ struct PS_INPUT
 	float4 Pos : SV_POSITION;
 	float2 Tex: TEXCOORD0;
 };
-#define kPI 3.1415926536f
-float3 decode(float2 enc)
-{
-	float2 ang = enc;
-	float2 scth;
-	sincos(ang.x * kPI, scth.x, scth.y);
-	float2 scphi = float2(sqrt(1.0 - ang.y*ang.y), ang.y);
-	return float3(scth.y*scphi.x, scth.x*scphi.x, scphi.y);
-}
+
 
 float4 main(PS_INPUT input) : SV_TARGET
 {
-	float3 normal = decode(normalTex.Sample(linearWrap, input.Tex).rg);
+	float3 normal = normalTex.Sample(linearWrap, input.Tex).xyz;
 	normal = normalize(mul(normal, view));
 
 	float depth = depthTex.Sample(pointWrap, input.Tex).r;
