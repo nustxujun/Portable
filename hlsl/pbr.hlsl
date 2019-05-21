@@ -7,9 +7,9 @@ SamplerState sampPoint: register(s1);
 
 cbuffer ConstantBuffer: register(b0)
 {
-	matrix invertViewProj;
+	matrix invertProj;
+	matrix View;
 	float4 lightpos;
-	float4 cameraPos;
 	float3 lightcolor;
 	float roughness;
 	float metallic;
@@ -63,12 +63,23 @@ float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
 	return ggx1 * ggx2;
 }
 
+//float3 decode(float2 enc)
+//{
+//	float4 nn = float4(enc,0,0) * float4(2, 2, 0, 0) + float4(-1, -1, 1, -1);
+//	float l = dot(nn.xyz, -nn.xyw);
+//	nn.z = l;
+//	nn.xy *= sqrt(l);
+//	return nn.xyz * 2 + float3(0, 0, -1);
+//}
+//
+
 float4 main(PS_INPUT input) : SV_TARGET
 {
 	float4 texcolor = albedoTexture.Sample(sampLinear, input.Tex);
 	float3 albedo = pow(texcolor.rgb, 2.2);
 
 	float4 normalData = normalTexture.Sample(sampPoint, input.Tex);
+	normalData = mul(normalData, View);
 	float3 N = normalize(normalData.xyz);
 	float depthVal = depthTexture.Sample(sampPoint, input.Tex).r;
 	float4 worldPos;
@@ -76,11 +87,11 @@ float4 main(PS_INPUT input) : SV_TARGET
 	worldPos.y = -(input.Tex.y * 2.0f - 1.0f);
 	worldPos.z = depthVal;
 	worldPos.w = 1.0f;
-	worldPos = mul(worldPos, invertViewProj);
+	worldPos = mul(worldPos, invertProj);
 	worldPos /= worldPos.w;
 
 
-	float3 V = normalize(cameraPos.xyz - worldPos.xyz);
+	float3 V = normalize( - worldPos.xyz);
 	float3 F0 = 0.04;
 	F0 = lerp(F0, albedo, metallic);
 

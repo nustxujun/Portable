@@ -7,9 +7,9 @@ class PBR:public Pipeline::Stage
 	__declspec(align(16))
 	struct Constants
 	{
-		Matrix invertViewPorj;
+		Matrix invertPorj;
+		Matrix View;
 		Vector4 lightpos;
-		Vector4 cameraPos;
 		Vector3 radiance;
 		float roughness;
 		float metallic;

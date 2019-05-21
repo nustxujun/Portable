@@ -55,12 +55,11 @@ void PBR::render(Renderer::RenderTarget::Ptr rt)
 		if (light->getType() == Scene::Light::LT_DIR)
 			constants.lightpos = { dir.x, dir.y,dir.z ,0 };
 		else
-			constants.lightpos = { pos.x, pos.y,pos.z ,0 };
+			constants.lightpos = { pos.x, pos.y,pos.z ,1 };
 
-		auto campos = cam->getNode()->getRealPosition();
-		constants.cameraPos = { campos.x, campos.y, campos.z, 1.0f };
-		Matrix viewproj = cam->getViewMatrix() * cam->getProjectionMatrix();
-		constants.invertViewPorj = viewproj.Invert().Transpose();
+		Matrix view = cam->getViewMatrix();
+		constants.lightpos = Vector4::Transform(constants.lightpos, view);
+		constants.invertPorj = cam->getProjectionMatrix().Invert().Transpose();
 
 		mConstants.lock()->blit(&constants, sizeof(constants));
 

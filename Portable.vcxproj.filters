@@ -186,7 +186,7 @@
       <Filter>Engine</Filter>
     </ClCompile>
     <ClCompile Include="DepthBounding.cpp">
-      <Filter>源文件</Filter>
+      <Filter>Pipeline\Stage</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -68,7 +68,7 @@ void MultipleLights::initScene()
 		auto light = mScene->createOrGetLight(ss.str());
 		Vector3 color = { rand(gen),rand(gen),rand(gen) };
 		color.Normalize();
-		color *= 1.0f;
+		color *= 50;
 		light->setColor(color);
 		light->setType(Scene::Light::LT_POINT);
 		light->attach(mScene->getRoot());
@@ -80,7 +80,7 @@ void MultipleLights::initScene()
 		light->attach(root);
 		Vector3 vel = { rand(gen),rand(gen),rand(gen) };
 		vel.Normalize();
-		vel *= 0.0f;
+		vel *= 1.0f;
 		lights->push_back({light,vel });
 	}
 
@@ -116,7 +116,7 @@ void MultipleLights::initDRPipeline()
 	auto w = mRenderer->getWidth();
 	auto h = mRenderer->getHeight();
 	auto albedo = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
-	auto normal = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
+	auto normal = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	auto worldpos = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R32_TYPELESS, true);
 	auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
@@ -129,7 +129,7 @@ void MultipleLights::initDRPipeline()
 	});
 
 	mPipeline->pushStage<GBuffer>(albedo, normal, worldpos, depth);
-	mPipeline->pushStage<PBR>(albedo, normal, depth, 0.1f, 0.9f);
+	mPipeline->pushStage<PBR>(albedo, normal, depth, 0.9f, 0.1f);
 	//mPipeline->pushStage<HDR>();
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 

@@ -34,11 +34,10 @@ GBufferVertexShaderOutput vs(GBufferVertexShaderInput input)
 	GBufferVertexShaderOutput output = (GBufferVertexShaderOutput)0;
 
 	float4 worldPosition = mul(float4(input.Position.xyz, 1.0f), World);
-	output.WorldPos = worldPosition;
 	float4 viewPosition = mul(worldPosition, View);
 	output.Position = mul(viewPosition, Projection);
 
-	output.Normal = input.Normal;
+	output.Normal = mul(mul(input.Normal, World), View);
 
 	output.TexCoord = input.TexCoord;
 
@@ -49,19 +48,21 @@ struct GBufferPixelShaderOutput
 {
 	float4 Color : COLOR0;
 	float4 Normal : COLOR1;
-	float4 WorldPos: COLOR2;
 };
 
+//float2 encode(float3 n)
+//{
+//	float2 enc = normalize(n.xy) * (sqrt(-n.z*0.5 + 0.5));
+//	enc = enc * 0.5 + 0.5;
+//	return enc;
+//}
 
 GBufferPixelShaderOutput ps(GBufferVertexShaderOutput input) : SV_TARGET
 {
 	GBufferPixelShaderOutput output;
 	output.Color = diffuseTex.Sample(sampLinear, input.TexCoord);
 	output.Color.a = 1.0f;
-	float3 normalFromMap = input.Normal;
-	normalFromMap = mul(normalFromMap, World);
-	output.Normal.xyz = normalize(normalFromMap);
-	output.WorldPos = input.WorldPos;
+	output.Normal.xyz = input.Normal;
 	return output;
 }
 
@@ -69,10 +70,7 @@ GBufferPixelShaderOutput ps_notex(GBufferVertexShaderOutput input) : SV_TARGET
 {
 	GBufferPixelShaderOutput output;
 	output.Color = float4(1, 1, 1,1);
-	float3 normalFromMap = input.Normal;
-	normalFromMap = mul(normalFromMap, World);
-	output.Normal.xyz = normalize(normalFromMap);
-	output.WorldPos = input.WorldPos;
+	output.Normal.xyz = input.Normal;
 	return output;
 }
 

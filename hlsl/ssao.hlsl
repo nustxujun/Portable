@@ -31,7 +31,6 @@ struct PS_INPUT
 float4 main(PS_INPUT input) : SV_TARGET
 {
 	float3 normal = normalTex.Sample(linearWrap, input.Tex).xyz;
-	normal = normalize(mul(normal, view));
 
 	float depth = depthTex.Sample(pointWrap, input.Tex).r;
 	float4 pos;

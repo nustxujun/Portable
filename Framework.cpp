@@ -58,7 +58,7 @@ void Framework::initPipeline()
 	mPipeline->pushStage([bb](Renderer::RenderTarget::Ptr rt)
 	{
 		bb.lock()->clear({ 1,1,1,0 });
-		rt.lock()->clear({ 1,1,1,0 });
+		rt.lock()->clear({ 0,0,0,0 });
 	});
 
 
@@ -66,7 +66,7 @@ void Framework::initPipeline()
 	mPipeline->pushStage<GBuffer>(albedo, normal, worldpos, depth);
 	mPipeline->pushStage<PBR>(albedo, normal, depth, 0.5f, 0.5f);
 	//mPipeline->pushStage<AO>(normal, depth,10.0f);
-	mPipeline->pushStage<ShadowMap>(worldpos, depth, 2048, 8);
+	//mPipeline->pushStage<ShadowMap>(worldpos, depth, 2048, 8);
 	//mPipeline->pushStage<VolumetricLighting>();
 
 	mPipeline->pushStage<HDR>();
@@ -83,7 +83,7 @@ void Framework::initScene()
 {
 	Parameters params;
 	//params["file"] = "tiny.x";
-	params["file"] = "sponza/sponza.obj";
+	params["file"] = "media/sponza/sponza.obj";
 	auto model = mScene->createModel("test", params, [this](const Parameters& p) {
 		return Mesh::Ptr(new Mesh(p, mRenderer));
 	});

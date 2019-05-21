@@ -66,12 +66,12 @@ public :
 
 		params["geom"] = "sphere";
 		params["radius"] = "1";
-		//model = mScene->createModel("light", params, [this](const Parameters& p)
-		//{
-		//	return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		//});
+		model = mScene->createModel("light", params, [this](const Parameters& p)
+		{
+			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+		});
 
-		//model->attach(light->getNode());
+		model->attach(light->getNode());
 
 		light = mScene->createOrGetLight("head");
 		light->setDirection({ 0, -1, 0 });
@@ -102,8 +102,8 @@ public :
 		//mPipeline->pushStage<AO>(normal, depth,10.0f);
 		//mPipeline->pushStage<ShadowMap>(worldpos,depth, 2048, 8);
 		//mPipeline->pushStage<VolumetricLighting>();
-		//mPipeline->pushStage<HDR>();
-		//mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
+		mPipeline->pushStage<HDR>();
+		mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 
 		mPipeline->pushStage([bb, quad](Renderer::RenderTarget::Ptr rt)
 		{
