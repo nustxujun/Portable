@@ -11,7 +11,7 @@
 #include "Framework.h"
 #include "Observer.h"
 #include "MultipleLights.h"
-
+#include "Network.h"
 #define MAX_LOADSTRING 100
 
 
@@ -23,6 +23,11 @@ std::string show;
 
 void initRenderer(HWND win)
 {
+	Network nw;
+	nw.connect("127.0.0.1", 0, [](const asio::error_code& err) {
+
+
+	});
 	
 	framework = std::shared_ptr<Framework>(new MultipleLights(win));
 	//framework = std::shared_ptr<Framework>(new Observer(win));
