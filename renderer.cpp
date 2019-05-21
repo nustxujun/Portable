@@ -77,7 +77,7 @@ void Renderer::init(HWND win, int width, int height)
 
 	checkResult(mDevice->CreateRenderTargetView(backbuffer, NULL, &bbv));
 	auto shared = std::shared_ptr<RenderTarget>(new RenderTarget(this, backbuffer, bbv, nullptr));
-	mRenderTargets.insert(shared);
+	mRenderTargets.push_back(shared);
 	mBackbuffer = shared;
 
 	mDefaultDepthStencil = createDepthStencil(width, height, DXGI_FORMAT_D24_UNORM_S8_UINT);
@@ -406,6 +406,15 @@ void Renderer::setPixelShader(PixelShader::Weak shader)
 	mContext->PSSetShader(ps, NULL, 0);
 }
 
+void Renderer::setComputeShder(ComputeShader::Weak shader)
+{
+	auto ptr = shader.lock();
+	ID3D11ComputeShader* cs = nullptr;
+	if (ptr)
+		cs = *ptr;
+	mContext->CSSetShader(cs, NULL,0);
+}
+
 void Renderer::uninit()
 {
 	mDepthStencils.clear();
@@ -415,6 +424,7 @@ void Renderer::uninit()
 	mFonts.clear();
 	mVSs.clear();
 	mPSs.clear();
+	mCSs.clear();
 	mSamplers.clear();
 	mTextures.clear();
 	mEffects.clear();
@@ -492,12 +502,11 @@ Renderer::Texture::Ptr Renderer::createTexture(const std::string& name, const D3
 
 Renderer::RenderTarget::Ptr Renderer::createRenderTarget(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage)
 {
-
-	auto ret = mRenderTargets.emplace(new RenderTarget(this,  width,  height,  format,  usage));
-	return RenderTarget::Ptr(*ret.first);
+	mRenderTargets.emplace_back(new RenderTarget(this,  width,  height,  format,  usage));
+	return mRenderTargets.back();
 }
 
-Renderer::Buffer::Ptr Renderer::createBuffer(int size, D3D11_BIND_FLAG flag, const D3D11_SUBRESOURCE_DATA* initialdata, D3D11_USAGE usage, bool CPUaccess)
+Renderer::Buffer::Ptr Renderer::createBuffer(int size, D3D11_BIND_FLAG flag, const D3D11_SUBRESOURCE_DATA* initialdata, D3D11_USAGE usage, size_t CPUaccess)
 {
 	D3D11_BUFFER_DESC bd;
 	ZeroMemory(&bd, sizeof(bd));
@@ -505,8 +514,8 @@ Renderer::Buffer::Ptr Renderer::createBuffer(int size, D3D11_BIND_FLAG flag, con
 	bd.ByteWidth = size;
 	bd.BindFlags = flag;
 	bd.CPUAccessFlags = CPUaccess;
-	auto ret = mBuffers.emplace(new Buffer(this, bd, initialdata));
-	return Buffer::Ptr(*ret.first);
+	mBuffers.emplace_back(new Buffer(this, bd, initialdata));
+	return mBuffers.back();
 }
 
 Renderer::SharedCompiledData Renderer::compileFile(const std::string& filename, const std::string& entryPoint, const std::string& shaderModel, const D3D10_SHADER_MACRO* macro)
@@ -535,8 +544,8 @@ Renderer::SharedCompiledData Renderer::compileFile(const std::string& filename, 
 
 Renderer::Effect::Ptr Renderer::createEffect(void* data, size_t size)
 {
-	auto ret = mEffects.emplace( new Effect(this,data, size));
-	return Effect::Ptr(*ret.first);
+	mEffects.emplace_back( new Effect(this,data, size));
+	return mEffects.back();
 }
 
 Renderer::VertexShader::Weak Renderer::createVertexShader(const void * data, size_t size)
@@ -555,10 +564,18 @@ Renderer::PixelShader::Weak Renderer::createPixelShader(const void * data, size_
 	return mPSs.back();
 }
 
+Renderer::ComputeShader::Weak Renderer::createComputeShader(const void * data, size_t size)
+{
+	ID3D11ComputeShader* cs;
+	checkResult(mDevice->CreateComputeShader(data, size, NULL, &cs));
+	mCSs.emplace_back(new ComputeShader(cs));
+	return mCSs.back();
+}
+
 Renderer::Layout::Ptr Renderer::createLayout(const D3D11_INPUT_ELEMENT_DESC * descarray, size_t count)
 {
-	auto ret = mLayouts.emplace(new Layout(this, descarray, count));
-	return Layout::Ptr(*ret.first);
+	mLayouts.emplace_back(new Layout(this, descarray, count));
+	return mLayouts.back();
 }
 
 Renderer::Font::Ptr Renderer::createOrGetFont(const std::wstring & font)
@@ -614,15 +631,28 @@ Renderer::DepthStencil::Ptr Renderer::createDepthStencil(int width, int height, 
 	descDepth.CPUAccessFlags = 0;
 	descDepth.MiscFlags = 0;
 
-	size_t key = Common::hash(descDepth);
-	auto ret = mDepthStencils.find(key);
-	if (ret != mDepthStencils.end())
-		return ret->second;
-
-	auto ins = mDepthStencils.emplace(key, std::shared_ptr<DepthStencil>(new DepthStencil(this, descDepth)));
+	auto ptr = std::shared_ptr<DepthStencil>(new DepthStencil(this, descDepth));
+	mDepthStencils.emplace_back(ptr);
 	
-	return ins.first->second;
+	return ptr;
 }
+
+Renderer::UnorderedAccess::Ptr Renderer::createUnorderedAccess(size_t size, size_t stride, size_t cpuAccess, D3D11_USAGE usage)
+{
+	D3D11_BUFFER_DESC desc = {0};
+	desc.ByteWidth = size;
+	desc.StructureByteStride = stride;
+	desc.CPUAccessFlags = cpuAccess;
+	desc.Usage = usage;
+	desc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
+	desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+
+	auto ptr = new UnorderedAccess(this, desc);
+	mUnorderedAccesses.emplace_back(ptr);
+	return mUnorderedAccesses.back();
+}
+
+
 
 Renderer::ShaderResource::ShaderResource(ID3D11ShaderResourceView* srv): mSRView(srv)
 {
@@ -726,9 +756,14 @@ Renderer::Buffer::~Buffer()
 
 void Renderer::Buffer::blit(const void * data, size_t size)
 {
-	if (mDesc.Usage & D3D11_USAGE_DYNAMIC)
+	if (  (mDesc.CPUAccessFlags & D3D11_CPU_ACCESS_WRITE))
 	{
-		abort();
+		D3D11_MAP map;
+		D3D11_MAPPED_SUBRESOURCE subresource;
+		map = (mDesc.Usage & D3D11_USAGE_DYNAMIC) ? D3D11_MAP_WRITE_DISCARD : D3D11_MAP_WRITE;
+		getContext()->Map(mBuffer, 0, map, 0,&subresource);
+		memcpy(subresource.pData, data, size);
+		getContext()->Unmap(mBuffer, 0);
 	}
 	else
 	{
@@ -968,7 +1003,6 @@ Renderer::DepthStencil::DepthStencil(Renderer* renderer, const D3D11_TEXTURE2D_D
 
 		checkResult(getDevice()->CreateShaderResourceView(mTexture, &srvd, &mSRView));
 	}
-
 }
 
 Renderer::DepthStencil::~DepthStencil()
@@ -986,4 +1020,29 @@ void Renderer::DepthStencil::clearDepth(float d)
 void Renderer::DepthStencil::clearStencil(int s)
 {
 	getContext()->ClearDepthStencilView(mDSView, D3D11_CLEAR_STENCIL, 1.0f, s);
+}
+
+Renderer::UnorderedAccess::UnorderedAccess(Renderer * renderer, const D3D11_BUFFER_DESC & desc):Buffer(renderer,desc,nullptr),ShaderResource(nullptr)
+{
+	D3D11_SHADER_RESOURCE_VIEW_DESC srDesc;
+	srDesc.Format = DXGI_FORMAT_UNKNOWN;
+	srDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+	srDesc.Buffer.FirstElement = 0;
+	srDesc.Buffer.NumElements = desc.ByteWidth / desc.StructureByteStride;
+	
+	checkResult(getDevice()->CreateShaderResourceView(getBuffer(), &srDesc, &mSRView));
+
+	D3D11_UNORDERED_ACCESS_VIEW_DESC DescUAV;
+	ZeroMemory(&DescUAV, sizeof(D3D11_UNORDERED_ACCESS_VIEW_DESC));
+	DescUAV.Format = DXGI_FORMAT_UNKNOWN;
+	DescUAV.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
+	DescUAV.Buffer.FirstElement = 0;
+	DescUAV.Buffer.NumElements = srDesc.Buffer.NumElements;
+
+	checkResult(getDevice()->CreateUnorderedAccessView(getBuffer(), &DescUAV, &mUAV));
+}
+
+Renderer::UnorderedAccess::~UnorderedAccess()
+{
+	mUAV->Release();
 }

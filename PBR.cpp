@@ -28,7 +28,7 @@ PBR::PBR(
 
 	mLinear = r->createSampler("liear_wrap", D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
 	mPoint = r->createSampler("point_wrap", D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
-	mConstants = r->createBuffer(sizeof(Constants), D3D11_BIND_CONSTANT_BUFFER);
+	mConstants = r->createBuffer(sizeof(Constants), D3D11_BIND_CONSTANT_BUFFER,NULL, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 }
 
 PBR::~PBR()
@@ -74,8 +74,8 @@ void PBR::render(Renderer::RenderTarget::Ptr rt)
 
 		desc.RenderTarget[0] = {
 			TRUE,
-			D3D11_BLEND_SRC_ALPHA,
-			D3D11_BLEND_DEST_ALPHA,
+			D3D11_BLEND_ONE,
+			D3D11_BLEND_ONE,
 			D3D11_BLEND_OP_ADD,
 			D3D11_BLEND_ONE,
 			D3D11_BLEND_ONE,

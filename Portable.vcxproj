@@ -157,9 +157,11 @@
     <ClInclude Include="Common.h" />
     <ClInclude Include="D3D11Helper.h" />
     <ClInclude Include="deferredRendering.h" />
+    <ClInclude Include="DepthBounding.h" />
     <ClInclude Include="Framework.h" />
     <ClInclude Include="GBuffer.h" />
     <ClInclude Include="GeometryMesh.h" />
+    <ClInclude Include="GPUComputer.h" />
     <ClInclude Include="HDR.h" />
     <ClInclude Include="Input.h" />
     <ClInclude Include="Material.h" />
@@ -183,8 +185,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AO.cpp" />
+    <ClCompile Include="DepthBounding.cpp" />
     <ClCompile Include="GBuffer.cpp" />
     <ClCompile Include="GeometryMesh.cpp" />
+    <ClCompile Include="GPUComputer.cpp" />
     <ClCompile Include="HDR.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Framework.cpp" />

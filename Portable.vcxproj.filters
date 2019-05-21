@@ -111,6 +111,12 @@
     <ClInclude Include="HDR.h">
       <Filter>Pipeline\Stage</Filter>
     </ClInclude>
+    <ClInclude Include="GPUComputer.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="DepthBounding.h">
+      <Filter>Pipeline\Stage</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -175,6 +181,12 @@
     </ClCompile>
     <ClCompile Include="HDR.cpp">
       <Filter>Pipeline\Stage</Filter>
+    </ClCompile>
+    <ClCompile Include="GPUComputer.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="DepthBounding.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

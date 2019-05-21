@@ -93,7 +93,7 @@ public:
 		D3D11_TEXTURE2D_DESC mDesc;
 	};
 
-	class Buffer final : public NODefault, public D3DObject
+	class Buffer : public NODefault, public D3DObject
 	{
 	public: 
 		using Ptr = std::weak_ptr<Buffer>;
@@ -105,6 +105,7 @@ public:
 
 
 		operator ID3D11Buffer* ()const {return mBuffer;}
+		ID3D11Buffer* getBuffer()const { return mBuffer; }
 	private:
 		ID3D11Buffer* mBuffer;
 		D3D11_BUFFER_DESC mDesc;
@@ -254,10 +255,27 @@ public:
 		D3D11_TEXTURE2D_DESC mDesc;
 	};
 
+	class UnorderedAccess : public Buffer, public ShaderResource
+	{
+	public:
+		using Ptr = std::weak_ptr<UnorderedAccess>;
+		
+	public:
+		UnorderedAccess(Renderer* renderer, const D3D11_BUFFER_DESC& desc);
+		~UnorderedAccess();
+
+		operator ID3D11UnorderedAccessView* ()const { return mUAV; }
+
+	private:
+		ID3D11UnorderedAccessView* mUAV;
+	};
+
 
 	using CompiledData = Interface<ID3D10Blob>;
 	using SharedCompiledData = CompiledData::Shared ;
 	using PixelShader = Interface<ID3D11PixelShader>;
+	using ComputeShader = Interface<ID3D11ComputeShader>;
+
 	using DepthStencilState = Interface<ID3D11DepthStencilState>;
 	using BlendState = Interface<ID3D11BlendState>;
 
@@ -319,6 +337,7 @@ public:
 	void setDefaultDepthStencilState();
 	void setVertexShader(VertexShader::Weak shader);
 	void setPixelShader(PixelShader::Weak shader);
+	void setComputeShder(ComputeShader::Weak shader);
 
 
 	Sampler::Ptr createSampler(const std::string& name, D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV,
@@ -326,15 +345,18 @@ public:
 	Texture::Ptr createTexture(const std::string& filename);
 	Texture::Ptr createTexture(const std::string& name, const D3D11_TEXTURE2D_DESC& desc, const void* data, size_t size);
 	RenderTarget::Ptr createRenderTarget(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage = D3D11_USAGE_DEFAULT);
-	Buffer::Ptr createBuffer(int size, D3D11_BIND_FLAG flag, const D3D11_SUBRESOURCE_DATA* initialdata = NULL,D3D11_USAGE usage = D3D11_USAGE_DEFAULT, bool CPUaccess = false);
+	Buffer::Ptr createBuffer(int size, D3D11_BIND_FLAG flag, const D3D11_SUBRESOURCE_DATA* initialdata = NULL,D3D11_USAGE usage = D3D11_USAGE_DEFAULT, size_t CPUaccess = 0);
 	SharedCompiledData compileFile(const std::string& filename, const std::string& entryPoint, const std::string& shaderModel, const D3D10_SHADER_MACRO* macro = NULL);
 	Effect::Ptr createEffect(void* data, size_t size);
 	VertexShader::Weak createVertexShader(const void* data, size_t size);
 	PixelShader::Weak createPixelShader(const void* data, size_t size);
+	ComputeShader::Weak createComputeShader(const void* data, size_t size);
 	Layout::Ptr createLayout(const D3D11_INPUT_ELEMENT_DESC* descarray, size_t count);
 	Font::Ptr createOrGetFont(const std::wstring& font);
 	Rasterizer::Ptr createOrGetRasterizer(  const D3D11_RASTERIZER_DESC& desc);
 	DepthStencil::Ptr createDepthStencil(int width, int height, DXGI_FORMAT format, bool access = false);
+	UnorderedAccess::Ptr createUnorderedAccess(size_t size, size_t stride, size_t cpuAccess = 0, D3D11_USAGE usage = D3D11_USAGE_DEFAULT);
+
  private:
 	static void checkResult(HRESULT hr);
 	static void error(const std::string& err);
@@ -357,20 +379,23 @@ private:
 	size_t mSRVState = 0;
 	size_t mConstantState = 0;
 
-	std::set<std::shared_ptr<RenderTarget>> mRenderTargets;
-	std::set<std::shared_ptr<Buffer>> mBuffers;
-	std::set<std::shared_ptr<Effect>> mEffects;
-	std::set<std::shared_ptr<Layout>> mLayouts;
+	std::vector<std::shared_ptr<RenderTarget>> mRenderTargets;
+	std::vector<std::shared_ptr<Buffer>> mBuffers;
+	std::vector<std::shared_ptr<Effect>> mEffects;
+	std::vector<std::shared_ptr<Layout>> mLayouts;
+	std::vector<std::shared_ptr<DepthStencil>> mDepthStencils;
+	std::vector<std::shared_ptr<UnorderedAccess>> mUnorderedAccesses;
+
 	std::unordered_map<std::string,std::shared_ptr<Texture>> mTextures;
 	std::unordered_map<std::string,std::shared_ptr<Sampler>> mSamplers;
 	std::vector<VertexShader::Shared> mVSs;
 	std::vector<PixelShader::Shared> mPSs;
+	std::vector<ComputeShader::Shared> mCSs;
 	std::unordered_map<std::wstring, std::shared_ptr<Font>> mFonts;
 	std::unordered_map<size_t, std::shared_ptr<Rasterizer>> mRasterizers;
 
 	std::unordered_map<size_t, DepthStencilState::Shared> mDepthStencilStates;
 	std::unordered_map<size_t, BlendState::Shared> mBlendStates;
-	std::unordered_map<size_t, std::shared_ptr<DepthStencil>> mDepthStencils;
 };
 
 
