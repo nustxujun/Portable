@@ -12,6 +12,7 @@
 #include "Observer.h"
 #include "MultipleLights.h"
 #include "Network.h"
+#include <functional>
 #define MAX_LOADSTRING 100
 
 
@@ -19,16 +20,27 @@ std::shared_ptr<Framework> framework;
 
 std::string show;
 
+std::shared_ptr<Network> network;
 
+void tryConnect(const asio::error_code& err)
+{
+	if (err)
+	{
+		network->connect("127.0.0.1", 8888, tryConnect);
+	}
+	else
+	{
+		json jo = { {"register",1},{"message", U"成功!"} };
+		network->send(jo);
+	}
+};
 
 void initRenderer(HWND win)
 {
-	Network nw;
-	nw.connect("127.0.0.1", 0, [](const asio::error_code& err) {
+	network = std::make_shared<Network>();
 
-
-	});
-	
+	network->connect("127.0.0.1", 8888, tryConnect);
+	//network->send(buffer, 1024);
 	framework = std::shared_ptr<Framework>(new MultipleLights(win));
 	//framework = std::shared_ptr<Framework>(new Observer(win));
 	//framework = std::make_shared<Framework>(win);
@@ -37,6 +49,10 @@ void initRenderer(HWND win)
 
 void framemove()
 {
+	//json jo;
+	//jo["message"] = framework->getFPS();
+	//network->send(jo);
+	network->update();
 	framework->update();
 	//input->update();
 	//auto light = scene->createOrGetLight("main");

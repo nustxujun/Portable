@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Hello World!</title>
+    <script src="./vue.js"></script>
+    <script src="vue-slider-componet.js"></script>
+    <link rel="stylesheet" href="vue-slider-componet.css">
+  </head>
+  <body>
+    <!-- <h1>Hello World!</h1> -->
+    <!-- All of the Node.js APIs are available in this renderer process. -->
+    <!-- We are using Node.js <script>document.write(process.versions.node)</script>,
+    Chromium <script>document.write(process.versions.chrome)</script>,
+    and Electron <script>document.write(process.versions.electron)</script>. -->
+
+    <div id="app">
+        {{ message }}
+        <!-- <vue-slider ref="slider" v-model="value" v-bind="options" ></vue-slider>
+        <vue-slider ref="slider" v-model="value" v-bind="options" ></vue-slider> -->
+
+    </div>
+
+    <script>
+
+
+      // You can also require other files to run in this process
+      require('./renderer.js')
+ 
+
+    </script>
+
+
+  </body>
+</html>

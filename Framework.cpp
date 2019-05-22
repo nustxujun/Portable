@@ -33,12 +33,11 @@ void Framework::init()
 }
 
 
-
 void Framework::update()
 {
 	mInput->update();
 	mPipeline->render();
-	showFPS();
+	//showFPS();
 	mRenderer->present();
 }
 

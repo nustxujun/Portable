@@ -12,6 +12,8 @@ public:
 	virtual ~Framework();
 	virtual void init();
 	virtual void update();
+
+	size_t getFPS()const { return mFPS; }
 protected:
 	virtual void initPipeline();
 	virtual void initScene();
