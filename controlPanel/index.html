@@ -16,8 +16,11 @@
 
     <div id="app">
         {{ message }}
-        <!-- <vue-slider ref="slider" v-model="value" v-bind="options" ></vue-slider>
-        <vue-slider ref="slider" v-model="value" v-bind="options" ></vue-slider> -->
+
+        <div v-for="prop in properties">
+          {{prop.key}}
+          <vue-slider ref="slider" v-model="prop.value" v-bind="options" ></vue-slider>
+        </div>
 
     </div>
 

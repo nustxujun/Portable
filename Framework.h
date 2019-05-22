@@ -4,8 +4,9 @@
 #include "Scene.h"
 #include "Pipeline.h"
 #include "Input.h"
+#include "Setting.h"
 
-class Framework
+class Framework: public Setting::Modifier
 {
 public:
 	Framework(HWND win);
@@ -15,9 +16,12 @@ public:
 
 	size_t getFPS()const { return mFPS; }
 protected:
+	virtual void initProperties();
 	virtual void initPipeline();
 	virtual void initScene();
 	virtual void initInput();
+	virtual void onChanged(const std::string& key, const nlohmann::json::value_type& value);
+
 private:
 	void showFPS();
 	void calFPS();

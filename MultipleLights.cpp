@@ -106,7 +106,8 @@ void MultipleLights::initScene()
 
 void MultipleLights::update()
 {
-	mUpdater();
+	if (mUpdater)
+		mUpdater();
 	Framework::update();
 }
 

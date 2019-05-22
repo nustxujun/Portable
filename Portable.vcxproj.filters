@@ -118,7 +118,10 @@
       <Filter>Pipeline\Stage</Filter>
     </ClInclude>
     <ClInclude Include="Network.h">
-      <Filter>源文件</Filter>
+      <Filter>Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="Setting.h">
+      <Filter>Framework</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

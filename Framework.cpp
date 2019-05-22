@@ -27,6 +27,7 @@ Framework::~Framework()
 
 void Framework::init()
 {
+	initProperties();
 	initPipeline();
 	initScene();
 	initInput();
@@ -39,6 +40,13 @@ void Framework::update()
 	mPipeline->render();
 	//showFPS();
 	mRenderer->present();
+}
+
+void Framework::initProperties()
+{
+	set("roughness", 0.5f);
+	set("metallic", 0.5f);
+
 }
 
 void Framework::initPipeline()
@@ -201,4 +209,9 @@ void Framework::calFPS()
 	mFPS = mCachedNumFrames * 1000 / dur;
 	mLastTimeStamp = cur;
 	mCachedNumFrames = 0;
+}
+
+void Framework::onChanged(const std::string& key, const nlohmann::json::value_type& value)
+{
+
 }

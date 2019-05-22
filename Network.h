@@ -25,6 +25,8 @@ public:
 	void send(const std::string& msg, Response rep = {});
 	void send(const json& jsonobj, Response rep = {});
 	void update();
+
+	void setListener(std::function<void(const char*, size_t)> f) { mListener = f; }
 private:
 	static void error(const asio::error_code& err);
 	static void error(const std::string& err);
@@ -39,4 +41,5 @@ private:
 
 	size_t mLastSize = 4;
 	bool mParseMsg = false;
+	std::function<void(const char*, size_t)> mListener;
 };

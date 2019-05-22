@@ -19,7 +19,7 @@ void Network::error(const asio::error_code& err)
 void Network::error(const std::string& err)
 {
 	OutputDebugStringA((err + "\n").c_str());
-	//::MessageBoxA(NULL, err.c_str(), NULL, NULL);
+	::MessageBoxA(NULL, err.c_str(), NULL, NULL);
 }
 
 void Network::connect(const std::string& ip , USHORT port,Callback callback)
@@ -50,6 +50,12 @@ void Network::disconnect()
 
 void Network::send(const char * data, unsigned int size, Response rep)
 {
+	if (!mSocket->is_open())
+		return;
+
+	mSocket->async_write_some(asio::buffer(&size, 4), [](const asio::error_code& err, size_t size) {
+		error(err);
+	});
 	mSocket->async_write_some(asio::buffer(data, size), [](const asio::error_code& err, size_t size) {
 		error(err);
 	});
@@ -57,7 +63,7 @@ void Network::send(const char * data, unsigned int size, Response rep)
 
 void Network::send(const std::string& msg, Response rep )
 {
-	send(msg.data(), msg.size(), rep);
+	send(msg.data(), msg.size()+1 , rep);
 }
 
 void Network::send(const json & jsonobj, Response rep )
@@ -111,7 +117,8 @@ void Network::receive(const asio::error_code & err, size_t size)
 
 void Network::dispatch(const char * data, size_t size)
 {
-
+	if (mListener)
+		mListener(data, size);
 }
 
 void Network::update()

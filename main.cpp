@@ -12,6 +12,8 @@
 #include "Observer.h"
 #include "MultipleLights.h"
 #include "Network.h"
+#include "Setting.h"
+
 #include <functional>
 #define MAX_LOADSTRING 100
 
@@ -21,6 +23,35 @@ std::shared_ptr<Framework> framework;
 std::string show;
 
 std::shared_ptr<Network> network;
+Setting::Ptr settings;
+
+class Relay: public Setting::Modifier
+{
+public:
+	Relay()
+	{
+		network->setListener([=](const char* b, size_t s) {
+			std::string str(b, s);
+			json j;
+			j.parse(str);
+
+			auto i = j.begin();
+			auto endi = j.end();
+			for (; i != endi; ++i)
+			{
+				framework->set(i.key(), i.value());
+			}
+		});
+	}
+
+	void onChanged(const std::string& key, const nlohmann::json::value_type& value)
+	{
+		json j = { {"type", "set"}, {"key", key}, {"value", value} };
+		network->send(j);
+	}
+};
+
+std::shared_ptr<Relay> relay;
 
 void tryConnect(const asio::error_code& err)
 {
@@ -30,21 +61,31 @@ void tryConnect(const asio::error_code& err)
 	}
 	else
 	{
-		json jo = { {"register",1},{"message", U"成功!"} };
-		network->send(jo);
+		json j = { {"type", "init"}, {"msg", "suc!"} };
+		network->send(j);
+		framework->init();
+
 	}
 };
 
-void initRenderer(HWND win)
+void initNetwork()
 {
 	network = std::make_shared<Network>();
-
 	network->connect("127.0.0.1", 8888, tryConnect);
-	//network->send(buffer, 1024);
+
+	relay = std::make_shared<Relay>();
+
+	settings = Setting::Ptr(new Setting);
+	relay->setSetting(settings);
+}
+
+void initRenderer(HWND win)
+{
 	framework = std::shared_ptr<Framework>(new MultipleLights(win));
 	//framework = std::shared_ptr<Framework>(new Observer(win));
 	//framework = std::make_shared<Framework>(win);
-	framework->init();
+	framework->setSetting(settings);
+
 }
 
 void framemove()
@@ -197,7 +238,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
-
+   initNetwork();
    initRenderer(hWnd);
    return TRUE;
 }
