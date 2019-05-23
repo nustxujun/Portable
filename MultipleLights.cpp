@@ -6,6 +6,7 @@
 #include "PostProcessing.h"
 #include "GeometryMesh.h"
 #include "DepthBounding.h"
+#include "LightCulling.h"
 
 #include <random>
 
@@ -55,6 +56,8 @@ void MultipleLights::initScene()
 
 	cam->lookat(aabb.second, aabb.first);
 	std::uniform_real_distribution<float> rand(0.0f, 0.1f);
+	std::uniform_real_distribution<float> rand2(-1.0f, 1.0f);
+
 	std::default_random_engine gen;
 
 	struct State
@@ -79,30 +82,30 @@ void MultipleLights::initScene()
 		float t = i * step;
 		float z = sin(t) * 30;
 		float x = cos(t) * 30;
-		light->getNode()->setPosition(x, 49.0f, z);
+		light->getNode()->setPosition(rand2(gen) * 49.f, rand2(gen) * 49.f, rand2(gen) * 49.f);
 		light->attach(root);
 		Vector3 vel = { rand(gen),rand(gen),rand(gen) };
 		vel.Normalize();
-		vel *= 1.0f;
+		vel *= 0.0f;
 		lights->push_back({light,vel });
 	}
 
-	mUpdater = [lights]() {
-		for(auto&i: *lights)
-		{ 
-			auto node = i.light->getNode();
-			auto pos = node->getPosition() + i.vel;
+	//mUpdater = [lights]() {
+	//	for(auto&i: *lights)
+	//	{ 
+	//		auto node = i.light->getNode();
+	//		auto pos = node->getPosition() + i.vel;
 
-			if (pos.x > 50 || pos.x < -50)
-				i.vel.x = -i.vel.x;
-			if (pos.y > 50 || pos.y < -50)
-				i.vel.y = -i.vel.y;
-			if (pos.z > 50 || pos.z < -50)
-				i.vel.z = -i.vel.z;
+	//		if (pos.x > 50 || pos.x < -50)
+	//			i.vel.x = -i.vel.x;
+	//		if (pos.y > 50 || pos.y < -50)
+	//			i.vel.y = -i.vel.y;
+	//		if (pos.z > 50 || pos.z < -50)
+	//			i.vel.z = -i.vel.z;
 
-			node->setPosition(pos);
-		}
-	};
+	//		node->setPosition(pos);
+	//	}
+	//};
 
 
 }
@@ -165,6 +168,8 @@ void MultipleLights::initTBDRPipeline()
 
 	mPipeline->pushStage<GBuffer>(albedo, normal, worldpos, depth);
 	mPipeline->pushStage<DepthBounding>(depth);
+	mPipeline->pushStage<LightCulling>(depth);
+
 	//mPipeline->pushStage<PBR>(albedo, normal, depth, 0.1f, 0.9f);
 	//mPipeline->pushStage<HDR>();
 	//mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");

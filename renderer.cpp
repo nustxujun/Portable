@@ -871,6 +871,12 @@ Renderer::Texture::Texture(Renderer* renderer, const D3D11_TEXTURE2D_DESC& desc,
 
 	if (unorderedAccess)
 	{
+		D3D11_UNORDERED_ACCESS_VIEW_DESC UAVDesc;
+		ZeroMemory(&UAVDesc, sizeof(D3D11_UNORDERED_ACCESS_VIEW_DESC));
+		UAVDesc.Format = desc.Format;
+		UAVDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
+		UAVDesc.Buffer.FirstElement = 0;
+		UAVDesc.Buffer.NumElements = desc.Width * desc.Height;
 		checkResult(getDevice()->CreateUnorderedAccessView(tex, NULL, &mUAV));
 	}
 

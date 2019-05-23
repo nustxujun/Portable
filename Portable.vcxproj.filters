@@ -123,6 +123,9 @@
     <ClInclude Include="Setting.h">
       <Filter>Framework</Filter>
     </ClInclude>
+    <ClInclude Include="LightCulling.h">
+      <Filter>Pipeline\Stage</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -195,6 +198,9 @@
       <Filter>Pipeline\Stage</Filter>
     </ClCompile>
     <ClCompile Include="Network.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="LightCulling.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

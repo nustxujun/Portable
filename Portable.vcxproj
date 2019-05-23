@@ -166,6 +166,7 @@
     <ClInclude Include="GPUComputer.h" />
     <ClInclude Include="HDR.h" />
     <ClInclude Include="Input.h" />
+    <ClInclude Include="LightCulling.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="MathUtilities.h" />
     <ClInclude Include="Mesh.h" />
@@ -194,6 +195,7 @@
     <ClCompile Include="GeometryMesh.cpp" />
     <ClCompile Include="GPUComputer.cpp" />
     <ClCompile Include="HDR.cpp" />
+    <ClCompile Include="LightCulling.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Framework.cpp" />
     <ClCompile Include="Input.cpp" />
