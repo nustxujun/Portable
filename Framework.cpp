@@ -17,6 +17,7 @@ Framework::Framework(HWND win)
 
 	mScene = std::make_shared<Scene>();
 	mPipeline = std::make_unique<Pipeline>(mRenderer, mScene);
+	setSetting(mPipeline->getSetting());
 	mInput = std::make_shared<Input>();
 }
 
@@ -27,27 +28,19 @@ Framework::~Framework()
 
 void Framework::init()
 {
-	initProperties();
 	initPipeline();
 	initScene();
 	initInput();
 }
 
-
 void Framework::update()
 {
 	mInput->update();
 	mPipeline->render();
-	//showFPS();
+	showFPS();
 	mRenderer->present();
 }
 
-void Framework::initProperties()
-{
-	set("roughness", 0.5f);
-	set("metallic", 0.5f);
-
-}
 
 void Framework::initPipeline()
 {
@@ -90,7 +83,7 @@ void Framework::initScene()
 {
 	Parameters params;
 	//params["file"] = "tiny.x";
-	params["file"] = "media/sponza/sponza.obj";
+	params["file"] = "sponza/sponza.obj";
 	auto model = mScene->createModel("test", params, [this](const Parameters& p) {
 		return Mesh::Ptr(new Mesh(p, mRenderer));
 	});
@@ -183,20 +176,21 @@ void Framework::initInput()
 void Framework::showFPS()
 {
 	calFPS();
-	mRenderer->setRenderTarget(mRenderer->getBackbuffer());
-	auto font = mRenderer->createOrGetFont(L"myfile.spritefont");
+	set("msg", { {"msg",mFPS} });
+	//mRenderer->setRenderTarget(mRenderer->getBackbuffer());
+	//auto font = mRenderer->createOrGetFont(L"myfile.spritefont");
 
-	std::stringstream ss;
-	ss << mFPS;
-	
-	mRenderer->setViewport({
-		0,0,
-		(float)mRenderer->getWidth(),
-		(float)mRenderer->getHeight(),
-		0,1.0f
-		}
-	);
-	font.lock()->drawText(ss.str().c_str(), Vector2(10, 10));
+	//std::stringstream ss;
+	//ss << mFPS;
+	//
+	//mRenderer->setViewport({
+	//	0,0,
+	//	(float)mRenderer->getWidth(),
+	//	(float)mRenderer->getHeight(),
+	//	0,1.0f
+	//	}
+	//);
+	//font.lock()->drawText(ss.str().c_str(), Vector2(10, 10));
 }
 
 void Framework::calFPS()
@@ -211,7 +205,3 @@ void Framework::calFPS()
 	mCachedNumFrames = 0;
 }
 
-void Framework::onChanged(const std::string& key, const nlohmann::json::value_type& value)
-{
-
-}

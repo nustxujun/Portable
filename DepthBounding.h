@@ -8,9 +8,14 @@ public:
 	DepthBounding(
 		Renderer::Ptr r,
 		Scene::Ptr s,
-		Pipeline* p );
+		Setting::Ptr set,
+		Pipeline* p ,
+		Renderer::ShaderResource::Ptr depth,
+		Renderer::UnorderedAccess::Ptr db);
 	void render(Renderer::RenderTarget::Ptr rt) override final;
 private:
 	GPUComputer mComputer;
 	Renderer::ComputeShader::Weak mCS;
+	Renderer::UnorderedAccess::Ptr mOutput;
+	Renderer::ShaderResource::Ptr mDepth;
 };

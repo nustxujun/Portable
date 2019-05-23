@@ -23,7 +23,6 @@ std::shared_ptr<Framework> framework;
 std::string show;
 
 std::shared_ptr<Network> network;
-Setting::Ptr settings;
 
 class Relay: public Setting::Modifier
 {
@@ -32,21 +31,22 @@ public:
 	{
 		network->setListener([=](const char* b, size_t s) {
 			std::string str(b, s);
-			json j;
-			j.parse(str);
+			json j = json::parse(str);
 
-			auto i = j.begin();
-			auto endi = j.end();
-			for (; i != endi; ++i)
+			std::string type = j["type"];
+			if ( type == "set")
 			{
-				framework->set(i.key(), i.value());
+				setValue(j["key"], j["value"]);
 			}
 		});
 	}
 
 	void onChanged(const std::string& key, const nlohmann::json::value_type& value)
 	{
-		json j = { {"type", "set"}, {"key", key}, {"value", value} };
+		json j = value;
+
+		if (j["type"] == "set")
+			j["key"] = key;
 		network->send(j);
 	}
 };
@@ -61,7 +61,7 @@ void tryConnect(const asio::error_code& err)
 	}
 	else
 	{
-		json j = { {"type", "init"}, {"msg", "suc!"} };
+		json j = { {"type", "init"}, {"msg", u8"连接成功!"} };
 		network->send(j);
 		framework->init();
 
@@ -71,12 +71,10 @@ void tryConnect(const asio::error_code& err)
 void initNetwork()
 {
 	network = std::make_shared<Network>();
+
+
 	network->connect("127.0.0.1", 8888, tryConnect);
 
-	relay = std::make_shared<Relay>();
-
-	settings = Setting::Ptr(new Setting);
-	relay->setSetting(settings);
 }
 
 void initRenderer(HWND win)
@@ -84,8 +82,9 @@ void initRenderer(HWND win)
 	framework = std::shared_ptr<Framework>(new MultipleLights(win));
 	//framework = std::shared_ptr<Framework>(new Observer(win));
 	//framework = std::make_shared<Framework>(win);
-	framework->setSetting(settings);
 
+	relay = std::make_shared<Relay>();
+	relay->setSetting(framework->getSetting());
 }
 
 void framemove()

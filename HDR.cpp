@@ -1,7 +1,7 @@
 #include "HDR.h"
 
-HDR::HDR(Renderer::Ptr r, Scene::Ptr s, Pipeline * p):
-	Pipeline::Stage(r,s,p), mQuad(r)
+HDR::HDR(Renderer::Ptr r, Scene::Ptr s, Setting::Ptr st, Pipeline * p):
+	Pipeline::Stage(r,s,st,p), mQuad(r)
 {
 	auto blob = r->compileFile("hlsl/hdr.hlsl", "main", "ps_5_0");
 	mPS = r->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());

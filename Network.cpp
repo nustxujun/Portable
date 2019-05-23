@@ -63,7 +63,7 @@ void Network::send(const char * data, unsigned int size, Response rep)
 
 void Network::send(const std::string& msg, Response rep )
 {
-	send(msg.data(), msg.size()+1 , rep);
+	send(msg.data(), msg.size() , rep);
 }
 
 void Network::send(const json & jsonobj, Response rep )
@@ -112,6 +112,9 @@ void Network::receive(const asio::error_code & err, size_t size)
 				abort();
 		}
 
+		mSocket->async_read_some(asio::buffer(mReceiveBuffer), std::bind(&Network::receive, this,
+			std::placeholders::_1,
+			std::placeholders::_2));
 	}
 }
 

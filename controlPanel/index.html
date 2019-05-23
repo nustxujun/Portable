@@ -18,8 +18,8 @@
         {{ message }}
 
         <div v-for="prop in properties">
-          {{prop.key}}
-          <vue-slider ref="slider" v-model="prop.value" v-bind="options" ></vue-slider>
+          {{prop.key}} : {{prop.value}}
+          <vue-slider v-model="prop.value":min="prop.min":max="prop.max":interval="prop.interval":width="'80%'" @change="prop.change" ></vue-slider>
         </div>
 
     </div>

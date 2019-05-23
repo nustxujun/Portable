@@ -18,6 +18,7 @@ public:
 	PBR(
 		Renderer::Ptr r,
 		Scene::Ptr s,
+		Setting::Ptr set,
 		Pipeline* p,
 		Renderer::RenderTarget::Ptr a,
 		Renderer::RenderTarget::Ptr n,

@@ -127,6 +127,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>ASIO_STANDALONE;WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>asio</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

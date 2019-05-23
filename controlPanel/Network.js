@@ -34,7 +34,7 @@ class Connection
                 {
                     if (curConn.getBody)
                     {
-                        var msg = curConn.mCache.toString('ascii',0,curConn.mCacheOffset - 1);
+                        var msg = curConn.mCache.toString('utf8',0,curConn.mCacheOffset );
                         console.log();
                         if (receiveCallback)
                             receiveCallback(JSON.parse(msg));
@@ -65,11 +65,12 @@ class Connection
     }
 
     send(msg){
-        var size = new Buffer(4);
-        size.writeUInt32LE(msg.length,0);
+        var str = JSON.stringify(msg);
+        var size = Buffer.alloc(4);
+        size.writeUInt32LE(str.length,0);
 
         this.socket.write(size.toString("binary"));
-        this.socket.write(msg);
+        this.socket.write(str);
     }
 }
 

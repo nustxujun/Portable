@@ -3,12 +3,13 @@
 GBuffer::GBuffer(
 	Renderer::Ptr r,
 	Scene::Ptr s,
+	Setting::Ptr st,
 	Pipeline* p,
 	Renderer::RenderTarget::Ptr a,
 	Renderer::RenderTarget::Ptr n,
 	Renderer::RenderTarget::Ptr w,
 	Renderer::DepthStencil::Ptr d):
-	Pipeline::Stage(r,s,p),
+	Pipeline::Stage(r,s,st,p),
 	mAlbedo(a), 
 	mNormal(n), 
 	mWorldPos(w),

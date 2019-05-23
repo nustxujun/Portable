@@ -14,14 +14,13 @@ public:
 	virtual void init();
 	virtual void update();
 
-	size_t getFPS()const { return mFPS; }
+	Setting::Ptr getSetting()const { return mPipeline->getSetting(); }
 protected:
-	virtual void initProperties();
 	virtual void initPipeline();
 	virtual void initScene();
 	virtual void initInput();
-	virtual void onChanged(const std::string& key, const nlohmann::json::value_type& value);
 
+	virtual void onChanged(const std::string& key, const nlohmann::json::value_type& value) {};
 private:
 	void showFPS();
 	void calFPS();
@@ -30,6 +29,7 @@ protected:
 	std::shared_ptr<Input> mInput;
 	Renderer::Ptr mRenderer;
 	Scene::Ptr mScene;
+
 	
 
 	size_t mCachedNumFrames = 0;

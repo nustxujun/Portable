@@ -19,20 +19,37 @@ public:
 			if (mSetting)
 				mSetting->mModifiers.erase(this);
 		}
+
 		template<class T>
-		void set(const std::string& key, const T& value)
+		void setValue(const std::string& key, const T& value)
 		{
 			if (!mSetting) return;
 
-			mSetting->set(key, value);
+			mSetting->set(key, { {"value", value} });
+			mSetting->notify(key, this);
+		}
+
+		void set(const std::string& key, const nlohmann::json& j)
+		{
+			if (!mSetting) return;
+
+			mSetting->set(key, j);
 			mSetting->notify(key, this);
 		}
 
 		template<class T>
-		T get(const std::string& key)
+		T getValue(const std::string& key)
 		{
-			if (!mSetting) return;
+			if (!mSetting) 
+				return T(0);
 
+			return mSetting->get(key)["value"];
+		}
+
+		const nlohmann::json& get(const std::string& key)
+		{
+			if (!mSetting)
+				return {};
 			return mSetting->get(key);
 		}
 
@@ -48,16 +65,37 @@ public:
 		Setting::Ptr mSetting ;
 	};
 public:
-	const nlohmann::json& getAll() const { return mValues; }
 private:
-	template<class T>
-	void set(const std::string& key, const T& value)
+	//template<class A, class B, class C, class D>
+	//void set(const std::string& key, const A& value, const B& min, const C& max,const D& interval)
+	//{
+	//	auto& j = mValues[key];
+	//	j["value"] = value;
+	//	j["min"] = min;
+	//	j["max"] = max;
+	//	j["interval"] = interval;
+	//}
+
+	//template<class T>
+	//void set(const std::string& key, const T& value)
+	//{
+	//	auto& j = mValues[key];
+	//	j["value"] = value;
+	//}
+
+	void set(const std::string& key, const nlohmann::json& j)
 	{
-		mValues[key] = value;
+		auto i = j.begin();
+		auto endi = j.end();
+
+		auto& v = mValues[key];
+
+		for (; i != endi; ++i)
+			v[i.key()] = i.value();
 	}
 
-	template<class T>
-	T get(const std::string& key)
+
+	const nlohmann::json& get(const std::string& key)
 	{
 		return mValues[key];
 	}
@@ -71,6 +109,6 @@ private:
 	}
 
 private:
-	nlohmann::json mValues;
+	std::map<std::string,nlohmann::json> mValues;
 	std::set<Modifier*> mModifiers;
 };

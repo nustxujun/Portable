@@ -62,14 +62,35 @@ public:
 	public:
 		using Ptr = std::weak_ptr<ShaderResource>;
 	public:
+		ShaderResource() {};
 		ShaderResource(ID3D11ShaderResourceView* srv );
 		~ShaderResource();
 
 		ID3D11ShaderResourceView* getShaderResourceView()const { return mSRView; }
 		operator ID3D11ShaderResourceView* ()const { return mSRView; }
 	protected:
-		ID3D11ShaderResourceView* mSRView;
+		ID3D11ShaderResourceView* mSRView = NULL;
 	};
+
+	class UnorderedAccess
+	{
+	public:
+		using Ptr = std::weak_ptr<UnorderedAccess>;
+
+	public:
+		UnorderedAccess() {}
+		UnorderedAccess(ID3D11UnorderedAccessView* uav);
+
+		~UnorderedAccess();
+
+		operator ID3D11UnorderedAccessView* ()const { return mUAV; }
+		ID3D11UnorderedAccessView* getUnorderedAccess()const { return mUAV; }
+	protected:
+		ID3D11UnorderedAccessView* mUAV = NULL;
+	};
+
+
+
 	class RenderTarget final : public NODefault, public D3DObject, public ShaderResource
 	{
 	public:
@@ -93,7 +114,7 @@ public:
 		D3D11_TEXTURE2D_DESC mDesc;
 	};
 
-	class Buffer : public NODefault, public D3DObject
+	class Buffer : public NODefault, public D3DObject, public UnorderedAccess, public ShaderResource
 	{
 	public: 
 		using Ptr = std::weak_ptr<Buffer>;
@@ -135,12 +156,13 @@ public:
 		std::unordered_map<std::string, ID3DX11EffectTechnique*> mTechs;
 	};
 
-	class Texture final : public NODefault, public ShaderResource
+	class Texture final : public NODefault, public D3DObject,public ShaderResource, public UnorderedAccess
 	{
 	public:
 		using Ptr = std::weak_ptr<Texture>;
 	public:
-		Texture(ID3D11ShaderResourceView* srv) :ShaderResource(srv){};
+		Texture(Renderer* renderer, const D3D11_TEXTURE2D_DESC& desc, const void* data = nullptr, size_t size = 0);
+		Texture(Renderer* renderer, const std::string& file);
 	private:
 	};
 
@@ -255,20 +277,6 @@ public:
 		D3D11_TEXTURE2D_DESC mDesc;
 	};
 
-	class UnorderedAccess : public Buffer, public ShaderResource
-	{
-	public:
-		using Ptr = std::weak_ptr<UnorderedAccess>;
-		
-	public:
-		UnorderedAccess(Renderer* renderer, const D3D11_BUFFER_DESC& desc);
-		~UnorderedAccess();
-
-		operator ID3D11UnorderedAccessView* ()const { return mUAV; }
-
-	private:
-		ID3D11UnorderedAccessView* mUAV;
-	};
 
 
 	using CompiledData = Interface<ID3D10Blob>;
@@ -343,7 +351,7 @@ public:
 	Sampler::Ptr createSampler(const std::string& name, D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV,
 		D3D11_TEXTURE_ADDRESS_MODE addrW = D3D11_TEXTURE_ADDRESS_WRAP, D3D11_COMPARISON_FUNC cmpfunc = D3D11_COMPARISON_NEVER, float minlod = 0, float maxlod = D3D11_FLOAT32_MAX);
 	Texture::Ptr createTexture(const std::string& filename);
-	Texture::Ptr createTexture(const std::string& name, const D3D11_TEXTURE2D_DESC& desc, const void* data, size_t size);
+	Texture::Ptr createTexture(const std::string& name, const D3D11_TEXTURE2D_DESC& desc, const void* data = 0, size_t size = 0);
 	RenderTarget::Ptr createRenderTarget(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage = D3D11_USAGE_DEFAULT);
 	Buffer::Ptr createBuffer(int size, D3D11_BIND_FLAG flag, const D3D11_SUBRESOURCE_DATA* initialdata = NULL,D3D11_USAGE usage = D3D11_USAGE_DEFAULT, size_t CPUaccess = 0);
 	SharedCompiledData compileFile(const std::string& filename, const std::string& entryPoint, const std::string& shaderModel, const D3D10_SHADER_MACRO* macro = NULL);
@@ -355,7 +363,6 @@ public:
 	Font::Ptr createOrGetFont(const std::wstring& font);
 	Rasterizer::Ptr createOrGetRasterizer(  const D3D11_RASTERIZER_DESC& desc);
 	DepthStencil::Ptr createDepthStencil(int width, int height, DXGI_FORMAT format, bool access = false);
-	UnorderedAccess::Ptr createUnorderedAccess(size_t size, size_t stride, size_t cpuAccess = 0, D3D11_USAGE usage = D3D11_USAGE_DEFAULT);
 
  private:
 	static void checkResult(HRESULT hr);
@@ -384,7 +391,6 @@ private:
 	std::vector<std::shared_ptr<Effect>> mEffects;
 	std::vector<std::shared_ptr<Layout>> mLayouts;
 	std::vector<std::shared_ptr<DepthStencil>> mDepthStencils;
-	std::vector<std::shared_ptr<UnorderedAccess>> mUnorderedAccesses;
 
 	std::unordered_map<std::string,std::shared_ptr<Texture>> mTextures;
 	std::unordered_map<std::string,std::shared_ptr<Sampler>> mSamplers;

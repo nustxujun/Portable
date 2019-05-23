@@ -3,13 +3,14 @@
 PBR::PBR(
 	Renderer::Ptr r, 
 	Scene::Ptr s, 
+	Setting::Ptr st,
 	Pipeline * p, 
 	Renderer::RenderTarget::Ptr a, 
 	Renderer::RenderTarget::Ptr n, 
 	Renderer::DepthStencil::Ptr d, 
 	float roughness, 
 	float metallic):
-	Pipeline::Stage(r,s,p),
+	Pipeline::Stage(r,s, st,p),
 	mAlbedo(a),
 	mNormal(n),
 	mDepth(d),
@@ -17,6 +18,9 @@ PBR::PBR(
 	mMetallic(metallic),
 	mQuad(r)
 {
+	set("roughness", { {"type","set"}, {"value",roughness},{"min","0.01"},{"max",1.0f},{"interval", "0.01"} });
+	set("metallic", { {"type","set"}, {"value",metallic},{"min","0"},{"max",1.0f},{"interval", "0.01"} });
+
 	const std::array<const char*, 3> definitions = { "POINT", "DIR", "SPOT" };
 	for (int i = 0; i < definitions.size(); ++i)
 	{
@@ -46,8 +50,8 @@ void PBR::render(Renderer::RenderTarget::Ptr rt)
 	getScene()->visitLights([this,cam,rt](Scene::Light::Ptr light) {
 		Constants constants;
 		constants.radiance = light->getColor();
-		constants.roughness = mRoughness;
-		constants.metallic = mMetallic;
+		constants.roughness = getValue<float>("roughness");
+		constants.metallic = getValue<float>("metallic");
 
 		auto dir = light->getDirection();
 		dir.Normalize();

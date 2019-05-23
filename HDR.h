@@ -4,7 +4,7 @@
 class HDR :public Pipeline::Stage
 {
 public:
-	HDR(Renderer::Ptr r, Scene::Ptr s, Pipeline* p);
+	HDR(Renderer::Ptr r, Scene::Ptr s, Setting::Ptr set, Pipeline* p);
 	~HDR();
 	void render(Renderer::RenderTarget::Ptr rt) override;
 private:

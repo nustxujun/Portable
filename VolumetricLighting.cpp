@@ -1,7 +1,7 @@
 #include "VolumetricLighting.h"
 
-VolumetricLighting::VolumetricLighting(Renderer::Ptr r, Scene::Ptr s, Pipeline * p):
-	Pipeline::Stage(r,s,p), mQuad(r)
+VolumetricLighting::VolumetricLighting(Renderer::Ptr r, Scene::Ptr s, Setting::Ptr st, Pipeline * p):
+	Pipeline::Stage(r,s,st,p), mQuad(r)
 {
 	auto blob = r->compileFile("hlsl/volumetriclight.hlsl", "main", "ps_5_0");
 	mPS = r->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());

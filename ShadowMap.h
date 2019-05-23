@@ -25,7 +25,7 @@ class ShadowMap: public Pipeline::Stage
 		float scale;
 	};
 public:
-	ShadowMap(Renderer::Ptr r, Scene::Ptr s, Pipeline* p,Renderer::ShaderResource::Ptr worldpos, Renderer::ShaderResource::Ptr depth, int mapsize, int numlevels);
+	ShadowMap(Renderer::Ptr r, Scene::Ptr s, Setting::Ptr set, Pipeline* p,Renderer::ShaderResource::Ptr worldpos, Renderer::ShaderResource::Ptr depth, int mapsize, int numlevels);
 	~ShadowMap();
 
 	void render(Renderer::RenderTarget::Ptr rt);
