@@ -155,25 +155,6 @@ void MultipleLights::initTBDRPipeline()
 	auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R32_TYPELESS, true);
 	auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 
-	int bw = ((w + 16 - 1) & ~15) / 16;
-	int bh = ((h + 16 - 1) & ~15) / 16;
-
-	D3D11_TEXTURE2D_DESC desc = { 0 };
-	desc.Width = bw;
-	desc.Height = bh;
-	desc.MipLevels = 1;
-	desc.ArraySize = 1;
-	desc.Format = DXGI_FORMAT_R32G32_FLOAT;
-	desc.SampleDesc.Count = 1;
-	desc.SampleDesc.Quality = 0;
-	desc.Usage = D3D11_USAGE_DEFAULT;
-	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
-	desc.CPUAccessFlags = 0;
-	desc.MiscFlags = 0;
-	
-
-	
-	auto depthbounds = mRenderer->createTexture("depthbounds",desc);
 
 	mPipeline->setFrameBuffer(frame);
 	auto bb = mRenderer->getBackbuffer();
@@ -183,7 +164,7 @@ void MultipleLights::initTBDRPipeline()
 	});
 
 	mPipeline->pushStage<GBuffer>(albedo, normal, worldpos, depth);
-	mPipeline->pushStage<DepthBounding>(depth, depthbounds);
+	mPipeline->pushStage<DepthBounding>(depth);
 	//mPipeline->pushStage<PBR>(albedo, normal, depth, 0.1f, 0.9f);
 	//mPipeline->pushStage<HDR>();
 	//mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
