@@ -5,8 +5,8 @@ PBR::PBR(
 	Scene::Ptr s, 
 	Setting::Ptr st,
 	Pipeline * p, 
-	Renderer::RenderTarget::Ptr a, 
-	Renderer::RenderTarget::Ptr n, 
+	Renderer::Texture::Ptr a, 
+	Renderer::Texture::Ptr n,
 	Renderer::DepthStencil::Ptr d, 
 	float roughness, 
 	float metallic):
@@ -39,7 +39,7 @@ PBR::~PBR()
 {
 }
 
-void PBR::render(Renderer::RenderTarget::Ptr rt)
+void PBR::render(Renderer::Texture::Ptr rt) 
 {
 	using namespace DirectX;
 	using namespace DirectX::SimpleMath;

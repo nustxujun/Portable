@@ -20,17 +20,17 @@ public:
 		Scene::Ptr s,
 		Setting::Ptr set,
 		Pipeline* p,
-		Renderer::RenderTarget::Ptr a,
-		Renderer::RenderTarget::Ptr n,
+		Renderer::Texture::Ptr a,
+		Renderer::Texture::Ptr n,
 		Renderer::DepthStencil::Ptr d, 
 		float roughness,
 		float metallic);
 	~PBR();
 
-	void render(Renderer::RenderTarget::Ptr rt) override final;
+	void render(Renderer::Texture::Ptr rt)  override final;
 private:
-	Renderer::RenderTarget::Ptr mAlbedo;
-	Renderer::RenderTarget::Ptr mNormal;
+	Renderer::Texture::Ptr mAlbedo;
+	Renderer::Texture::Ptr mNormal;
 	Renderer::DepthStencil::Ptr mDepth;
 	float mRoughness;
 	float mMetallic;

@@ -18,7 +18,7 @@ public:
 	~GBuffer();
 
 
-	void render(Renderer::RenderTarget::Ptr rt) override final;
+	void render(Renderer::Texture::Ptr rt)  override final;
 private:
 	Renderer::RenderTarget::Ptr mAlbedo;
 	Renderer::RenderTarget::Ptr mNormal;

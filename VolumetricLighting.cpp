@@ -23,7 +23,7 @@ VolumetricLighting::~VolumetricLighting()
 {
 }
 
-void VolumetricLighting::render(Renderer::RenderTarget::Ptr rt)
+void VolumetricLighting::render(Renderer::Texture::Ptr rt) 
 {
 	renderBlur(rt);
 
@@ -31,7 +31,7 @@ void VolumetricLighting::render(Renderer::RenderTarget::Ptr rt)
 	//mQuad.setRenderTarget(rt);
 	//mQuad.drawTexture(mBlur,false);
 }
-void VolumetricLighting::renderBlur(Renderer::RenderTarget::Ptr rt)
+void VolumetricLighting::renderBlur(Renderer::Texture::Ptr rt)
 {
 	auto w = getRenderer()->getWidth();
 	auto h = getRenderer()->getHeight();

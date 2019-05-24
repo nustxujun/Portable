@@ -105,7 +105,7 @@ public :
 		mPipeline->pushStage<HDR>();
 		mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 
-		mPipeline->pushStage([bb, quad](Renderer::RenderTarget::Ptr rt)
+		mPipeline->pushStage([bb, quad](Renderer::Texture::Ptr rt)
 		{
 			quad->setRenderTarget(bb);
 			quad->drawTexture(rt, false);

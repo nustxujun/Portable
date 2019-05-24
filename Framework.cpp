@@ -55,7 +55,7 @@ void Framework::initPipeline()
 
 	mPipeline->setFrameBuffer(frame);
 	auto bb = mRenderer->getBackbuffer();
-	mPipeline->pushStage([bb](Renderer::RenderTarget::Ptr rt)
+	mPipeline->pushStage([bb](Renderer::Texture::Ptr rt)
 	{
 		bb.lock()->clear({ 1,1,1,0 });
 		rt.lock()->clear({ 0,0,0,0 });
@@ -72,7 +72,7 @@ void Framework::initPipeline()
 	mPipeline->pushStage<HDR>();
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 
-	mPipeline->pushStage([bb, quad](Renderer::RenderTarget::Ptr rt)
+	mPipeline->pushStage([bb, quad](Renderer::Texture::Ptr rt)
 	{
 		quad->setRenderTarget(bb);
 		quad->drawTexture(rt, false);

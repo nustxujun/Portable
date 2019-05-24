@@ -91,27 +91,22 @@ public:
 
 
 
-	class RenderTarget final : public NODefault, public D3DObject, public ShaderResource
+	class RenderTarget : public NODefault
 	{
 	public:
 		using Ptr = std::weak_ptr<RenderTarget>;
 	public:
-		RenderTarget(Renderer* renderer, int width, int height, DXGI_FORMAT format, D3D11_USAGE usage);
-		RenderTarget(Renderer* renderer, ID3D11Texture2D* t, ID3D11RenderTargetView* rt, ID3D11ShaderResourceView* srv);
+		RenderTarget() :mRTView(nullptr) {};
+		RenderTarget(ID3D11RenderTargetView* rt);
+
 		~RenderTarget();
 		operator ID3D11RenderTargetView*() { return mRTView; }
-		
-		ID3D11Texture2D* getTexture() const{ return mTexture; }
 		ID3D11RenderTargetView* getRenderTargetView() const{ return mRTView; }
 
-		void clear(const std::array<float,4> c);
+		virtual void clear(const std::array<float, 4> c) = 0;
 
-		RenderTarget::Ptr clone()const;
-		void swap(RenderTarget::Ptr rt, bool force = false);
-	private:
-		ID3D11Texture2D* mTexture;
+	protected:
 		ID3D11RenderTargetView* mRTView;
-		D3D11_TEXTURE2D_DESC mDesc;
 	};
 
 	class Buffer : public NODefault, public D3DObject, public UnorderedAccess, public ShaderResource
@@ -156,14 +151,26 @@ public:
 		std::unordered_map<std::string, ID3DX11EffectTechnique*> mTechs;
 	};
 
-	class Texture final : public NODefault, public D3DObject,public ShaderResource, public UnorderedAccess
+	class Texture final :public D3DObject, public RenderTarget,public ShaderResource, public UnorderedAccess
 	{
 	public:
 		using Ptr = std::weak_ptr<Texture>;
 	public:
 		Texture(Renderer* renderer, const D3D11_TEXTURE2D_DESC& desc, const void* data = nullptr, size_t size = 0);
 		Texture(Renderer* renderer, const std::string& file);
+		Texture(Renderer* renderer, ID3D11Texture2D* t);
+		~Texture();
+
+		void clear(const std::array<float, 4> c) override;
+		void swap(RenderTarget::Ptr rt, bool force = false);
+		Texture::Ptr clone()const;
+
+		const D3D11_TEXTURE2D_DESC& getDesc()const { return mDesc; }
 	private:
+		void initTexture();
+	private:
+		D3D11_TEXTURE2D_DESC mDesc;
+		ID3D11Texture2D* mTexture;
 	};
 
 	class Sampler final : public NODefault
@@ -332,7 +339,7 @@ public:
 	void setRasterizer(Rasterizer::Ptr r);
 	void setDefaultRasterizer();
 
-	RenderTarget::Ptr getBackbuffer() { return mBackbuffer; }
+	Texture::Ptr getBackbuffer() { return mBackbuffer; }
 	void setLayout(ID3D11InputLayout* layout);
 	void setPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY pri);
 	void setIndexBuffer(Buffer::Ptr b, DXGI_FORMAT format, int offset);
@@ -351,8 +358,8 @@ public:
 	Sampler::Ptr createSampler(const std::string& name, D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV,
 		D3D11_TEXTURE_ADDRESS_MODE addrW = D3D11_TEXTURE_ADDRESS_WRAP, D3D11_COMPARISON_FUNC cmpfunc = D3D11_COMPARISON_NEVER, float minlod = 0, float maxlod = D3D11_FLOAT32_MAX);
 	Texture::Ptr createTexture(const std::string& filename);
-	Texture::Ptr createTexture(const std::string& name, const D3D11_TEXTURE2D_DESC& desc, const void* data = 0, size_t size = 0);
-	RenderTarget::Ptr createRenderTarget(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage = D3D11_USAGE_DEFAULT);
+	Texture::Ptr createTexture( const D3D11_TEXTURE2D_DESC& desc, const void* data = 0, size_t size = 0);
+	Texture::Ptr createRenderTarget(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage = D3D11_USAGE_DEFAULT);
 	Buffer::Ptr createBuffer(int size, D3D11_BIND_FLAG flag, const D3D11_SUBRESOURCE_DATA* initialdata = NULL,D3D11_USAGE usage = D3D11_USAGE_DEFAULT, size_t CPUaccess = 0);
 	SharedCompiledData compileFile(const std::string& filename, const std::string& entryPoint, const std::string& shaderModel, const D3D10_SHADER_MACRO* macro = NULL);
 	Effect::Ptr createEffect(void* data, size_t size);
@@ -380,19 +387,18 @@ private:
 	DepthStencil::Ptr mDefaultDepthStencil;
 	Rasterizer::Ptr mRasterizer;
 
-	RenderTarget::Ptr mBackbuffer;
+	Texture::Ptr mBackbuffer;
 
 	size_t mSamplersState = 0;
 	size_t mSRVState = 0;
 	size_t mConstantState = 0;
 
-	std::vector<std::shared_ptr<RenderTarget>> mRenderTargets;
 	std::vector<std::shared_ptr<Buffer>> mBuffers;
 	std::vector<std::shared_ptr<Effect>> mEffects;
 	std::vector<std::shared_ptr<Layout>> mLayouts;
 	std::vector<std::shared_ptr<DepthStencil>> mDepthStencils;
 
-	std::unordered_map<std::string,std::shared_ptr<Texture>> mTextures;
+	std::vector<std::shared_ptr<Texture>> mTextures;
 	std::unordered_map<std::string,std::shared_ptr<Sampler>> mSamplers;
 	std::vector<VertexShader::Shared> mVSs;
 	std::vector<PixelShader::Shared> mPSs;

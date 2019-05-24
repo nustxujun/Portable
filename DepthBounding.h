@@ -10,13 +10,13 @@ public:
 		Scene::Ptr s,
 		Setting::Ptr set,
 		Pipeline* p ,
-		Renderer::ShaderResource::Ptr depth);
-	void render(Renderer::RenderTarget::Ptr rt) override final;
+		Renderer::ShaderResource::Ptr depth,
+		Renderer::Texture::Ptr db);
+	void render(Renderer::Texture::Ptr rt)  override final;
 private:
 	GPUComputer mComputer;
 	Renderer::ComputeShader::Weak mCS;
 	Renderer::Texture::Ptr mDepthMinMax;
 	Renderer::ShaderResource::Ptr mDepth;
-	size_t mWidth;
-	size_t mHeight;
+	Renderer::Buffer::Ptr mConstants;
 };

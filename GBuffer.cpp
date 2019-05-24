@@ -32,7 +32,7 @@ GBuffer::~GBuffer()
 {
 }
 
-void GBuffer::render(Renderer::RenderTarget::Ptr rt)
+void GBuffer::render(Renderer::Texture::Ptr rt) 
 {
 	using namespace DirectX;
 	auto e = mEffect.lock();

@@ -5,45 +5,32 @@ DepthBounding::DepthBounding(
 	Scene::Ptr s, 
 	Setting::Ptr set, 
 	Pipeline * p, 
-	Renderer::ShaderResource::Ptr depth):
+	Renderer::ShaderResource::Ptr depth,
+	Renderer::Texture::Ptr db):
 	Pipeline::Stage(r,s,set,p), 
 	mComputer(r), 
-	mDepth(depth)
+	mDepth(depth),
+	mDepthMinMax(db)
 {
 	auto blob = r->compileFile("hlsl/depthbounding.hlsl", "main", "cs_5_0");
 	mCS = r->createComputeShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
 
-	int w = r->getWidth();
-	int h = r->getHeight();
-	mWidth = ((w + 16 - 1) & ~15) / 16;
-	mHeight = ((h + 16 - 1) & ~15) / 16;
-
-	D3D11_TEXTURE2D_DESC desc = { 0 };
-	desc.Width = mWidth;
-	desc.Height = mHeight;
-	desc.MipLevels = 1;
-	desc.ArraySize = 1;
-	desc.Format = DXGI_FORMAT_R32G32_FLOAT;
-	desc.SampleDesc.Count = 1;
-	desc.SampleDesc.Quality = 0;
-	desc.Usage = D3D11_USAGE_DEFAULT;
-	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
-	desc.CPUAccessFlags = 0;
-	desc.MiscFlags = 0;
-
-	mDepthMinMax = r->createTexture("depthbounds", desc);
+	mConstants = r->createBuffer(sizeof(Matrix), D3D11_BIND_CONSTANT_BUFFER);
+	//mDepthMinMax = r->createTexture( desc);
 }
 
-void DepthBounding::render(Renderer::RenderTarget::Ptr rt)
+void DepthBounding::render(Renderer::Texture::Ptr rt) 
 {
+	auto cam = getScene()->createOrGetCamera("main");
+	Matrix invertproj = cam->getProjectionMatrix().Invert().Transpose();
+	mConstants.lock()->blit(&invertproj, sizeof(invertproj));
+
+	mComputer.setConstants({ mConstants });
 	mComputer.setInputs({ mDepth });
 	mComputer.setOuputs({ mDepthMinMax });
 	mComputer.setShader(mCS);
 
+	auto desc = mDepthMinMax.lock()->getDesc();
+	mComputer.compute(desc.Width, desc.Height, 1);
 
-	mComputer.compute(mWidth, mHeight, 1);
-
-	Quad quad(getRenderer());
-	quad.setRenderTarget(rt );
-	quad.drawTexture(mDepthMinMax, false);
 }

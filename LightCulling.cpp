@@ -22,24 +22,19 @@ LightCulling::LightCulling(
 	desc.SampleDesc.Count = 1;
 	desc.SampleDesc.Quality = 0;
 	desc.Usage = D3D11_USAGE_DEFAULT;
-	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
+	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_RENDER_TARGET;
 	desc.CPUAccessFlags = 0;
 	desc.MiscFlags = 0;
 
-	mOutput = r->createTexture("lightculling", desc);
+	mOutput = r->createTexture( desc);
 
 	auto blob = r->compileFile("hlsl/lightculling.hlsl", "main", "cs_5_0");
 	mCS = r->createComputeShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
-
-
-
-
-	D3D11_UNORDERED_ACCESS_VIEW_DESC uavd;
-	mOutput.lock()->getUnorderedAccess()->GetDesc(&uavd);
 }
 
-void LightCulling::render(Renderer::RenderTarget::Ptr rt)
+void LightCulling::render(Renderer::Texture::Ptr rt) 
 {
+	mOutput.lock()->clear({ 0,0,1.0f,0 });
 	mComputer.setInputs({ mDepthBounds });
 	mComputer.setOuputs({ mOutput });
 	mComputer.setShader(mCS);
@@ -47,5 +42,5 @@ void LightCulling::render(Renderer::RenderTarget::Ptr rt)
 
 	Quad quad(getRenderer());
 	quad.setRenderTarget(rt);
-	quad.drawTexture(mOutput, false);
+	quad.drawTexture(mDepthBounds, false);
 }

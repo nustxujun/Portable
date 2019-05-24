@@ -75,10 +75,11 @@ void Renderer::init(HWND win, int width, int height)
 	ID3D11RenderTargetView* bbv;
 	checkResult( mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backbuffer) );
 
-	checkResult(mDevice->CreateRenderTargetView(backbuffer, NULL, &bbv));
-	auto shared = std::shared_ptr<RenderTarget>(new RenderTarget(this, backbuffer, bbv, nullptr));
-	mRenderTargets.push_back(shared);
-	mBackbuffer = shared;
+	auto shared = std::shared_ptr<Texture>(new Texture(this, backbuffer));
+	mTextures.emplace_back(shared);
+	mBackbuffer = mTextures.back();
+
+
 
 	mDefaultDepthStencil = createDepthStencil(width, height, DXGI_FORMAT_D24_UNORM_S8_UINT);
 
@@ -429,7 +430,6 @@ void Renderer::uninit()
 	mTextures.clear();
 	mEffects.clear();
 	mLayouts.clear();
-	mRenderTargets.clear();
 	mBuffers.clear();
 	mSwapChain->Release();
 	mContext->Release();
@@ -469,31 +469,33 @@ Renderer::Sampler::Ptr Renderer::createSampler(const std::string& name, D3D11_FI
 
 Renderer::Texture::Ptr Renderer::createTexture(const std::string & filename)
 {
-	auto exist = mTextures.find(filename);
-	if (exist != mTextures.end())
-		return exist->second;
-
-	
-	auto ret = mTextures.emplace(filename, new Texture(this,filename));
-	return Texture::Ptr(ret.first->second);
+	mTextures.emplace_back(new Texture(this,filename));
+	return mTextures.back();
 }
 
-Renderer::Texture::Ptr Renderer::createTexture(const std::string& name, const D3D11_TEXTURE2D_DESC& desc, const void* data, size_t size)
+Renderer::Texture::Ptr Renderer::createTexture( const D3D11_TEXTURE2D_DESC& desc, const void* data, size_t size)
 {
-	auto exist = mTextures.find(name);
-	if (exist != mTextures.end())
-		return exist->second;
-
-
-	auto ret = mTextures.emplace(name, new Texture(this,desc,data,size));
-	return ret.first->second;
+	mTextures.emplace_back( new Texture(this,desc,data,size));
+	return mTextures.back();
 }
 
 
-Renderer::RenderTarget::Ptr Renderer::createRenderTarget(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage)
+Renderer::Texture::Ptr Renderer::createRenderTarget(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage)
 {
-	mRenderTargets.emplace_back(new RenderTarget(this,  width,  height,  format,  usage));
-	return mRenderTargets.back();
+	D3D11_TEXTURE2D_DESC desc = {0};
+	desc.Width = width;
+	desc.Height = height;
+	desc.Format = format;
+	desc.Usage = usage;
+	desc.MipLevels = 1;
+	desc.SampleDesc.Count = 1;
+	desc.SampleDesc.Quality = 0;
+	desc.ArraySize = 1;
+	desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+
+
+	mTextures.emplace_back(new Texture(this, desc));
+	return mTextures.back();
 }
 
 Renderer::Buffer::Ptr Renderer::createBuffer(int size, D3D11_BIND_FLAG flag, const D3D11_SUBRESOURCE_DATA* initialdata, D3D11_USAGE usage, size_t CPUaccess)
@@ -640,80 +642,16 @@ Renderer::ShaderResource::~ShaderResource()
 	mSRView = nullptr;
 }
 
-Renderer::RenderTarget::RenderTarget(Renderer* renderer, int width, int height, DXGI_FORMAT format, D3D11_USAGE usage):D3DObject(renderer), ShaderResource(nullptr)
+Renderer::RenderTarget::RenderTarget(ID3D11RenderTargetView* rt)
 {
-	// Create the final texture.
-	D3D11_TEXTURE2D_DESC descFinalTexture;
-	ZeroMemory(&descFinalTexture, sizeof(descFinalTexture));
-	descFinalTexture.Width = width;
-	descFinalTexture.Height = height;
-	descFinalTexture.MipLevels = 1;
-	descFinalTexture.ArraySize = 1;
-	descFinalTexture.Format = format;
-	descFinalTexture.SampleDesc.Count = 1;
-	descFinalTexture.SampleDesc.Quality = 0;
-	descFinalTexture.Usage = usage;
-	descFinalTexture.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE ;
-	descFinalTexture.CPUAccessFlags = 0;
-	descFinalTexture.MiscFlags = 0;
-
-	mDesc = descFinalTexture;
-
-	checkResult(getDevice()->CreateTexture2D(&descFinalTexture, NULL, &mTexture));
-
-	// Create the final render target.
-	D3D11_RENDER_TARGET_VIEW_DESC finalRTVDesc;
-	ZeroMemory(&finalRTVDesc, sizeof(finalRTVDesc));
-	finalRTVDesc.Format = descFinalTexture.Format;
-	finalRTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-	finalRTVDesc.Texture2D.MipSlice = 0;
-
-	checkResult(getDevice()->CreateRenderTargetView(mTexture, &finalRTVDesc, &mRTView));
-
-
-	// Create the final shader resource view
-	checkResult(getDevice()->CreateShaderResourceView(mTexture, nullptr, &mSRView));
-
-}
-
-Renderer::RenderTarget::RenderTarget(Renderer* renderer, ID3D11Texture2D* t, ID3D11RenderTargetView* rt, ID3D11ShaderResourceView* srv):D3DObject(renderer), ShaderResource(srv)
-{
-	mTexture = t;
 	mRTView = rt;
 }
 
 
 Renderer::RenderTarget::~RenderTarget()
 {
-	mTexture->Release();
-	mRTView->Release();
-}
-
-void Renderer::RenderTarget::clear(const std::array<float, 4> c)
-{
-	getContext()->ClearRenderTargetView(mRTView, c.data());
-}
-
-Renderer::RenderTarget::Ptr Renderer::RenderTarget::clone() const
-{
-	return getRenderer()->createRenderTarget(mDesc.Width, mDesc.Height, mDesc.Format, mDesc.Usage);
-}
-
-void Renderer::RenderTarget::swap(RenderTarget::Ptr rt, bool force)
-{
-	auto ptr = rt.lock();
-	if (ptr == nullptr) return;
-	if (memcmp(&mDesc, &ptr->mDesc, sizeof(mDesc)) != 0 && !force)
-	{
-		error("only can swap the same rts.");
-		return;
-	}
-
-	std::swap(mTexture, ptr->mTexture);
-	std::swap(mRTView, ptr->mRTView);
-	std::swap(mSRView, ptr->mSRView);
-	std::swap(mDesc, ptr->mDesc);
-
+	if (mRTView)
+		mRTView->Release();
 }
 
 
@@ -853,38 +791,32 @@ ID3DX11EffectConstantBuffer * Renderer::Effect::getConstantBuffer(const std::str
 
 Renderer::Texture::Texture(Renderer* renderer, const D3D11_TEXTURE2D_DESC& desc, const void* data, size_t size) :D3DObject(renderer)
 {
+	mDesc = desc;
 	D3D11_SUBRESOURCE_DATA initdata;
 	initdata.pSysMem = data;
 	initdata.SysMemPitch = size;
 	initdata.SysMemSlicePitch = 0;
-	ID3D11Texture2D* tex;
-	checkResult(getDevice()->CreateTexture2D(&desc, data? &initdata: nullptr, &tex));
+	checkResult(getDevice()->CreateTexture2D(&desc,  nullptr, &mTexture));
 
 
-	bool unorderedAccess = ((desc.BindFlags & D3D11_BIND_UNORDERED_ACCESS) != 0);
-	bool shaderRecource = ((desc.BindFlags & D3D11_BIND_SHADER_RESOURCE) != 0);
+	initTexture();
 
-	if (shaderRecource)
-	{
-		checkResult(getDevice()->CreateShaderResourceView(tex, nullptr, &mSRView));
-	}
-
-	if (unorderedAccess)
-	{
-		D3D11_UNORDERED_ACCESS_VIEW_DESC UAVDesc;
-		ZeroMemory(&UAVDesc, sizeof(D3D11_UNORDERED_ACCESS_VIEW_DESC));
-		UAVDesc.Format = desc.Format;
-		UAVDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
-		UAVDesc.Buffer.FirstElement = 0;
-		UAVDesc.Buffer.NumElements = desc.Width * desc.Height;
-		checkResult(getDevice()->CreateUnorderedAccessView(tex, NULL, &mUAV));
-	}
-
-	tex->Release();
 }
 Renderer::Texture::Texture(Renderer* renderer, const std::string& filename):D3DObject(renderer)
 {
-	checkResult(D3DX11CreateShaderResourceViewFromFileA(renderer->mDevice, filename.c_str(), NULL, NULL, &mSRView, NULL));
+	checkResult(D3DX11CreateTextureFromFileA(getDevice(), filename.c_str(), NULL, NULL, (ID3D11Resource**)&mTexture, NULL));
+	initTexture();
+}
+
+Renderer::Texture::Texture(Renderer * renderer, ID3D11Texture2D * t) :D3DObject(renderer)
+{
+	mTexture = t;
+	initTexture();
+}
+
+Renderer::Texture::~Texture()
+{
+	mTexture->Release();
 }
 
 
@@ -900,6 +832,64 @@ Renderer::Layout::Layout(Renderer* renderer, const D3D11_INPUT_ELEMENT_DESC * de
 		mSize += D3D11Helper::sizeof_DXGI_FORMAT(d.Format);
 	}
 }
+
+void Renderer::Texture::clear(const std::array<float, 4> c) 
+{
+	if (mRTView)
+	{
+		getContext()->ClearRenderTargetView(mRTView, c.data());
+	}
+}
+
+void Renderer::Texture::swap(RenderTarget::Ptr rt, bool force)
+{
+	//auto ptr = rt.lock();
+	//if (ptr == nullptr) return;
+	//if (memcmp(&mDesc, &ptr->mDesc, sizeof(mDesc)) != 0 && !force)
+	//{
+	//	error("only can swap the same rts.");
+	//	return;
+	//}
+
+	//std::swap(mTexture, ptr->mTexture);
+	//std::swap(mRTView, ptr->mRTView);
+	//std::swap(mSRView, ptr->mSRView);
+	//std::swap(mDesc, ptr->mDesc);
+	abort();
+}
+
+Renderer::Texture::Ptr Renderer::Texture::clone()const
+{
+	return getRenderer()->createTexture(mDesc);
+}
+
+void Renderer::Texture::initTexture()
+{
+	mTexture->GetDesc(&mDesc);
+	bool unorderedAccess = ((mDesc.BindFlags & D3D11_BIND_UNORDERED_ACCESS) != 0);
+	bool shaderRecource = ((mDesc.BindFlags & D3D11_BIND_SHADER_RESOURCE) != 0);
+	bool rendertarget = ((mDesc.BindFlags & D3D11_BIND_RENDER_TARGET) != 0);
+
+	if (rendertarget)
+		checkResult(getDevice()->CreateRenderTargetView(mTexture, NULL, &mRTView));
+
+	if (shaderRecource)
+	{
+		checkResult(getDevice()->CreateShaderResourceView(mTexture, nullptr, &mSRView));
+	}
+
+	if (unorderedAccess)
+	{
+		D3D11_UNORDERED_ACCESS_VIEW_DESC UAVDesc;
+		ZeroMemory(&UAVDesc, sizeof(D3D11_UNORDERED_ACCESS_VIEW_DESC));
+		UAVDesc.Format = mDesc.Format;
+		UAVDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
+		UAVDesc.Buffer.FirstElement = 0;
+		UAVDesc.Buffer.NumElements = mDesc.Width * mDesc.Height;
+		checkResult(getDevice()->CreateUnorderedAccessView(mTexture, NULL, &mUAV));
+	}
+}
+
 
 ID3D11InputLayout * Renderer::Layout::bind(ID3DX11EffectPass* pass)
 {

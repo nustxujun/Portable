@@ -11,7 +11,7 @@ PostProcessing::~PostProcessing()
 {
 }
 
-void PostProcessing::render(Renderer::RenderTarget::Ptr rt)
+void PostProcessing::render(Renderer::Texture::Ptr rt) 
 {
 	if (mTarget.lock() == nullptr)
 		mTarget = rt.lock()->clone();

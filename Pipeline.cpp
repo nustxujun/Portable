@@ -30,7 +30,7 @@ void Pipeline::render()
 		i->render(mFrameBuffer);
 }
 
-void Pipeline::setFrameBuffer(Renderer::RenderTarget::Ptr rt)
+void Pipeline::setFrameBuffer(Renderer::Texture::Ptr rt)
 {
 	mFrameBuffer = rt;
 }

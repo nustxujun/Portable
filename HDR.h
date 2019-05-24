@@ -6,17 +6,17 @@ class HDR :public Pipeline::Stage
 public:
 	HDR(Renderer::Ptr r, Scene::Ptr s, Setting::Ptr set, Pipeline* p);
 	~HDR();
-	void render(Renderer::RenderTarget::Ptr rt) override;
+	void render(Renderer::Texture::Ptr rt) override;
 private:
-	void renderLuminance(Renderer::RenderTarget::Ptr rt);
-	void renderHDR(Renderer::RenderTarget::Ptr frame);
+	void renderLuminance(Renderer::Texture::Ptr rt);
+	void renderHDR(Renderer::Texture::Ptr frame);
 private:
-	Renderer::RenderTarget::Ptr mTarget;
+	Renderer::Texture::Ptr mTarget;
 	Renderer::PixelShader::Weak mPS;
 	Renderer::PixelShader::Weak mDownSamplePS2x2;
 	Renderer::PixelShader::Weak mDownSamplePS3x3;
 	Renderer::Sampler::Ptr mPoint;
 
 	Quad mQuad;
-	std::vector<Renderer::RenderTarget::Ptr> mLuminance;
+	std::vector<Renderer::Texture::Ptr> mLuminance;
 };

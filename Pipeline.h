@@ -18,7 +18,7 @@ public:
 		Stage(Renderer::Ptr r, Scene::Ptr s, Setting::Ptr set, Pipeline* p);
 		virtual ~Stage();
 
-		virtual void render(Renderer::RenderTarget::Ptr rt) = 0;
+		virtual void render(Renderer::Texture::Ptr rt) = 0;
 		virtual void onChanged(const std::string& key, const nlohmann::json::value_type& value)override {};
 
 		Renderer::Ptr getRenderer()const { return mRenderer; }
@@ -34,13 +34,13 @@ public:
 	class Anonymous : public Stage
 	{
 	public:
-		using DrawCall = std::function<void(Renderer::RenderTarget::Ptr)>;
+		using DrawCall = std::function<void(Renderer::Texture::Ptr)>;
 	public:
 		Anonymous(Renderer::Ptr r, Scene::Ptr s,Setting::Ptr st, Pipeline* p, DrawCall drawcall) :Stage(r, s,st, p), mDrawCall(drawcall)
 		{
 		}
 
-		void render(Renderer::RenderTarget::Ptr rt) override final
+		void render(Renderer::Texture::Ptr rt) override final
 		{
 			mDrawCall(rt);
 		}
@@ -62,12 +62,12 @@ public:
 	void pushStage(Anonymous::DrawCall dc);
 
 	void render();
-	void setFrameBuffer(Renderer::RenderTarget::Ptr rt);
+	void setFrameBuffer(Renderer::Texture::Ptr rt);
 	Setting::Ptr getSetting()const { return mSetting; }
 private:
 	Renderer::Ptr mRenderer;
 	Scene::Ptr mScene;
 	std::vector<Stage::Ptr> mStages;
-	Renderer::RenderTarget::Ptr mFrameBuffer;
+	Renderer::Texture::Ptr mFrameBuffer;
 	Setting::Ptr mSetting;
 };

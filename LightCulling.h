@@ -13,7 +13,7 @@ public:
 		Pipeline* p,
 		Renderer::ShaderResource::Ptr depthBounds
 	);
-	void render(Renderer::RenderTarget::Ptr rt) override final;
+	void render(Renderer::Texture::Ptr rt)  override final;
 private:
 	Renderer::ShaderResource::Ptr mDepthBounds;
 	Renderer::Texture::Ptr mOutput;

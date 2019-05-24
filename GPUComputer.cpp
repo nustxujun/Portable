@@ -53,10 +53,13 @@ void GPUComputer::compute(UINT x, UINT y, UINT z)
 	context->CSSetUnorderedAccessViews(0, uav.size(), uav.data(), NULL);
 	context->CSSetConstantBuffers(0, consts.size(), consts.data());
 
-	mRenderer->getContext()->Dispatch(x, y, z);
+	context->CSSetShader(*mCS.lock(), NULL, 0);
+	context->Dispatch(x, y, z);
+	
 	std::vector<ID3D11ShaderResourceView*> srvclearer(srvs.size());
 	context->CSSetShaderResources(0, srvs.size(), srvclearer.data());
 
 	std::vector<ID3D11UnorderedAccessView*> clearer(uav.size());
 	context->CSSetUnorderedAccessViews(0, uav.size(), clearer.data(),NULL);
+
 }

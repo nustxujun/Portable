@@ -239,7 +239,7 @@ void ShadowMap::renderShadow(Renderer::RenderTarget::Ptr rt)
 
 }
 
-void ShadowMap::render(Renderer::RenderTarget::Ptr rt)
+void ShadowMap::render(Renderer::Texture::Ptr rt) 
 {
 	fitToScene();
 	renderToShadowMap();
