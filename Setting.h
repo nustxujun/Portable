@@ -43,7 +43,16 @@ public:
 			if (!mSetting) 
 				return T(0);
 
-			return mSetting->get(key)["value"];
+			auto& j = mSetting->get(key);
+			if (j.type() == nlohmann::json::value_t::object)
+				return j["value"];
+			else
+				return T(0);
+		}
+
+		bool has(const std::string& key)
+		{
+			return mSetting->mValues.find(key) != mSetting->mValues.end();
 		}
 
 		const nlohmann::json& get(const std::string& key)

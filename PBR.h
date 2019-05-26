@@ -9,10 +9,15 @@ class PBR:public Pipeline::Stage
 	{
 		Matrix invertPorj;
 		Matrix View;
-		Vector4 lightpos;
-		Vector3 radiance;
+		Vector4 lightspos[100];
+		Vector4 lightscolor[100];
+		int numLights;
 		float roughness;
 		float metallic;
+		float width;
+		float height;
+		int maxLightsPerTile;
+		int tilePerline;
 	};
 public:
 	PBR(
@@ -23,8 +28,7 @@ public:
 		Renderer::Texture::Ptr a,
 		Renderer::Texture::Ptr n,
 		Renderer::DepthStencil::Ptr d, 
-		float roughness,
-		float metallic);
+		Renderer::Buffer::Ptr lightsindex = {});
 	~PBR();
 
 	void render(Renderer::Texture::Ptr rt)  override final;
@@ -32,8 +36,7 @@ private:
 	Renderer::Texture::Ptr mAlbedo;
 	Renderer::Texture::Ptr mNormal;
 	Renderer::DepthStencil::Ptr mDepth;
-	float mRoughness;
-	float mMetallic;
+	Renderer::Buffer::Ptr mLightsIndex;
 
 	std::array<Renderer::PixelShader::Weak,3> mPSs;
 	Renderer::Sampler::Ptr mLinear;

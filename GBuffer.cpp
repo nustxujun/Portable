@@ -15,6 +15,7 @@ GBuffer::GBuffer(
 	mWorldPos(w),
 	mDepth(d)
 {
+	mName = "gbuffer";
 	auto blob = getRenderer()->compileFile("hlsl/gbuffer.fx", "", "fx_5_0");
 	mEffect = getRenderer()->createEffect((**blob).GetBufferPointer(), (**blob).GetBufferSize());
 
@@ -34,6 +35,7 @@ GBuffer::~GBuffer()
 
 void GBuffer::render(Renderer::Texture::Ptr rt) 
 {
+
 	using namespace DirectX;
 	auto e = mEffect.lock();
 	if (e == nullptr)
@@ -104,4 +106,6 @@ void GBuffer::render(Renderer::Texture::Ptr rt)
 	});
 
 	renderer->removeRenderTargets();
+
+
 }

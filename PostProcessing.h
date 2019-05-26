@@ -12,5 +12,5 @@ public:
 private:
 	Renderer::PixelShader::Weak mPS;
 	Quad mQuad;
-	Renderer::RenderTarget::Ptr mTarget;
+	Renderer::Texture::Ptr mTarget;
 };

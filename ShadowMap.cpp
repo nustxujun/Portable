@@ -4,6 +4,7 @@
 ShadowMap::ShadowMap(Renderer::Ptr r, Scene::Ptr s,Setting::Ptr st, Pipeline* p,Renderer::ShaderResource::Ptr worldpos, Renderer::ShaderResource::Ptr depth, int size, int numlevels) :
 	Pipeline::Stage(r, s,st, p), mWorldPos(worldpos),mSceneDepth(depth), mShadowMapSize(size), mNumLevels(numlevels), mQuad(r)
 {
+	mName = "shadow map";
 	mShadowMapSize = 2048;
 	mNumLevels = std::min(mNumLevels, 8);
 

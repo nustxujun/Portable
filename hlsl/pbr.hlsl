@@ -2,6 +2,10 @@ Texture2D albedoTexture: register(t0);
 Texture2D normalTexture: register(t1);
 Texture2D depthTexture: register(t2);
 
+#ifdef TILED
+Buffer<uint> lightsIndex: register(t3);
+#endif
+
 SamplerState sampLinear: register(s0);
 SamplerState sampPoint: register(s1);
 
@@ -9,11 +13,15 @@ cbuffer ConstantBuffer: register(b0)
 {
 	matrix invertProj;
 	matrix View;
-	float4 lightpos;
-	float3 lightcolor;
+	float4 lightspos[100];
+	float4 lightscolor[100];
+	int numLights;
 	float roughness;
 	float metallic;
-
+	float width;
+	float height;
+	int maxLightsPerTile;
+	int tilePerline;
 }
 
 struct PS_INPUT
@@ -98,44 +106,68 @@ float4 main(PS_INPUT input) : SV_TARGET
 	float3 Lo = 0;
 
 
-#ifdef POINT
-	float3 L = normalize(lightpos.xyz - worldPos.xyz);
+#ifdef TILED
+	
+	int x = input.Tex.x * width;
+	int y = input.Tex.y * height;
+	x /= 16;
+	y /= 16;
 
-	float distance = length(lightpos.xyz - worldPos.xyz);
-	float attenuation = 1.0 / (distance * distance);
-	float3 radiance = lightcolor * attenuation;
+	int startoffset = (x + y * tilePerline) * (100 + 1);
+	uint num = lightsIndex[startoffset];
+	//return (float)num / (float)maxLightsPerTile;
+	for (uint i = 0; i< num; ++i)
+	{
+		uint index = lightsIndex[startoffset + i];
+		float4 lightpos = lightspos[index];
+		float3 lightcolor = lightscolor[index].rgb;
+#else
+	for (int i = 0; i < numLights; ++i)
+	{
+		float4 lightpos = lightspos[i];
+		float3 lightcolor = lightscolor[i].rgb;
+#endif
+
+#ifdef POINT
+		float3 L = normalize(lightpos.xyz - worldPos.xyz);
+
+
+		float distance = length(lightpos.xyz - worldPos.xyz);
+		float attenuation = 1.0 / (distance * distance);
+		float3 radiance = lightcolor * attenuation;
 #endif
 #ifdef DIR
-	float3 L = -normalize(lightpos.xyz);
-	float3 radiance = lightcolor;
+		float3 L = -normalize(lightpos.xyz);
+		float3 radiance = lightcolor;
 
 #endif
 #ifdef SPOT
-	float3 L = -normalize(lightpos.xyz - worldPos);
-	float3 radiance = lightcolor;
+		float3 L = -normalize(lightpos.xyz - worldPos);
+		float3 radiance = lightcolor;
 
 #endif
-	float3 H = normalize(V + L);
+		float3 H = normalize(V + L);
 
 
-	// cook-torrance brdf
-	float NDF = DistributionGGX(N, H, roughness);
-	float G = GeometrySmith(N, V, L, roughness);
-	float3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+		// cook-torrance brdf
+		float NDF = DistributionGGX(N, H, roughness);
+		float G = GeometrySmith(N, V, L, roughness);
+		float3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
 
-	float3 kS = F;
-	float3 kD = 1.0 - kS;
-	kD *= 1.0 - metallic;
+		float3 kS = F;
+		float3 kD = 1.0 - kS;
+		kD *= 1.0 - metallic;
 
-	float3 nominator = NDF * G * F;
-	float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.001;
-	float3 specular = nominator / denominator;
+		float3 nominator = NDF * G * F;
+		float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.001;
+		float3 specular = nominator / denominator;
 
-	// add to outgoing radiance Lo
-	float NdotL = max(dot(N, L), 0.0);
-	Lo += (kD * albedo / PI + specular)  * NdotL * radiance;
+		// add to outgoing radiance Lo
+		float NdotL = max(dot(N, L), 0.0);
+		Lo += (kD * albedo / PI + specular)  * NdotL * radiance ;
+	}
 
-	//float3 ambient = 0.01 * albedo;// *ao;
+	//float3 ambient = 0.1 * albedo;// *ao;
 	//float3 color = ambient + Lo;
 
 

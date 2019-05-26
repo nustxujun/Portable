@@ -98,7 +98,7 @@ public :
 		});
 
 		mPipeline->pushStage<GBuffer>(albedo, normal, worldpos, depth);
-		mPipeline->pushStage<PBR>(albedo, normal, depth, 0.5f, 0.9f);
+		mPipeline->pushStage<PBR>(albedo, normal, depth);
 		//mPipeline->pushStage<AO>(normal, depth,10.0f);
 		//mPipeline->pushStage<ShadowMap>(worldpos,depth, 2048, 8);
 		//mPipeline->pushStage<VolumetricLighting>();

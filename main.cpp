@@ -45,7 +45,7 @@ public:
 	{
 		json j = value;
 
-		if (j["type"] == "set")
+		if (j["type"] == "set" || j["type"] == "stage")
 			j["key"] = key;
 		network->send(j);
 	}

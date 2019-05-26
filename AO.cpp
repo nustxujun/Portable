@@ -6,6 +6,7 @@
 AO::AO(Renderer::Ptr r, Scene::Ptr s, Setting::Ptr st, Pipeline* p, Renderer::ShaderResource::Ptr normal, Renderer::ShaderResource::Ptr depth, float radius):
 	Pipeline::Stage(r,s,st,p), mNormal(normal), mDepth(depth)
 {
+	mName = "AO";
 	auto blob = r->compileFile("hlsl/ssao.hlsl", "main", "ps_5_0");
 	mPS = r->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
 

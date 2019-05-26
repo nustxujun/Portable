@@ -114,6 +114,7 @@ public:
 	public: 
 		using Ptr = std::weak_ptr<Buffer>;
 	public:
+		Buffer(Renderer* renderer, int size, int stride, DXGI_FORMAT format,  size_t bindflags, D3D11_USAGE usage, size_t cpuaccess);
 		Buffer(Renderer* renderer, const D3D11_BUFFER_DESC& desc, const D3D11_SUBRESOURCE_DATA* data);
 		~Buffer();
 
@@ -162,7 +163,7 @@ public:
 		~Texture();
 
 		void clear(const std::array<float, 4> c) override;
-		void swap(RenderTarget::Ptr rt, bool force = false);
+		void swap(Texture::Ptr rt, bool force = false);
 		Texture::Ptr clone()const;
 
 		const D3D11_TEXTURE2D_DESC& getDesc()const { return mDesc; }
@@ -284,6 +285,42 @@ public:
 		D3D11_TEXTURE2D_DESC mDesc;
 	};
 
+	class Profile :public NODefault, public D3DObject
+	{
+		friend class Renderer;
+	public :
+		using Ptr = std::weak_ptr<Profile>;
+
+		class Timer
+		{
+		public:
+			Timer(Profile* p):profile(p)
+			{
+				p->getContext()->End(p->mBegin);
+			}
+
+			~Timer()
+			{
+				profile->getContext()->End(profile->mEnd);
+			}
+
+			Profile* profile;
+		};
+	public:
+		Profile(Renderer* r);
+		~Profile();
+
+		Timer count();
+		float getElapsedTime()const { return mElapsedTime; }
+	private:
+		void getData(UINT64 frq);
+	private:
+		ID3D11Query* mBegin;
+		ID3D11Query* mEnd;
+		float mCachedTime = 0;
+		int mNumCached = 0;
+		float mElapsedTime = 0;
+	};
 
 
 	using CompiledData = Interface<ID3D10Blob>;
@@ -360,7 +397,9 @@ public:
 	Texture::Ptr createTexture(const std::string& filename);
 	Texture::Ptr createTexture( const D3D11_TEXTURE2D_DESC& desc, const void* data = 0, size_t size = 0);
 	Texture::Ptr createRenderTarget(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage = D3D11_USAGE_DEFAULT);
-	Buffer::Ptr createBuffer(int size, D3D11_BIND_FLAG flag, const D3D11_SUBRESOURCE_DATA* initialdata = NULL,D3D11_USAGE usage = D3D11_USAGE_DEFAULT, size_t CPUaccess = 0);
+	Buffer::Ptr createBuffer(int size, D3D11_BIND_FLAG bindflag, const D3D11_SUBRESOURCE_DATA* initialdata = NULL,D3D11_USAGE usage = D3D11_USAGE_DEFAULT, size_t CPUaccess = 0);
+	Buffer::Ptr createRWBuffer(int size, int stride, DXGI_FORMAT format, size_t bindflag,  D3D11_USAGE usage = D3D11_USAGE_DEFAULT, size_t CPUaccess = 0);
+
 	SharedCompiledData compileFile(const std::string& filename, const std::string& entryPoint, const std::string& shaderModel, const D3D10_SHADER_MACRO* macro = NULL);
 	Effect::Ptr createEffect(void* data, size_t size);
 	VertexShader::Weak createVertexShader(const void* data, size_t size);
@@ -370,6 +409,7 @@ public:
 	Font::Ptr createOrGetFont(const std::wstring& font);
 	Rasterizer::Ptr createOrGetRasterizer(  const D3D11_RASTERIZER_DESC& desc);
 	DepthStencil::Ptr createDepthStencil(int width, int height, DXGI_FORMAT format, bool access = false);
+	Profile::Ptr createProfile();
 
  private:
 	static void checkResult(HRESULT hr);
@@ -384,9 +424,11 @@ private:
 	ID3D11DeviceContext* mContext;
 	IDXGISwapChain* mSwapChain;
 	D3D_FEATURE_LEVEL mFeatureLevel;
+	ID3D11Query* mDisjoint;
+
+
 	DepthStencil::Ptr mDefaultDepthStencil;
 	Rasterizer::Ptr mRasterizer;
-
 	Texture::Ptr mBackbuffer;
 
 	size_t mSamplersState = 0;
@@ -403,6 +445,7 @@ private:
 	std::vector<VertexShader::Shared> mVSs;
 	std::vector<PixelShader::Shared> mPSs;
 	std::vector<ComputeShader::Shared> mCSs;
+	std::vector<std::shared_ptr<Profile>> mProfiles;
 	std::unordered_map<std::wstring, std::shared_ptr<Font>> mFonts;
 	std::unordered_map<size_t, std::shared_ptr<Rasterizer>> mRasterizers;
 
@@ -412,3 +455,4 @@ private:
 
 
 
+#define PROFILE(x) auto _profile = x.lock()->count();

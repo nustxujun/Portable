@@ -1,31 +1,37 @@
 #include "PBR.h"
 
 PBR::PBR(
-	Renderer::Ptr r, 
-	Scene::Ptr s, 
-	Setting::Ptr st,
-	Pipeline * p, 
-	Renderer::Texture::Ptr a, 
+	Renderer::Ptr r,
+	Scene::Ptr s,
+	Setting::Ptr set,
+	Pipeline* p,
+	Renderer::Texture::Ptr a,
 	Renderer::Texture::Ptr n,
-	Renderer::DepthStencil::Ptr d, 
-	float roughness, 
-	float metallic):
-	Pipeline::Stage(r,s, st,p),
+	Renderer::DepthStencil::Ptr d,
+	Renderer::Buffer::Ptr lightsindex) :
+	Pipeline::Stage(r, s, set, p),
 	mAlbedo(a),
 	mNormal(n),
 	mDepth(d),
-	mRoughness(roughness),
-	mMetallic(metallic),
-	mQuad(r)
+	mQuad(r),
+	mLightsIndex(lightsindex)
 {
-	set("roughness", { {"type","set"}, {"value",roughness},{"min","0.01"},{"max",1.0f},{"interval", "0.01"} });
-	set("metallic", { {"type","set"}, {"value",metallic},{"min","0"},{"max",1.0f},{"interval", "0.01"} });
+	mName = "pbr lighting";
+	this->set("roughness", { {"type","set"}, {"value",0.5f},{"min","0.01"},{"max",1.0f},{"interval", "0.01"} });
+	this->set("metallic", { {"type","set"}, {"value",0.5f},{"min","0"},{"max",1.0f},{"interval", "0.01"} });
+	this->set("radiance", { {"type","set"}, {"value",1},{"min","1"},{"max",1000},{"interval", "1"} });
 
 	const std::array<const char*, 3> definitions = { "POINT", "DIR", "SPOT" };
 	for (int i = 0; i < definitions.size(); ++i)
 	{
-		D3D10_SHADER_MACRO macros[] = { {definitions[i],""}, NULL, NULL };
-		auto blob = r->compileFile("hlsl/pbr.hlsl", "main", "ps_5_0", macros);
+
+		std::vector<D3D10_SHADER_MACRO> macros = { {definitions[i],""} };
+		if (has("tiled") && getValue<bool>("tiled"))
+			macros.push_back({ "TILED", ""});
+
+		macros.push_back({ NULL, NULL });
+		
+		auto blob = r->compileFile("hlsl/pbr.hlsl", "main", "ps_5_0", macros.data());
 		mPSs[i] = r->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
 	}
 
@@ -47,48 +53,63 @@ void PBR::render(Renderer::Texture::Ptr rt)
 
 
 
-	getScene()->visitLights([this,cam,rt](Scene::Light::Ptr light) {
-		Constants constants;
-		constants.radiance = light->getColor();
-		constants.roughness = getValue<float>("roughness");
-		constants.metallic = getValue<float>("metallic");
+	Constants constants;
+	int index = 0;
+	Matrix view = cam->getViewMatrix();
+	getScene()->visitLights([&constants, &index,view,this](Scene::Light::Ptr light) {
+		Vector3 color = light->getColor();
+		color *= getValue<float>("radiance");
+		constants.lightscolor[index] = {color.x,color.y,color.z,1};
 
 		auto dir = light->getDirection();
 		dir.Normalize();
 		auto pos = light->getNode()->getRealPosition();
 		if (light->getType() == Scene::Light::LT_DIR)
-			constants.lightpos = { dir.x, dir.y,dir.z ,0 };
+			constants.lightspos[index] = { dir.x, dir.y,dir.z ,0 };
 		else
-			constants.lightpos = { pos.x, pos.y,pos.z ,1 };
+			constants.lightspos[index] = { pos.x, pos.y,pos.z ,1 };
 
-		Matrix view = cam->getViewMatrix();
-		constants.lightpos = Vector4::Transform(constants.lightpos, view);
-		constants.invertPorj = cam->getProjectionMatrix().Invert().Transpose();
-
-		mConstants.lock()->blit(&constants, sizeof(constants));
-
-		mQuad.setRenderTarget(rt);
-		mQuad.setTextures({ mAlbedo, mNormal, mDepth });
-		mQuad.setPixelShader(mPSs[light->getType()]);
-		mQuad.setSamplers({ mLinear, mPoint });
-		mQuad.setConstant(mConstants);
-
-		D3D11_BLEND_DESC desc = { 0 };
-
-		desc.RenderTarget[0] = {
-			TRUE,
-			D3D11_BLEND_ONE,
-			D3D11_BLEND_ONE,
-			D3D11_BLEND_OP_ADD,
-			D3D11_BLEND_ONE,
-			D3D11_BLEND_ONE,
-			D3D11_BLEND_OP_ADD,
-			D3D11_COLOR_WRITE_ENABLE_ALL
-		};
-
-		mQuad.setBlend(desc);
-		mQuad.draw();
+		constants.lightspos[index] = Vector4::Transform(constants.lightspos[index], view);
+		index++;
 	});
 
+	constants.numLights = index;
+	if (has("numLights"))
+		constants.numLights = std::min(index, getValue<int>("numLights"));
+	
+	constants.roughness = getValue<float>("roughness");
+	constants.metallic = getValue<float>("metallic");
+	auto desc = mAlbedo.lock()->getDesc();
+	constants.width = desc.Width;
+	constants.height = desc.Height;
+	constants.maxLightsPerTile = std::min(getValue<int>("maxLightsPerTile"), constants.numLights);
+	constants.tilePerline = ((desc.Width + 16 - 1) & ~15) / 16;
+
+
+	constants.invertPorj = cam->getProjectionMatrix().Invert().Transpose();
+
+	mConstants.lock()->blit(&constants, sizeof(constants));
+
+	mQuad.setRenderTarget(rt);
+	mQuad.setTextures({ mAlbedo, mNormal, mDepth ,mLightsIndex});
+	mQuad.setPixelShader(mPSs[Scene::Light::LT_POINT]);
+	mQuad.setSamplers({ mLinear, mPoint });
+	mQuad.setConstant(mConstants);
+
+	D3D11_BLEND_DESC blend = { 0 };
+
+	blend.RenderTarget[0] = {
+		TRUE,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_OP_ADD,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_OP_ADD,
+		D3D11_COLOR_WRITE_ENABLE_ALL
+	};
+
+	mQuad.setBlend(blend);
+	mQuad.draw();
 
 }

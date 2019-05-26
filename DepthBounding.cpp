@@ -12,6 +12,7 @@ DepthBounding::DepthBounding(
 	mDepth(depth),
 	mDepthMinMax(db)
 {
+	mName = "depth bounding";
 	auto blob = r->compileFile("hlsl/depthbounding.hlsl", "main", "cs_5_0");
 	mCS = r->createComputeShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
 

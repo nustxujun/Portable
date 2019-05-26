@@ -7,11 +7,14 @@
 #include "GeometryMesh.h"
 #include "DepthBounding.h"
 #include "LightCulling.h"
+#include "AO.h"
 
 #include <random>
 
 void MultipleLights::initPipeline()
 {
+
+
 	//initDRPipeline();
 	initTBDRPipeline();
 }
@@ -47,12 +50,25 @@ void MultipleLights::initScene()
 	
 	}
 
+	//{
+	//	Parameters params;
+	//	//params["file"] = "tiny.x";
+	//	params["file"] = "media/sponza/sponza.obj";
+	//	auto model = mScene->createModel("test", params, [this](const Parameters& p) {
+	//		return Mesh::Ptr(new Mesh(p, mRenderer));
+	//	});
+
+	//	model->attach(mScene->getRoot());
+	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+	//
+	//}
 
 	auto cam = mScene->createOrGetCamera("main");
 	cam->setViewport(0, 0, mRenderer->getWidth(), mRenderer->getHeight());
 	cam->setFOVy(0.785398185);
 	auto aabb = root->getWorldAABB();
-	cam->setNearFar(1.0f, (aabb.second - aabb.first).Length());
+	auto len = aabb.second - aabb.first;
+	cam->setNearFar(1.0f, (len).Length());
 
 	cam->lookat(aabb.second, aabb.first);
 	std::uniform_real_distribution<float> rand(0.0f, 0.1f);
@@ -66,7 +82,7 @@ void MultipleLights::initScene()
 		Vector3 vel;
 	};
 	std::shared_ptr<std::vector<State>> lights = std::shared_ptr<std::vector<State>>(new std::vector<State>());
-	int numlights = 100;
+	int numlights = 2;
 	for (int i = 0; i < numlights; ++i)
 	{
 		std::stringstream ss;
@@ -74,7 +90,7 @@ void MultipleLights::initScene()
 		auto light = mScene->createOrGetLight(ss.str());
 		Vector3 color = { rand(gen),rand(gen),rand(gen) };
 		color.Normalize();
-		color *= 50;
+		//color *= 1;
 		light->setColor(color);
 		light->setType(Scene::Light::LT_POINT);
 		light->attach(mScene->getRoot());
@@ -82,7 +98,10 @@ void MultipleLights::initScene()
 		float t = i * step;
 		float z = sin(t) * 30;
 		float x = cos(t) * 30;
-		light->getNode()->setPosition(rand2(gen) * 49.f, rand2(gen) * 49.f, rand2(gen) * 49.f);
+		//light->getNode()->setPosition(rand2(gen) *len.x * 0.5f, rand2(gen) * len.y  * 0.5f, rand2(gen) * len.z  * 0.5f);
+		//light->getNode()->setPosition( 0.0f, len.y  * 0.5f - 0.1f,0.0f );
+		light->getNode()->setPosition(x, 49.0f, z);
+		//light->getNode()->setPosition(0.0f, 49.0f, ((i % 2) * 2.0f - 1) * 30.0f);
 		light->attach(root);
 		Vector3 vel = { rand(gen),rand(gen),rand(gen) };
 		vel.Normalize();
@@ -136,7 +155,7 @@ void MultipleLights::initDRPipeline()
 	});
 
 	mPipeline->pushStage<GBuffer>(albedo, normal, worldpos, depth);
-	mPipeline->pushStage<PBR>(albedo, normal, depth, 0.9f, 0.1f);
+	mPipeline->pushStage<PBR>(albedo, normal, depth);
 	//mPipeline->pushStage<HDR>();
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 
@@ -175,6 +194,11 @@ void MultipleLights::initTBDRPipeline()
 	desc.MiscFlags = 0;
 	auto depthBounds = mRenderer->createTexture(desc);
 
+	auto lightindex = mRenderer->createRWBuffer(
+		desc.Width * desc.Height * (1 + 100) * sizeof(int),
+		sizeof(int),
+		DXGI_FORMAT_R16_UINT,
+		D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE);
 
 	mPipeline->setFrameBuffer(frame);
 	auto bb = mRenderer->getBackbuffer();
@@ -185,11 +209,12 @@ void MultipleLights::initTBDRPipeline()
 
 	mPipeline->pushStage<GBuffer>(albedo, normal, worldpos, depth);
 	mPipeline->pushStage<DepthBounding>(depth, depthBounds);
-	mPipeline->pushStage<LightCulling>(depthBounds);
+	mPipeline->pushStage<LightCulling>(depthBounds, lightindex);
 
-	//mPipeline->pushStage<PBR>(albedo, normal, depth, 0.1f, 0.9f);
+	mPipeline->pushStage<PBR>(albedo, normal, depth, lightindex);
+	//mPipeline->pushStage<AO>(normal,depth, 10);
 	//mPipeline->pushStage<HDR>();
-	//mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
+	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 
 	mPipeline->pushStage([bb, quad](Renderer::Texture::Ptr rt)
 	{

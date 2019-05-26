@@ -4,7 +4,6 @@
 #include <fstream>
 #include "D3D11Helper.h"
 
-
 void Renderer::checkResult(HRESULT hr)
 {
 	if (hr == S_OK) return;
@@ -72,7 +71,6 @@ void Renderer::init(HWND win, int width, int height)
 	
 
 	ID3D11Texture2D* backbuffer = NULL;
-	ID3D11RenderTargetView* bbv;
 	checkResult( mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backbuffer) );
 
 	auto shared = std::shared_ptr<Texture>(new Texture(this, backbuffer));
@@ -84,25 +82,33 @@ void Renderer::init(HWND win, int width, int height)
 	mDefaultDepthStencil = createDepthStencil(width, height, DXGI_FORMAT_D24_UNORM_S8_UINT);
 
 
-	//D3D11_RASTERIZER_DESC rasterDesc;
-	//rasterDesc.AntialiasedLineEnable = false;
-	//rasterDesc.CullMode = D3D11_CULL_BACK;
-	//rasterDesc.DepthBias = 0;
-	//rasterDesc.DepthBiasClamp = 0.0f;
-	//rasterDesc.DepthClipEnable = true;
-	//rasterDesc.FillMode = D3D11_FILL_SOLID;
-	//rasterDesc.FrontCounterClockwise = false;
-	//rasterDesc.MultisampleEnable = false;
-	//rasterDesc.ScissorEnable = false;
-	//rasterDesc.SlopeScaledDepthBias = 0.0f;
-	//createOrGetRasterizer(rasterDesc);
+	D3D11_QUERY_DESC d;
+	d.Query = D3D11_QUERY_TIMESTAMP_DISJOINT;
+	d.MiscFlags = 0;
 
+	mDevice->CreateQuery(&d, &mDisjoint);
+	mContext->Begin(mDisjoint);
 }
 
 
 void Renderer::present()
 {
 	mSwapChain->Present(0,0);
+
+
+	mContext->End(mDisjoint);
+	while (mContext->GetData(mDisjoint, NULL, 0, 0) == S_FALSE);
+
+	D3D11_QUERY_DATA_TIMESTAMP_DISJOINT tsDisjoint;
+	mContext->GetData(mDisjoint, &tsDisjoint, sizeof(tsDisjoint), 0);
+	if (tsDisjoint.Disjoint != TRUE)
+	{
+		for (auto& i : mProfiles)
+			i->getData(tsDisjoint.Frequency);
+	}
+
+	mContext->Begin(mDisjoint);
+
 }
 
 void Renderer::clearRenderTarget(RenderTarget::Ptr rt, const float color[4])
@@ -418,6 +424,7 @@ void Renderer::setComputeShder(ComputeShader::Weak shader)
 
 void Renderer::uninit()
 {
+	mDisjoint->Release();
 	mDepthStencils.clear();
 	mBlendStates.clear();
 	mDepthStencilStates.clear();
@@ -510,6 +517,14 @@ Renderer::Buffer::Ptr Renderer::createBuffer(int size, D3D11_BIND_FLAG flag, con
 	mBuffers.emplace_back(new Buffer(this, bd, initialdata));
 	return mBuffers.back();
 }
+
+Renderer::Buffer::Ptr Renderer::createRWBuffer(int size, int stride, DXGI_FORMAT format, size_t bindflag, D3D11_USAGE usage, size_t CPUaccess)
+{
+	mBuffers.emplace_back(new Buffer(this,size,stride,format,bindflag,usage,CPUaccess));
+
+	return mBuffers.back();
+}
+
 
 Renderer::SharedCompiledData Renderer::compileFile(const std::string& filename, const std::string& entryPoint, const std::string& shaderModel, const D3D10_SHADER_MACRO* macro)
 {
@@ -630,6 +645,13 @@ Renderer::DepthStencil::Ptr Renderer::createDepthStencil(int width, int height, 
 	return ptr;
 }
 
+Renderer::Profile::Ptr Renderer::createProfile()
+{
+	mProfiles.push_back(std::shared_ptr<Profile>(new Profile(this)));
+	return mProfiles.back();
+}
+
+
 Renderer::ShaderResource::ShaderResource(ID3D11ShaderResourceView* srv): mSRView(srv)
 {
 
@@ -659,18 +681,31 @@ Renderer::Buffer::Buffer(Renderer* renderer, const D3D11_BUFFER_DESC& desc, cons
 {
 	mDesc = desc;
 	checkResult(getDevice()->CreateBuffer(&desc, data, &mBuffer));
+}
 
-	bool unorderedAccess = ((desc.BindFlags & D3D11_BIND_UNORDERED_ACCESS) != 0);
-	bool shaderRecource = ((desc.BindFlags & D3D11_BIND_SHADER_RESOURCE) != 0);
+Renderer::Buffer::Buffer(Renderer * renderer, int size, int stride, DXGI_FORMAT format, size_t bindflags, D3D11_USAGE usage, size_t cpuaccess):D3DObject(renderer)
+{
+	D3D11_BUFFER_DESC mDesc = { 0 };
+	mDesc.BindFlags = bindflags;
+	mDesc.ByteWidth = size;
+	mDesc.CPUAccessFlags = cpuaccess;
+	mDesc.MiscFlags = (format == DXGI_FORMAT_UNKNOWN) ? D3D11_RESOURCE_MISC_BUFFER_STRUCTURED : 0;
+	mDesc.StructureByteStride = stride;
+	mDesc.Usage = usage;
+
+	checkResult(getDevice()->CreateBuffer(&mDesc, nullptr, &mBuffer));
+
+
+	bool unorderedAccess = ((bindflags & D3D11_BIND_UNORDERED_ACCESS) != 0);
+	bool shaderRecource = ((bindflags & D3D11_BIND_SHADER_RESOURCE) != 0);
 
 	if (shaderRecource)
 	{
 		D3D11_SHADER_RESOURCE_VIEW_DESC srDesc;
-		srDesc.Format = DXGI_FORMAT_UNKNOWN;
+		srDesc.Format = format;
 		srDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
 		srDesc.Buffer.FirstElement = 0;
-		srDesc.Buffer.NumElements = desc.ByteWidth / desc.StructureByteStride;
-
+		srDesc.Buffer.NumElements = size / stride;
 		checkResult(getDevice()->CreateShaderResourceView(mBuffer, &srDesc, &mSRView));
 	}
 
@@ -678,14 +713,13 @@ Renderer::Buffer::Buffer(Renderer* renderer, const D3D11_BUFFER_DESC& desc, cons
 	{
 		D3D11_UNORDERED_ACCESS_VIEW_DESC DescUAV;
 		ZeroMemory(&DescUAV, sizeof(D3D11_UNORDERED_ACCESS_VIEW_DESC));
-		DescUAV.Format = DXGI_FORMAT_UNKNOWN;
+		DescUAV.Format = format;
 		DescUAV.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
 		DescUAV.Buffer.FirstElement = 0;
-		DescUAV.Buffer.NumElements = desc.ByteWidth / desc.StructureByteStride;
+		DescUAV.Buffer.NumElements = size / stride;
 
 		checkResult(getDevice()->CreateUnorderedAccessView(mBuffer, &DescUAV, &mUAV));
 	}
-
 
 }
 
@@ -841,21 +875,21 @@ void Renderer::Texture::clear(const std::array<float, 4> c)
 	}
 }
 
-void Renderer::Texture::swap(RenderTarget::Ptr rt, bool force)
+void Renderer::Texture::swap(Texture::Ptr t, bool force)
 {
-	//auto ptr = rt.lock();
-	//if (ptr == nullptr) return;
-	//if (memcmp(&mDesc, &ptr->mDesc, sizeof(mDesc)) != 0 && !force)
-	//{
-	//	error("only can swap the same rts.");
-	//	return;
-	//}
+	auto ptr = t.lock();
+	if (ptr == nullptr) return;
+	if (memcmp(&mDesc, &ptr->mDesc, sizeof(mDesc)) != 0 && !force)
+	{
+		error("only can swap the same textures.");
+		return;
+	}
 
-	//std::swap(mTexture, ptr->mTexture);
-	//std::swap(mRTView, ptr->mRTView);
-	//std::swap(mSRView, ptr->mSRView);
-	//std::swap(mDesc, ptr->mDesc);
-	abort();
+	std::swap(mTexture, ptr->mTexture);
+	std::swap(mRTView, ptr->mRTView);
+	std::swap(mSRView, ptr->mSRView);
+	std::swap(mUAV, ptr->mUAV);
+	std::swap(mDesc, ptr->mDesc);
 }
 
 Renderer::Texture::Ptr Renderer::Texture::clone()const
@@ -1076,4 +1110,46 @@ Renderer::UnorderedAccess::~UnorderedAccess()
 {
 	if (mUAV)
 		mUAV->Release();
+}
+
+Renderer::Profile::Profile(Renderer * r):D3DObject(r)
+{
+	D3D11_QUERY_DESC desc;
+	desc.MiscFlags = 0;
+	desc.Query = D3D11_QUERY_TIMESTAMP;
+
+	checkResult(getDevice()->CreateQuery(&desc, &mBegin));
+	checkResult(getDevice()->CreateQuery(&desc, &mEnd));
+
+}
+
+Renderer::Profile::~Profile()
+{
+	mBegin->Release();
+	mEnd->Release();
+}
+
+Renderer::Profile::Timer Renderer::Profile::count()
+{
+	return Timer(this);
+}
+
+void Renderer::Profile::getData(UINT64 frq)
+{
+	UINT64 beg, end;
+	getContext()->GetData(mBegin, &beg, sizeof(UINT64), 0);
+	getContext()->GetData(mEnd, &end, sizeof(UINT64), 0);
+
+	float delta = float(end - beg) / float(frq) * 1000.0f;
+
+	mElapsedTime = delta;
+	//mCachedTime += delta;
+	//mNumCached++;
+
+	//if (mNumCached < 10)
+	//	return;
+
+	//mElapsedTime = mCachedTime / (float)mNumCached;
+	//mCachedTime = 0;
+	//mNumCached = 0;
 }

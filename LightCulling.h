@@ -5,20 +5,31 @@
 #include "GPUComputer.h"
 class LightCulling: public Pipeline::Stage
 {
+	__declspec(align(16))
+	struct Constants
+	{
+		Matrix invertProj;
+		Vector4 lights[100];
+		int numLights;
+		float texelwidth;
+		float texelheight;
+		int maxLightsPerTile;
+		int tilePerline;
+	};
 public:
 	LightCulling(
 		Renderer::Ptr r,
 		Scene::Ptr s,
 		Setting::Ptr set,
 		Pipeline* p,
-		Renderer::ShaderResource::Ptr depthBounds
+		Renderer::Texture::Ptr depthBounds,
+		Renderer::Buffer::Ptr lightsindex
 	);
 	void render(Renderer::Texture::Ptr rt)  override final;
 private:
-	Renderer::ShaderResource::Ptr mDepthBounds;
-	Renderer::Texture::Ptr mOutput;
+	Renderer::Texture::Ptr mDepthBounds;
 	GPUComputer mComputer;
 	Renderer::ComputeShader::Weak mCS;
-	size_t mWidth;
-	size_t mHeight;
+	Renderer::Buffer::Ptr mConstants;
+	Renderer::Buffer::Ptr mLightsOutput;
 };
