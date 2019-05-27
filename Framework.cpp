@@ -55,7 +55,7 @@ void Framework::initPipeline()
 
 	mPipeline->setFrameBuffer(frame);
 	auto bb = mRenderer->getBackbuffer();
-	mPipeline->pushStage([bb](Renderer::Texture::Ptr rt)
+	mPipeline->pushStage("clear rt", [bb](Renderer::Texture::Ptr rt)
 	{
 		bb.lock()->clear({ 1,1,1,0 });
 		rt.lock()->clear({ 0,0,0,0 });
@@ -72,7 +72,7 @@ void Framework::initPipeline()
 	mPipeline->pushStage<HDR>();
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 
-	mPipeline->pushStage([bb, quad](Renderer::Texture::Ptr rt)
+	mPipeline->pushStage("draw to backbuffer", [bb, quad](Renderer::Texture::Ptr rt)
 	{
 		quad->setRenderTarget(bb);
 		quad->drawTexture(rt, false);
@@ -176,7 +176,13 @@ void Framework::initInput()
 void Framework::showFPS()
 {
 	calFPS();
-	set("msg", { {"msg",mFPS} });
+	std::stringstream ss;
+	ss << mFPS;
+	ss << "(";
+	ss.precision(4);
+	ss << (float)1000.0f / (float)mFPS << ")";
+	set("msg", { {"msg",ss.str()} });
+
 	//mRenderer->setRenderTarget(mRenderer->getBackbuffer());
 	//auto font = mRenderer->createOrGetFont(L"myfile.spritefont");
 

@@ -1,7 +1,7 @@
 #include "PostProcessing.h"
 
-PostProcessing::PostProcessing(Renderer::Ptr r, Scene::Ptr s, Setting::Ptr st, Pipeline * p, const std::string & ps):
-	Pipeline::Stage(r,s,st,p), mQuad(r)
+PostProcessing::PostProcessing(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr st, Pipeline * p, const std::string & ps):
+	Pipeline::Stage(r,s,q,st,p), mQuad(r)
 {
 	mName = ps;
 	auto blob = r->compileFile(ps, "main", "ps_5_0");

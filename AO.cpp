@@ -3,8 +3,8 @@
 #include <random>
 #include "MathUtilities.h"
 
-AO::AO(Renderer::Ptr r, Scene::Ptr s, Setting::Ptr st, Pipeline* p, Renderer::ShaderResource::Ptr normal, Renderer::ShaderResource::Ptr depth, float radius):
-	Pipeline::Stage(r,s,st,p), mNormal(normal), mDepth(depth)
+AO::AO(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr st, Pipeline* p, Renderer::ShaderResource::Ptr normal, Renderer::ShaderResource::Ptr depth, float radius):
+	Pipeline::Stage(r,s,q,st,p), mNormal(normal), mDepth(depth)
 {
 	mName = "AO";
 	auto blob = r->compileFile("hlsl/ssao.hlsl", "main", "ps_5_0");
@@ -88,15 +88,15 @@ void AO::render(Renderer::Texture::Ptr rt)
 
 	mMatrix.lock()->blit(&matrix, sizeof(matrix));
 
-
-	mQuad->setConstants({ mKernel, mMatrix });
-	mQuad->setPixelShader(mPS);
-	mQuad->setSamplers({ mLinearWrap ,mPointWrap });
-	mQuad->setTextures({ mNormal, mDepth, mNoise});
+	auto quad = getQuad();
+	quad->setConstants({ mKernel, mMatrix });
+	quad->setPixelShader(mPS);
+	quad->setSamplers({ mLinearWrap ,mPointWrap });
+	quad->setTextures({ mNormal, mDepth, mNoise});
 	
-	mQuad->setDefaultBlend();
-	mQuad->setRenderTarget(rt);
-	mQuad->draw();
+	quad->setDefaultBlend();
+	quad->setRenderTarget(rt);
+	quad->draw();
 }
 
 

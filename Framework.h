@@ -34,5 +34,5 @@ protected:
 
 	size_t mCachedNumFrames = 0;
 	size_t mLastTimeStamp = 0;
-	size_t mFPS = 0;
+	float mFPS = 0;
 };

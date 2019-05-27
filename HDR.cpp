@@ -1,7 +1,7 @@
 #include "HDR.h"
 
-HDR::HDR(Renderer::Ptr r, Scene::Ptr s, Setting::Ptr st, Pipeline * p):
-	Pipeline::Stage(r,s,st,p), mQuad(r)
+HDR::HDR(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr st, Pipeline * p):
+	Pipeline::Stage(r,s,q,st,p)
 {
 	mName = "HDR";
 	auto blob = r->compileFile("hlsl/hdr.hlsl", "main", "ps_5_0");
@@ -36,9 +36,9 @@ void HDR::render(Renderer::Texture::Ptr rt)
 {
 	renderLuminance(rt);
 	renderHDR(rt);
-
-	mQuad.setRenderTarget(rt);
-	mQuad.drawTexture(mTarget, false);
+	auto quad = getQuad();
+	quad->setRenderTarget(rt);
+	quad->drawTexture(mTarget, false);
 
 	//auto w = getRenderer()->getWidth();
 	//auto h = getRenderer()->getHeight();
@@ -53,9 +53,9 @@ void HDR::render(Renderer::Texture::Ptr rt)
 	//		0,1.0f,
 	//	};
 
-	//	mQuad.setViewport(vp);
-	//	mQuad.setTextures({ mLuminance[i] });
-	//	mQuad.draw();
+	//	quad->setViewport(vp);
+	//	quad->setTextures({ mLuminance[i] });
+	//	quad->draw();
 	//}
 	//
 	
@@ -65,37 +65,39 @@ void HDR::renderLuminance(Renderer::Texture::Ptr rt)
 {
 	float len = pow(3, mLuminance.size() - 1);
 	mLuminance.back().lock()->clear({ 1,1,1,1 });
-	mQuad.setDefaultBlend(false);
+	auto quad = getQuad();
+	quad->setDefaultBlend(false);
 
-	mQuad.setRenderTarget(mLuminance.back());
-	mQuad.setSamplers({ mPoint });
-	mQuad.setPixelShader(mDownSamplePS2x2);
-	mQuad.setTextures({rt });
+	quad->setRenderTarget(mLuminance.back());
+	quad->setSamplers({ mPoint });
+	quad->setPixelShader(mDownSamplePS2x2);
+	quad->setTextures({rt });
 
-	mQuad.setViewport({0,0,len ,len ,0,1.0f});
-	mQuad.draw();
+	quad->setViewport({0,0,len ,len ,0,1.0f});
+	quad->draw();
 
-	mQuad.setPixelShader(mDownSamplePS3x3);
+	quad->setPixelShader(mDownSamplePS3x3);
 	for (size_t i = mLuminance.size() - 1; i > 0; --i)
 	{
 		len /= 3;
-		mQuad.setViewport({ 0,0,len ,len ,0,1.0f });
-		mQuad.setRenderTarget(mLuminance[i - 1]);
-		mQuad.setTextures({ mLuminance[i] });
-		mQuad.draw();
+		quad->setViewport({ 0,0,len ,len ,0,1.0f });
+		quad->setRenderTarget(mLuminance[i - 1]);
+		quad->setTextures({ mLuminance[i] });
+		quad->draw();
 	}
-	//mQuad.setRenderTarget(rt);
-	//mQuad.drawTexture(mLuminance[0],false);
+	//quad->setRenderTarget(rt);
+	//quad->drawTexture(mLuminance[0],false);
 }
 
 void HDR::renderHDR(Renderer::Texture::Ptr frame)
 {
-	mQuad.setDefaultViewport();
-	mQuad.setDefaultBlend(false);
+	auto quad = getQuad();
+	quad->setDefaultViewport();
+	quad->setDefaultBlend(false);
 
-	mQuad.setSamplers({ mPoint });
-	mQuad.setPixelShader(mPS);
-	mQuad.setTextures({ frame,mLuminance[0] });
-	mQuad.setRenderTarget(mTarget);
-	mQuad.draw();
+	quad->setSamplers({ mPoint });
+	quad->setPixelShader(mPS);
+	quad->setTextures({ frame,mLuminance[0] });
+	quad->setRenderTarget(mTarget);
+	quad->draw();
 }

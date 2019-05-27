@@ -4,7 +4,7 @@
 class HDR :public Pipeline::Stage
 {
 public:
-	HDR(Renderer::Ptr r, Scene::Ptr s, Setting::Ptr set, Pipeline* p);
+	HDR(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr set, Pipeline* p);
 	~HDR();
 	void render(Renderer::Texture::Ptr rt) override;
 private:
@@ -17,6 +17,5 @@ private:
 	Renderer::PixelShader::Weak mDownSamplePS3x3;
 	Renderer::Sampler::Ptr mPoint;
 
-	Quad mQuad;
 	std::vector<Renderer::Texture::Ptr> mLuminance;
 };

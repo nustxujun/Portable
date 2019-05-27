@@ -1,8 +1,8 @@
 #include "ShadowMap.h"
 #include "MathUtilities.h"
 
-ShadowMap::ShadowMap(Renderer::Ptr r, Scene::Ptr s,Setting::Ptr st, Pipeline* p,Renderer::ShaderResource::Ptr worldpos, Renderer::ShaderResource::Ptr depth, int size, int numlevels) :
-	Pipeline::Stage(r, s,st, p), mWorldPos(worldpos),mSceneDepth(depth), mShadowMapSize(size), mNumLevels(numlevels), mQuad(r)
+ShadowMap::ShadowMap(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr st, Pipeline* p,Renderer::ShaderResource::Ptr worldpos, Renderer::ShaderResource::Ptr depth, int size, int numlevels) :
+	Pipeline::Stage(r, s,q,st, p), mWorldPos(worldpos),mSceneDepth(depth), mShadowMapSize(size), mNumLevels(numlevels), mQuad(r)
 {
 	mName = "shadow map";
 	mShadowMapSize = 2048;

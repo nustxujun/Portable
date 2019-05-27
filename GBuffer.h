@@ -9,6 +9,7 @@ public:
 	GBuffer(
 		Renderer::Ptr r, 
 		Scene::Ptr s, 
+		Quad::Ptr q,
 		Setting::Ptr set,
 		Pipeline* p,
 		Renderer::RenderTarget::Ptr a, 

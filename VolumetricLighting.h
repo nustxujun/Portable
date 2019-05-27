@@ -5,7 +5,7 @@
 class VolumetricLighting:public Pipeline::Stage
 {
 public:
-	VolumetricLighting(Renderer::Ptr r, Scene::Ptr s, Setting::Ptr set, Pipeline* p);
+	VolumetricLighting(Renderer::Ptr r, Scene::Ptr s,Quad::Ptr q, Setting::Ptr set, Pipeline* p);
 	~VolumetricLighting();
 
 	void render(Renderer::Texture::Ptr rt)  override final;

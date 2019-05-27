@@ -4,7 +4,7 @@
 class PostProcessing:public Pipeline::Stage
 {
 public:
-	PostProcessing(Renderer::Ptr r, Scene::Ptr s, Setting::Ptr set, Pipeline* p, const std::string& ps);
+	PostProcessing(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr set, Pipeline* p, const std::string& ps);
 	~PostProcessing();
 
 	void render(Renderer::Texture::Ptr rt)  override ;

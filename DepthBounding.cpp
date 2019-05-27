@@ -3,11 +3,12 @@
 DepthBounding::DepthBounding(
 	Renderer::Ptr r, 
 	Scene::Ptr s, 
+	Quad::Ptr q,
 	Setting::Ptr set, 
 	Pipeline * p, 
 	Renderer::ShaderResource::Ptr depth,
 	Renderer::Texture::Ptr db):
-	Pipeline::Stage(r,s,set,p), 
+	Pipeline::Stage(r,s,q,set,p), 
 	mComputer(r), 
 	mDepth(depth),
 	mDepthMinMax(db)

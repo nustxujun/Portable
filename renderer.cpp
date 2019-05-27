@@ -424,6 +424,7 @@ void Renderer::setComputeShder(ComputeShader::Weak shader)
 
 void Renderer::uninit()
 {
+	mProfiles.clear();
 	mDisjoint->Release();
 	mDepthStencils.clear();
 	mBlendStates.clear();

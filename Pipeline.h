@@ -15,7 +15,7 @@ public:
 	public:
 		using Ptr = std::shared_ptr<Stage>;
 	public:
-		Stage(Renderer::Ptr r, Scene::Ptr s, Setting::Ptr set, Pipeline* p);
+		Stage(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q,Setting::Ptr set, Pipeline* p);
 		virtual ~Stage();
 		void update(Renderer::Texture::Ptr rt);
 		virtual void render(Renderer::Texture::Ptr rt) = 0;
@@ -23,14 +23,15 @@ public:
 
 		Renderer::Ptr getRenderer()const { return mRenderer; }
 		Scene::Ptr getScene()const { return mScene; }
+		Quad::Ptr getQuad()const { return mQuad; }
 		virtual const std::string& getName() const{ return mName; }
 
 		void showCost();
 	protected:
-		Quad::Ptr mQuad;
 		std::string mName = "Default Stage";
 
 	private:
+		Quad::Ptr mQuad;
 		Renderer::Ptr mRenderer;
 		Scene::Ptr mScene;
 		Pipeline* mPipeline;
@@ -46,9 +47,9 @@ public:
 	public:
 		using DrawCall = std::function<void(Renderer::Texture::Ptr)>;
 	public:
-		Anonymous(Renderer::Ptr r, Scene::Ptr s,Setting::Ptr st, Pipeline* p, DrawCall drawcall) :Stage(r, s,st, p), mDrawCall(drawcall)
+		Anonymous(Renderer::Ptr r, Scene::Ptr s,Quad::Ptr q,Setting::Ptr st, Pipeline* p, const std::string& name, DrawCall drawcall) :Stage(r, s,q,st, p),mDrawCall(drawcall)
 		{
-			mName = "Anonymous";
+			mName = name;
 		}
 
 		void render(Renderer::Texture::Ptr rt) override final
@@ -66,11 +67,11 @@ public:
 	template<class T, class ... Args>
 	void pushStage(Args ... args)
 	{
-		auto ptr = new T(mRenderer, mScene, mSetting,this, args...);
+		auto ptr = new T(mRenderer, mScene, mQuad,mSetting,this, args...);
 		mStages.emplace_back(Stage::Ptr(ptr));
 	}
 
-	void pushStage(Anonymous::DrawCall dc);
+	void pushStage(const std::string& name, Anonymous::DrawCall dc);
 
 	void render();
 	void setFrameBuffer(Renderer::Texture::Ptr rt);
@@ -81,6 +82,7 @@ public:
 private:
 	Renderer::Ptr mRenderer;
 	Scene::Ptr mScene;
+	Quad::Ptr mQuad;
 	std::vector<Stage::Ptr> mStages;
 	Renderer::Texture::Ptr mFrameBuffer;
 	Setting::Ptr mSetting;

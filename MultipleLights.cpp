@@ -15,8 +15,8 @@ void MultipleLights::initPipeline()
 {
 
 
-	//initDRPipeline();
-	initTBDRPipeline();
+	initDRPipeline();
+	//initTBDRPipeline();
 }
 
 void MultipleLights::initScene()
@@ -40,6 +40,7 @@ void MultipleLights::initScene()
 		Parameters params;
 		params["geom"] = "sphere";
 		params["radius"] = "10";
+		params["resolution"] = "10";
 		auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
 		{
 			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
@@ -53,7 +54,7 @@ void MultipleLights::initScene()
 	//{
 	//	Parameters params;
 	//	//params["file"] = "tiny.x";
-	//	params["file"] = "media/sponza/sponza.obj";
+	//	params["file"] = "sponza/sponza.obj";
 	//	auto model = mScene->createModel("test", params, [this](const Parameters& p) {
 	//		return Mesh::Ptr(new Mesh(p, mRenderer));
 	//	});
@@ -82,7 +83,7 @@ void MultipleLights::initScene()
 		Vector3 vel;
 	};
 	std::shared_ptr<std::vector<State>> lights = std::shared_ptr<std::vector<State>>(new std::vector<State>());
-	int numlights = 2;
+	int numlights = 100;
 	for (int i = 0; i < numlights; ++i)
 	{
 		std::stringstream ss;
@@ -98,28 +99,28 @@ void MultipleLights::initScene()
 		float t = i * step;
 		float z = sin(t) * 30;
 		float x = cos(t) * 30;
-		//light->getNode()->setPosition(rand2(gen) *len.x * 0.5f, rand2(gen) * len.y  * 0.5f, rand2(gen) * len.z  * 0.5f);
+		light->getNode()->setPosition(rand2(gen) *len.x * 0.5f, rand2(gen) * len.y  * 0.5f, rand2(gen) * len.z  * 0.5f);
 		//light->getNode()->setPosition( 0.0f, len.y  * 0.5f - 0.1f,0.0f );
-		light->getNode()->setPosition(x, 49.0f, z);
+		//light->getNode()->setPosition(x, 49.0f, z);
 		//light->getNode()->setPosition(0.0f, 49.0f, ((i % 2) * 2.0f - 1) * 30.0f);
 		light->attach(root);
 		Vector3 vel = { rand(gen),rand(gen),rand(gen) };
 		vel.Normalize();
-		vel *= 0.0f;
+		vel *= 1.0f;
 		lights->push_back({light,vel });
 	}
 
-	//mUpdater = [lights]() {
+	//mUpdater = [lights,len]() {
 	//	for(auto&i: *lights)
 	//	{ 
 	//		auto node = i.light->getNode();
 	//		auto pos = node->getPosition() + i.vel;
 
-	//		if (pos.x > 50 || pos.x < -50)
+	//		if (pos.x > len.x || pos.x < -len.x)
 	//			i.vel.x = -i.vel.x;
-	//		if (pos.y > 50 || pos.y < -50)
+	//		if (pos.y > len.y || pos.y < -len.y)
 	//			i.vel.y = -i.vel.y;
-	//		if (pos.z > 50 || pos.z < -50)
+	//		if (pos.z > len.z || pos.z < -len.z)
 	//			i.vel.z = -i.vel.z;
 
 	//		node->setPosition(pos);
@@ -149,7 +150,7 @@ void MultipleLights::initDRPipeline()
 
 	mPipeline->setFrameBuffer(frame);
 	auto bb = mRenderer->getBackbuffer();
-	mPipeline->pushStage([bb](Renderer::RenderTarget::Ptr rt)
+	mPipeline->pushStage("clear rt",[bb](Renderer::RenderTarget::Ptr rt)
 	{
 		rt.lock()->clear({ 0,0,0,0 });
 	});
@@ -159,7 +160,7 @@ void MultipleLights::initDRPipeline()
 	//mPipeline->pushStage<HDR>();
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 
-	mPipeline->pushStage([bb, quad](Renderer::Texture::Ptr rt)
+	mPipeline->pushStage("draw to backbuffer",[bb, quad](Renderer::Texture::Ptr rt)
 	{
 		quad->setRenderTarget(bb);
 		quad->drawTexture(rt, false);
@@ -202,7 +203,7 @@ void MultipleLights::initTBDRPipeline()
 
 	mPipeline->setFrameBuffer(frame);
 	auto bb = mRenderer->getBackbuffer();
-	mPipeline->pushStage([bb](Renderer::RenderTarget::Ptr rt)
+	mPipeline->pushStage("clear rt",[bb](Renderer::RenderTarget::Ptr rt)
 	{
 		rt.lock()->clear({ 0,0,0,0 });
 	});
@@ -216,7 +217,7 @@ void MultipleLights::initTBDRPipeline()
 	//mPipeline->pushStage<HDR>();
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 
-	mPipeline->pushStage([bb, quad](Renderer::Texture::Ptr rt)
+	mPipeline->pushStage("draw to backbuffer",[bb, quad](Renderer::Texture::Ptr rt)
 	{
 		quad->setRenderTarget(bb);
 		quad->drawTexture(rt, false);

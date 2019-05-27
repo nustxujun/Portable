@@ -38,7 +38,7 @@ public:
 		}
 
 		template<class T>
-		T getValue(const std::string& key)
+		T getValue(const std::string& key, const T& dft = T(0))
 		{
 			if (!mSetting) 
 				return T(0);
@@ -47,7 +47,7 @@ public:
 			if (j.type() == nlohmann::json::value_t::object)
 				return j["value"];
 			else
-				return T(0);
+				return dft;
 		}
 
 		bool has(const std::string& key)

@@ -1,10 +1,9 @@
 #include "Pipeline.h"
 #include <sstream>
-Pipeline::Stage::Stage(Renderer::Ptr r, Scene::Ptr s, Setting::Ptr set, Pipeline* p):
-	mRenderer(r),mScene(s), mPipeline(p)
+Pipeline::Stage::Stage(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q,Setting::Ptr set, Pipeline* p):
+	mRenderer(r),mScene(s),mQuad(q), mPipeline(p)
 {
 	setSetting(set);
-	mQuad = std::shared_ptr<Quad>(new Quad(r));
 	mProfile = r->createProfile();
 }
 
@@ -35,11 +34,12 @@ Pipeline::Pipeline(Renderer::Ptr r, Scene::Ptr s) :
 	mSetting = Setting::Ptr(new Setting());
 	setSetting(mSetting);
 	mProfile = r->createProfile();
+	mQuad = Quad::Ptr(new Quad(r));
 }
 
-void Pipeline::pushStage(Anonymous::DrawCall dc)
+void Pipeline::pushStage(const std::string& name, Anonymous::DrawCall dc)
 {
-	auto ptr = new Anonymous(mRenderer, mScene,mSetting, this, dc);
+	auto ptr = new Anonymous(mRenderer, mScene,mQuad,mSetting, this, name,dc);
 	mStages.emplace_back(Stage::Ptr(ptr));
 }
 

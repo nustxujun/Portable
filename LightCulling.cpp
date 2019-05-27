@@ -3,11 +3,12 @@
 LightCulling::LightCulling(
 	Renderer::Ptr r,
 	Scene::Ptr s,
+	Quad::Ptr q,
 	Setting::Ptr set,
 	Pipeline * p,
 	Renderer::Texture::Ptr depthBounds,
 	Renderer::Buffer::Ptr lightsindex) :
-	Pipeline::Stage(r, s, set, p), mComputer(r),
+	Pipeline::Stage(r, s, q,set, p), mComputer(r),
 	mDepthBounds(depthBounds),
 	mLightsOutput (lightsindex)
 {
@@ -18,7 +19,6 @@ LightCulling::LightCulling(
 	mConstants = r->createBuffer(sizeof(Constants), D3D11_BIND_CONSTANT_BUFFER);
 
 	this->set("numLights", { {"value", 100}, {"min", 1}, {"max", 100}, {"interval", 1}, {"type","set"} });
-	this->set("lightRange", { {"value", 100}, {"min", 1}, {"max", 1000}, {"interval", 1}, {"type","set"} });
 	this->set("tiled", { {"value",true } });
 	
 	

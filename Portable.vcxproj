@@ -167,6 +167,7 @@
     <ClInclude Include="HDR.h" />
     <ClInclude Include="Input.h" />
     <ClInclude Include="LightCulling.h" />
+    <ClInclude Include="LightVolumeCulling.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="MathUtilities.h" />
     <ClInclude Include="Mesh.h" />

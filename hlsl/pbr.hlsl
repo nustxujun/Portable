@@ -116,7 +116,7 @@ float4 main(PS_INPUT input) : SV_TARGET
 	int startoffset = (x + y * tilePerline) * (100 + 1);
 	uint num = lightsIndex[startoffset];
 	//return (float)num / (float)maxLightsPerTile;
-	for (uint i = 0; i< num; ++i)
+	for (uint i = 1; i<= num; ++i)
 	{
 		uint index = lightsIndex[startoffset + i];
 		float4 lightpos = lightspos[index];
@@ -133,8 +133,18 @@ float4 main(PS_INPUT input) : SV_TARGET
 
 
 		float distance = length(lightpos.xyz - worldPos.xyz);
+
 		float attenuation = 1.0 / (distance * distance);
 		float3 radiance = lightcolor * attenuation;
+
+
+		float x = distance / lightpos.w;
+		// fake inverse squared falloff:
+		// -(1/k)*(1-(k+1)/(1+k*x^2))
+		// k=20: -(1/20)*(1 - 21/(1+20*x^2))
+		float fFalloff = -0.05 + 1.05 / (1 + 20 * x*x);
+		radiance *= fFalloff;
+
 #endif
 #ifdef DIR
 		float3 L = -normalize(lightpos.xyz);

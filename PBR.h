@@ -23,6 +23,7 @@ public:
 	PBR(
 		Renderer::Ptr r,
 		Scene::Ptr s,
+		Quad::Ptr q,
 		Setting::Ptr set,
 		Pipeline* p,
 		Renderer::Texture::Ptr a,
@@ -42,5 +43,4 @@ private:
 	Renderer::Sampler::Ptr mLinear;
 	Renderer::Sampler::Ptr mPoint;
 	Renderer::Buffer::Ptr mConstants;
-	Quad mQuad;
 };

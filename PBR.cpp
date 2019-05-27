@@ -3,23 +3,24 @@
 PBR::PBR(
 	Renderer::Ptr r,
 	Scene::Ptr s,
+	Quad::Ptr q,
 	Setting::Ptr set,
 	Pipeline* p,
 	Renderer::Texture::Ptr a,
 	Renderer::Texture::Ptr n,
 	Renderer::DepthStencil::Ptr d,
 	Renderer::Buffer::Ptr lightsindex) :
-	Pipeline::Stage(r, s, set, p),
+	Pipeline::Stage(r, s, q,set, p),
 	mAlbedo(a),
 	mNormal(n),
 	mDepth(d),
-	mQuad(r),
 	mLightsIndex(lightsindex)
 {
 	mName = "pbr lighting";
 	this->set("roughness", { {"type","set"}, {"value",0.5f},{"min","0.01"},{"max",1.0f},{"interval", "0.01"} });
 	this->set("metallic", { {"type","set"}, {"value",0.5f},{"min","0"},{"max",1.0f},{"interval", "0.01"} });
 	this->set("radiance", { {"type","set"}, {"value",1},{"min","1"},{"max",1000},{"interval", "1"} });
+	this->set("lightRange", { {"value", 100}, {"min", 1}, {"max", 1000}, {"interval", 1}, {"type","set"} });
 
 	const std::array<const char*, 3> definitions = { "POINT", "DIR", "SPOT" };
 	for (int i = 0; i < definitions.size(); ++i)
@@ -67,9 +68,11 @@ void PBR::render(Renderer::Texture::Ptr rt)
 		if (light->getType() == Scene::Light::LT_DIR)
 			constants.lightspos[index] = { dir.x, dir.y,dir.z ,0 };
 		else
-			constants.lightspos[index] = { pos.x, pos.y,pos.z ,1 };
+			constants.lightspos[index] = { pos.x, pos.y,pos.z , 1};
 
 		constants.lightspos[index] = Vector4::Transform(constants.lightspos[index], view);
+		if (light->getType() != Scene::Light::LT_DIR)
+			constants.lightspos[index].w = getValue<float>("lightRange");
 		index++;
 	});
 
@@ -90,11 +93,12 @@ void PBR::render(Renderer::Texture::Ptr rt)
 
 	mConstants.lock()->blit(&constants, sizeof(constants));
 
-	mQuad.setRenderTarget(rt);
-	mQuad.setTextures({ mAlbedo, mNormal, mDepth ,mLightsIndex});
-	mQuad.setPixelShader(mPSs[Scene::Light::LT_POINT]);
-	mQuad.setSamplers({ mLinear, mPoint });
-	mQuad.setConstant(mConstants);
+	auto quad = getQuad();
+	quad->setRenderTarget(rt);
+	quad->setTextures({ mAlbedo, mNormal, mDepth ,mLightsIndex});
+	quad->setPixelShader(mPSs[Scene::Light::LT_POINT]);
+	quad->setSamplers({ mLinear, mPoint });
+	quad->setConstant(mConstants);
 
 	D3D11_BLEND_DESC blend = { 0 };
 
@@ -109,7 +113,7 @@ void PBR::render(Renderer::Texture::Ptr rt)
 		D3D11_COLOR_WRITE_ENABLE_ALL
 	};
 
-	mQuad.setBlend(blend);
-	mQuad.draw();
+	quad->setBlend(blend);
+	quad->draw();
 
 }
