@@ -1,4 +1,5 @@
 #include "PBR.h"
+#include "GeometryMesh.h"
 
 PBR::PBR(
 	Renderer::Ptr r,
@@ -40,6 +41,21 @@ PBR::PBR(
 	mLinear = r->createSampler("liear_wrap", D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
 	mPoint = r->createSampler("point_wrap", D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
 	mConstants = r->createBuffer(sizeof(Constants), D3D11_BIND_CONSTANT_BUFFER,NULL, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+
+
+	D3D11_INPUT_ELEMENT_DESC layout[] = {
+		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0, D3D11_INPUT_PER_INSTANCE_DATA,1},
+	};
+	mLightVolumeLayout = r->createLayout(layout, 2);
+
+	{
+		Parameters params;
+		params["geom"] = "sphere";
+		params["radius"] = "1";
+		mLightVolumes[Scene::Light::LT_POINT] = Mesh::Ptr(new GeometryMesh(params, r));
+	}
+
 }
 
 PBR::~PBR()
@@ -116,4 +132,13 @@ void PBR::render(Renderer::Texture::Ptr rt)
 	quad->setBlend(blend);
 	quad->draw();
 
+}
+
+
+void PBR::renderLightVolumes(Renderer::Texture::Ptr rt)
+{
+	getScene()->visitLights([this](Scene::Light::Ptr light)
+	{
+
+	});
 }

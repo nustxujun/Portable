@@ -34,6 +34,8 @@ public:
 
 	void render(Renderer::Texture::Ptr rt)  override final;
 private:
+	void renderLightVolumes(Renderer::Texture::Ptr rt);
+private:
 	Renderer::Texture::Ptr mAlbedo;
 	Renderer::Texture::Ptr mNormal;
 	Renderer::DepthStencil::Ptr mDepth;
@@ -43,4 +45,7 @@ private:
 	Renderer::Sampler::Ptr mLinear;
 	Renderer::Sampler::Ptr mPoint;
 	Renderer::Buffer::Ptr mConstants;
+	Renderer::Buffer::Ptr mLightVolumesInstance;
+	Renderer::Layout::Ptr mLightVolumeLayout;
+	Mesh::Ptr mLightVolumes[3];
 };
