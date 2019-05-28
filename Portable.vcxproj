@@ -160,6 +160,7 @@
     <ClInclude Include="D3D11Helper.h" />
     <ClInclude Include="deferredRendering.h" />
     <ClInclude Include="DepthBounding.h" />
+    <ClInclude Include="DepthLinearing.h" />
     <ClInclude Include="Framework.h" />
     <ClInclude Include="GBuffer.h" />
     <ClInclude Include="GeometryMesh.h" />
@@ -192,6 +193,7 @@
   <ItemGroup>
     <ClCompile Include="AO.cpp" />
     <ClCompile Include="DepthBounding.cpp" />
+    <ClCompile Include="DepthLinearing.cpp" />
     <ClCompile Include="GBuffer.cpp" />
     <ClCompile Include="GeometryMesh.cpp" />
     <ClCompile Include="GPUComputer.cpp" />

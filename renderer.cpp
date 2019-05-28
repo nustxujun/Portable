@@ -337,7 +337,7 @@ void Renderer::setVertexBuffer(Buffer::Ptr b, UINT stride, UINT offset)
 	mContext->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
 }
 
-void Renderer::setVertexBuffers( std::vector<Buffer::Ptr>& b, const UINT * stride, const UINT * offset)
+void Renderer::setVertexBuffers(const std::vector<Buffer::Ptr>& b, const UINT * stride, const UINT * offset)
 {
 	std::vector<ID3D11Buffer*> list;
 	list.reserve(b.size());
@@ -571,6 +571,12 @@ Renderer::PixelShader::Weak Renderer::createPixelShader(const void * data, size_
 	checkResult(mDevice->CreatePixelShader(data, size, NULL, &ps));
 	mPSs.emplace_back(new PixelShader(ps));
 	return mPSs.back();
+}
+
+Renderer::PixelShader::Weak Renderer::createPixelShader(const std::string& file, const std::string& entry)
+{
+	auto blob = compileFile(file, entry, "ps_5_0");
+	return createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
 }
 
 Renderer::ComputeShader::Weak Renderer::createComputeShader(const void * data, size_t size)

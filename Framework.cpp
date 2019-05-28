@@ -64,7 +64,7 @@ void Framework::initPipeline()
 
 
 	mPipeline->pushStage<GBuffer>(albedo, normal, worldpos, depth);
-	mPipeline->pushStage<PBR>(albedo, normal, depth);
+	//mPipeline->pushStage<PBR>(albedo, normal, depth);
 	//mPipeline->pushStage<AO>(normal, depth,10.0f);
 	//mPipeline->pushStage<ShadowMap>(worldpos, depth, 2048, 8);
 	//mPipeline->pushStage<VolumetricLighting>();

@@ -28,6 +28,7 @@ struct PS_INPUT
 {
 	float4 Pos : SV_POSITION;
 	float2 Tex: TEXCOORD0;
+	uint index:TEXCOORD1;
 };
 
 static const float PI = 3.14159265359;
@@ -83,13 +84,13 @@ float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
 
 float4 main(PS_INPUT input) : SV_TARGET
 {
-	float4 texcolor = albedoTexture.Sample(sampLinear, input.Tex);
+	float4 texcolor = albedoTexture.Sample(sampLinear, input.Tex.xy);
 	float3 albedo = pow(texcolor.rgb, 2.2);
 
-	float4 normalData = normalTexture.Sample(sampPoint, input.Tex);
+	float4 normalData = normalTexture.Sample(sampPoint, input.Tex.xy);
 	normalData = mul(normalData, View);
 	float3 N = normalize(normalData.xyz);
-	float depthVal = depthTexture.Sample(sampPoint, input.Tex).r;
+	float depthVal = depthTexture.Sample(sampPoint, input.Tex.xy).g;
 	float4 worldPos;
 	worldPos.x = input.Tex.x * 2.0f - 1.0f;
 	worldPos.y = -(input.Tex.y * 2.0f - 1.0f);
@@ -122,10 +123,12 @@ float4 main(PS_INPUT input) : SV_TARGET
 		float4 lightpos = lightspos[index];
 		float3 lightcolor = lightscolor[index].rgb;
 #else
-	for (int i = 0; i < numLights; ++i)
-	{
-		float4 lightpos = lightspos[i];
-		float3 lightcolor = lightscolor[i].rgb;
+	//for (int i = 0; i < numLights; ++i)
+	//{
+	//	float4 lightpos = lightspos[i];
+	//	float3 lightcolor = lightscolor[i].rgb;
+	float4 lightpos = lightspos[input.index];
+	float3 lightcolor = lightscolor[input.index].rgb;
 #endif
 
 #ifdef POINT
@@ -138,12 +141,12 @@ float4 main(PS_INPUT input) : SV_TARGET
 		float3 radiance = lightcolor * attenuation;
 
 
-		float x = distance / lightpos.w;
-		// fake inverse squared falloff:
-		// -(1/k)*(1-(k+1)/(1+k*x^2))
-		// k=20: -(1/20)*(1 - 21/(1+20*x^2))
-		float fFalloff = -0.05 + 1.05 / (1 + 20 * x*x);
-		radiance *= fFalloff;
+		//float x = distance / lightpos.w;
+		//// fake inverse squared falloff:
+		//// -(1/k)*(1-(k+1)/(1+k*x^2))
+		//// k=20: -(1/20)*(1 - 21/(1+20*x^2))
+		//float fFalloff = -0.05 + 1.05 / (1 + 20 * x*x);
+		//radiance *= fFalloff;
 
 #endif
 #ifdef DIR
@@ -175,7 +178,9 @@ float4 main(PS_INPUT input) : SV_TARGET
 		// add to outgoing radiance Lo
 		float NdotL = max(dot(N, L), 0.0);
 		Lo += (kD * albedo / PI + specular)  * NdotL * radiance ;
+#ifdef TILED
 	}
+#endif
 
 	//float3 ambient = 0.1 * albedo;// *ao;
 	//float3 color = ambient + Lo;

@@ -381,7 +381,7 @@ public:
 	void setPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY pri);
 	void setIndexBuffer(Buffer::Ptr b, DXGI_FORMAT format, int offset);
 	void setVertexBuffer(Buffer::Ptr b, UINT stride, UINT offset);
-	void setVertexBuffers( std::vector<Buffer::Ptr>& b, const UINT* stride, const UINT* offset);
+	void setVertexBuffers(const std::vector<Buffer::Ptr>& b, const UINT* stride, const UINT* offset);
 	void setViewport(const D3D11_VIEWPORT& vp);
 	void setDepthStencilState(const D3D11_DEPTH_STENCIL_DESC& desc);
 	void setBlendState(const D3D11_BLEND_DESC& desc, const std::array<float, 4>& factor = { 1,1,1,1 }, size_t mask = 0xffffffff);
@@ -404,6 +404,8 @@ public:
 	Effect::Ptr createEffect(void* data, size_t size);
 	VertexShader::Weak createVertexShader(const void* data, size_t size);
 	PixelShader::Weak createPixelShader(const void* data, size_t size);
+	PixelShader::Weak createPixelShader(const std::string& file, const std::string& entry);
+
 	ComputeShader::Weak createComputeShader(const void* data, size_t size);
 	Layout::Ptr createLayout(const D3D11_INPUT_ELEMENT_DESC* descarray, size_t count);
 	Font::Ptr createOrGetFont(const std::wstring& font);

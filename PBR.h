@@ -18,6 +18,14 @@ class PBR:public Pipeline::Stage
 		float height;
 		int maxLightsPerTile;
 		int tilePerline;
+		float range;
+	};
+
+	__declspec(align(16))
+	struct LightVolumeConstants
+	{
+		Matrix View;
+		Matrix Projection;
 	};
 public:
 	PBR(
@@ -29,6 +37,7 @@ public:
 		Renderer::Texture::Ptr a,
 		Renderer::Texture::Ptr n,
 		Renderer::DepthStencil::Ptr d, 
+		Renderer::Texture::Ptr dl,
 		Renderer::Buffer::Ptr lightsindex = {});
 	~PBR();
 
@@ -39,13 +48,16 @@ private:
 	Renderer::Texture::Ptr mAlbedo;
 	Renderer::Texture::Ptr mNormal;
 	Renderer::DepthStencil::Ptr mDepth;
+	Renderer::Texture::Ptr mDepthLinear;
 	Renderer::Buffer::Ptr mLightsIndex;
 
 	std::array<Renderer::PixelShader::Weak,3> mPSs;
 	Renderer::Sampler::Ptr mLinear;
 	Renderer::Sampler::Ptr mPoint;
 	Renderer::Buffer::Ptr mConstants;
-	Renderer::Buffer::Ptr mLightVolumesInstance;
+	Renderer::Buffer::Ptr mLightVolumesInstances[3];
 	Renderer::Layout::Ptr mLightVolumeLayout;
 	Mesh::Ptr mLightVolumes[3];
+	Renderer::VertexShader::Weak mLightVolumeVS;
+	Renderer::Buffer::Ptr mLightVolumeConstants;
 };

@@ -8,12 +8,14 @@
 #include "DepthBounding.h"
 #include "LightCulling.h"
 #include "AO.h"
+#include "DepthLinearing.h"
 
 #include <random>
 
 void MultipleLights::initPipeline()
 {
-
+	set("numLights", { {"value", 100}, {"min", 1}, {"max", 100}, {"interval", 1}, {"type","set"} });
+	set("lightRange", { {"value", 10}, {"min", 1}, {"max", 1000}, {"interval", 1}, {"type","set"} });
 
 	initDRPipeline();
 	//initTBDRPipeline();
@@ -83,7 +85,7 @@ void MultipleLights::initScene()
 		Vector3 vel;
 	};
 	std::shared_ptr<std::vector<State>> lights = std::shared_ptr<std::vector<State>>(new std::vector<State>());
-	int numlights = 100;
+	int numlights = 1;
 	for (int i = 0; i < numlights; ++i)
 	{
 		std::stringstream ss;
@@ -146,6 +148,9 @@ void MultipleLights::initDRPipeline()
 	auto normal = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	auto worldpos = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R32_TYPELESS, true);
+	auto depthLinear = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32_FLOAT);
+
+
 	auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 
 	mPipeline->setFrameBuffer(frame);
@@ -156,9 +161,10 @@ void MultipleLights::initDRPipeline()
 	});
 
 	mPipeline->pushStage<GBuffer>(albedo, normal, worldpos, depth);
-	mPipeline->pushStage<PBR>(albedo, normal, depth);
+	mPipeline->pushStage<DepthLinearing>(depth, depthLinear);
+	mPipeline->pushStage<PBR>(albedo, normal, depth,depthLinear);
 	//mPipeline->pushStage<HDR>();
-	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
+	//mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 
 	mPipeline->pushStage("draw to backbuffer",[bb, quad](Renderer::Texture::Ptr rt)
 	{
@@ -212,7 +218,7 @@ void MultipleLights::initTBDRPipeline()
 	mPipeline->pushStage<DepthBounding>(depth, depthBounds);
 	mPipeline->pushStage<LightCulling>(depthBounds, lightindex);
 
-	mPipeline->pushStage<PBR>(albedo, normal, depth, lightindex);
+	//mPipeline->pushStage<PBR>(albedo, normal, depth, lightindex);
 	//mPipeline->pushStage<AO>(normal,depth, 10);
 	//mPipeline->pushStage<HDR>();
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");

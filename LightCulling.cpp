@@ -18,7 +18,6 @@ LightCulling::LightCulling(
 
 	mConstants = r->createBuffer(sizeof(Constants), D3D11_BIND_CONSTANT_BUFFER);
 
-	this->set("numLights", { {"value", 100}, {"min", 1}, {"max", 100}, {"interval", 1}, {"type","set"} });
 	this->set("tiled", { {"value",true } });
 	
 	
