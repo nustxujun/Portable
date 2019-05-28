@@ -85,7 +85,7 @@ void MultipleLights::initScene()
 		Vector3 vel;
 	};
 	std::shared_ptr<std::vector<State>> lights = std::shared_ptr<std::vector<State>>(new std::vector<State>());
-	int numlights = 1;
+	int numlights = 100;
 	for (int i = 0; i < numlights; ++i)
 	{
 		std::stringstream ss;
@@ -147,7 +147,7 @@ void MultipleLights::initDRPipeline()
 	auto albedo = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
 	auto normal = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	auto worldpos = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
-	auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R32_TYPELESS, true);
+	auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R24G8_TYPELESS, true);
 	auto depthLinear = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32_FLOAT);
 
 
@@ -155,9 +155,11 @@ void MultipleLights::initDRPipeline()
 
 	mPipeline->setFrameBuffer(frame);
 	auto bb = mRenderer->getBackbuffer();
-	mPipeline->pushStage("clear rt",[bb](Renderer::RenderTarget::Ptr rt)
+	mPipeline->pushStage("clear rt",[bb,depth](Renderer::RenderTarget::Ptr rt)
 	{
 		rt.lock()->clear({ 0,0,0,0 });
+		depth.lock()->clearDepth(1.0f);
+		depth.lock()->clearStencil(1);
 	});
 
 	mPipeline->pushStage<GBuffer>(albedo, normal, worldpos, depth);

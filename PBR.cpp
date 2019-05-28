@@ -157,7 +157,6 @@ void PBR::render(Renderer::Texture::Ptr rt)
 void PBR::renderLightVolumes(Renderer::Texture::Ptr rt)
 {
 	auto renderer = getRenderer();
-	renderer->setRenderTarget(rt,mDepth);
 	renderer->setViewport({ 0,0, (float)renderer->getWidth(), (float)renderer->getHeight(), 0, 1.0f });
 	renderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	renderer->setDefaultRasterizer();
@@ -179,19 +178,7 @@ void PBR::renderLightVolumes(Renderer::Texture::Ptr rt)
 
 	renderer->setBlendState(blend);
 
-	D3D11_RASTERIZER_DESC rasterDesc;
-	rasterDesc.AntialiasedLineEnable = false;
-	rasterDesc.CullMode = D3D11_CULL_BACK;
-	rasterDesc.DepthBias = 0;
-	rasterDesc.DepthBiasClamp = 0.0f;
-	rasterDesc.DepthClipEnable = false;
-	rasterDesc.FillMode = getValue<D3D11_FILL_MODE>("fillmode");
-	rasterDesc.FrontCounterClockwise = false;
-	rasterDesc.MultisampleEnable = false;
-	rasterDesc.ScissorEnable = false;
-	rasterDesc.SlopeScaledDepthBias = 0.0f;
-	auto dft = renderer->createOrGetRasterizer(rasterDesc);
-	renderer->setRasterizer(dft);
+
 
 	auto cam = getScene()->createOrGetCamera("main");
 	LightVolumeConstants consts;
@@ -209,20 +196,7 @@ void PBR::renderLightVolumes(Renderer::Texture::Ptr rt)
 	constants.metallic = getValue<float>("metallic");
 	constants.range = getValue<float>("lightRange");
 
-	D3D11_DEPTH_STENCIL_DESC dsdesc = 
-	{
-		TRUE,
-		D3D11_DEPTH_WRITE_MASK_ZERO,
-		D3D11_COMPARISON_LESS,
-		FALSE,
-		D3D11_DEFAULT_STENCIL_READ_MASK,
-		D3D11_DEFAULT_STENCIL_WRITE_MASK,
-		D3D11_STENCIL_OP_KEEP,
-		D3D11_STENCIL_OP_KEEP,
-		D3D11_STENCIL_OP_KEEP,
-		D3D11_COMPARISON_ALWAYS
-	};
-	renderer->setDepthStencilState(dsdesc);
+
 	// point
 	{
 		std::vector<float> lights;
@@ -268,11 +242,66 @@ void PBR::renderLightVolumes(Renderer::Texture::Ptr rt)
 		UINT offset[] = { 0, 0 };
 
 		renderer->setVertexShader(mLightVolumeVS);
-		renderer->setPixelShader(mPSs[Scene::Light::LT_POINT]);
 		renderer->setIndexBuffer(rend.indices, DXGI_FORMAT_R32_UINT, 0);
 		renderer->setVertexBuffers( {rend.vertices, instances}, stride, offset);
 		renderer->setLayout(layout.lock()->bind(mLightVolumeVS));
+
+		D3D11_RASTERIZER_DESC rasterDesc;
+		rasterDesc.AntialiasedLineEnable = false;
+		rasterDesc.CullMode = D3D11_CULL_NONE;
+		rasterDesc.DepthBias = 0;
+		rasterDesc.DepthBiasClamp = 0.0f;
+		rasterDesc.DepthClipEnable = false;
+		rasterDesc.FillMode = getValue<D3D11_FILL_MODE>("fillmode");
+		rasterDesc.FrontCounterClockwise = false;
+		rasterDesc.MultisampleEnable = false;
+		rasterDesc.ScissorEnable = false;
+		rasterDesc.SlopeScaledDepthBias = 0.0f;
+		renderer->setRasterizer(rasterDesc);
+
+		D3D11_DEPTH_STENCIL_DESC dsdesc =
+		{
+			TRUE,
+			D3D11_DEPTH_WRITE_MASK_ZERO,
+			D3D11_COMPARISON_LESS,
+			TRUE,
+			D3D11_DEFAULT_STENCIL_READ_MASK,
+			D3D11_DEFAULT_STENCIL_WRITE_MASK,
+			{
+				D3D11_STENCIL_OP_KEEP,
+				D3D11_STENCIL_OP_KEEP,
+				D3D11_STENCIL_OP_INCR_SAT,
+				D3D11_COMPARISON_ALWAYS,
+			},
+			{
+				D3D11_STENCIL_OP_KEEP,
+				D3D11_STENCIL_OP_KEEP,
+				D3D11_STENCIL_OP_DECR_SAT,
+				D3D11_COMPARISON_ALWAYS
+			}
+		};
+
+		mDepth.lock()->clearStencil(1);
+		renderer->setDepthStencilState(dsdesc, 1);
+		renderer->setPixelShader({});
+		renderer->setRenderTargets({}, mDepth);
+		//context->DrawIndexedInstanced(rend.numIndices, instacesCount, 0, 0, 0);
+
+		dsdesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+		dsdesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+		dsdesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+		dsdesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+		dsdesc.DepthEnable = false;
+		dsdesc.StencilEnable = false;
+		renderer->setDepthStencilState(dsdesc, 1);
+
+		rasterDesc.CullMode = D3D11_CULL_FRONT;
+		renderer->setRasterizer(rasterDesc);
+		renderer->setPixelShader(mPSs[Scene::Light::LT_POINT]);
+		renderer->setRenderTarget(rt, mDepth);
 		context->DrawIndexedInstanced(rend.numIndices, instacesCount, 0, 0, 0);
+
+
 	}
 
 	renderer->removeShaderResourceViews();

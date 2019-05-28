@@ -294,6 +294,11 @@ void Renderer::setRasterizer(Rasterizer::Ptr r)
 	mContext->RSSetState(*ptr);
 }
 
+void Renderer::setRasterizer(const D3D11_RASTERIZER_DESC& desc)
+{
+	setRasterizer(createOrGetRasterizer(desc));
+}
+
 void Renderer::setDefaultRasterizer()
 {
 	D3D11_RASTERIZER_DESC rasterDesc;
@@ -353,7 +358,7 @@ void Renderer::setViewport(const D3D11_VIEWPORT & vp)
 	mContext->RSSetViewports(1, &vp);
 }
 
-void Renderer::setDepthStencilState(const D3D11_DEPTH_STENCIL_DESC & desc)
+void Renderer::setDepthStencilState(const D3D11_DEPTH_STENCIL_DESC & desc, UINT stencil )
 {
 	size_t hash = Common::hash(desc);
 	auto ret = mDepthStencilStates.find(hash);
@@ -365,7 +370,7 @@ void Renderer::setDepthStencilState(const D3D11_DEPTH_STENCIL_DESC & desc)
 		ret = newstate.first;
 	}
 
-	mContext->OMSetDepthStencilState(*ret->second, 0);
+	mContext->OMSetDepthStencilState(*ret->second, stencil);
 }
 
 void Renderer::setBlendState(const D3D11_BLEND_DESC& desc, const std::array<float, 4>& factor , size_t mask )

@@ -374,6 +374,8 @@ public:
 	void setPSConstantBuffers(const std::vector<Buffer::Ptr>& bs);
 
 	void setRasterizer(Rasterizer::Ptr r);
+	void setRasterizer(const D3D11_RASTERIZER_DESC& desc);
+
 	void setDefaultRasterizer();
 
 	Texture::Ptr getBackbuffer() { return mBackbuffer; }
@@ -383,7 +385,7 @@ public:
 	void setVertexBuffer(Buffer::Ptr b, UINT stride, UINT offset);
 	void setVertexBuffers(const std::vector<Buffer::Ptr>& b, const UINT* stride, const UINT* offset);
 	void setViewport(const D3D11_VIEWPORT& vp);
-	void setDepthStencilState(const D3D11_DEPTH_STENCIL_DESC& desc);
+	void setDepthStencilState(const D3D11_DEPTH_STENCIL_DESC& desc, UINT stencil = 0);
 	void setBlendState(const D3D11_BLEND_DESC& desc, const std::array<float, 4>& factor = { 1,1,1,1 }, size_t mask = 0xffffffff);
 	void setDefaultBlendState();
 	void setDefaultDepthStencilState();
