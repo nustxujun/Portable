@@ -114,7 +114,7 @@ float4 main(PS_INPUT input) : SV_TARGET
 	x /= 16;
 	y /= 16;
 
-	int startoffset = (x + y * tilePerline) * (100 + 1);
+	int startoffset = (x + y * tilePerline) * (maxLightsPerTile + 1);
 	uint num = lightsIndex[startoffset];
 	//return (float)num / (float)maxLightsPerTile;
 	for (uint i = 1; i<= num; ++i)

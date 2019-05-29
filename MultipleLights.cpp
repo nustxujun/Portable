@@ -14,15 +14,21 @@
 
 void MultipleLights::initPipeline()
 {
-	set("numLights", { {"value", 100}, {"min", 1}, {"max", 100}, {"interval", 1}, {"type","set"} });
-	set("lightRange", { {"value", 500}, {"min", 1}, {"max", 1000}, {"interval", 1}, {"type","set"} });
 
-	//initDRPipeline();
-	initTBDRPipeline();
+
+	initDRPipeline();
+	//initTBDRPipeline();
 }
 
 void MultipleLights::initScene()
 {
+	int numlights = 1000;
+
+
+	set("numLights", { {"value", 100}, {"min", 1}, {"max", numlights}, {"interval", 1}, {"type","set"} });
+	set("lightRange", { {"value", 500}, {"min", 1}, {"max", 1000}, {"interval", 1}, {"type","set"} });
+	set("fovy", { {"value", "0.7"}, {"min", "0.1"}, {"max", "2"}, {"interval", "0.01"}, {"type","set"} });
+
 	auto root = mScene->getRoot();
 	{
 		Parameters params;
@@ -56,7 +62,7 @@ void MultipleLights::initScene()
 	//{
 	//	Parameters params;
 	//	//params["file"] = "tiny.x";
-	//	params["file"] = "sponza/sponza.obj";
+	//	params["file"] = "lost-empire/lost_empire.obj";
 	//	auto model = mScene->createModel("test", params, [this](const Parameters& p) {
 	//		return Mesh::Ptr(new Mesh(p, mRenderer));
 	//	});
@@ -73,7 +79,9 @@ void MultipleLights::initScene()
 	auto len = aabb.second - aabb.first;
 	cam->setNearFar(1.0f, (len).Length());
 
-	cam->lookat(aabb.second, aabb.first);
+	cam->getNode()->setPosition((aabb.second + aabb.first) * 0.5f);
+	cam->setDirection({ 0,0,1 });
+	//cam->lookat((aabb.second + aabb.first) * 0.5f, aabb.first);
 	std::uniform_real_distribution<float> rand(0.0f, 0.1f);
 	std::uniform_real_distribution<float> rand2(-1.0f, 1.0f);
 
@@ -85,7 +93,6 @@ void MultipleLights::initScene()
 		Vector3 vel;
 	};
 	std::shared_ptr<std::vector<State>> lights = std::shared_ptr<std::vector<State>>(new std::vector<State>());
-	int numlights = 100;
 	for (int i = 0; i < numlights; ++i)
 	{
 		std::stringstream ss;
@@ -149,6 +156,7 @@ void MultipleLights::initDRPipeline()
 	auto worldpos = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R24G8_TYPELESS, true);
 	auto depthLinear = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32_FLOAT);
+	auto lights = mRenderer->createRWBuffer(sizeof(Vector4) * 2 * mScene->getNumLights(), sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 
 
 	auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
@@ -164,7 +172,7 @@ void MultipleLights::initDRPipeline()
 
 	mPipeline->pushStage<GBuffer>(albedo, normal, worldpos, depth);
 	mPipeline->pushStage<DepthLinearing>(depth, depthLinear);
-	mPipeline->pushStage<PBR>(albedo, normal, depth,depthLinear);
+	mPipeline->pushStage<PBR>(albedo, normal, depth,depthLinear, lights);
 	//mPipeline->pushStage<HDR>();
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 
@@ -186,6 +194,7 @@ void MultipleLights::initTBDRPipeline()
 	auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R32_TYPELESS, true);
 	auto depthLinear = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32_FLOAT);
 	auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	auto lights = mRenderer->createRWBuffer(sizeof(Vector4) * 2 * mScene->getNumLights(), sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 
 
 	int bw = ((w + 16 - 1) & ~15) / 16;
@@ -205,7 +214,7 @@ void MultipleLights::initTBDRPipeline()
 	auto depthBounds = mRenderer->createTexture(desc);
 
 	auto lightindex = mRenderer->createRWBuffer(
-		desc.Width * desc.Height * (1 + 100) * sizeof(int),
+		desc.Width * desc.Height * (1 + mScene->getNumLights()) * sizeof(int),
 		sizeof(int),
 		DXGI_FORMAT_R16_UINT,
 		D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE);
@@ -220,9 +229,9 @@ void MultipleLights::initTBDRPipeline()
 	mPipeline->pushStage<GBuffer>(albedo, normal, worldpos, depth);
 	mPipeline->pushStage<DepthLinearing>(depth, depthLinear);
 	mPipeline->pushStage<DepthBounding>(depth, depthBounds);
-	mPipeline->pushStage<LightCulling>(depthBounds, lightindex);
+	mPipeline->pushStage<LightCulling>(depthBounds,lights, lightindex);
 
-	mPipeline->pushStage<PBR>(albedo, normal, depth, depthLinear, lightindex);
+	mPipeline->pushStage<PBR>(albedo, normal, depth, depthLinear, lights, lightindex);
 	//mPipeline->pushStage<AO>(normal,depth, 10);
 	//mPipeline->pushStage<HDR>();
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
@@ -235,4 +244,13 @@ void MultipleLights::initTBDRPipeline()
 
 
 
+}
+
+void MultipleLights::onChanged(const std::string& key, const nlohmann::json::value_type& value)
+{
+	if (key == "fovy")
+	{
+		auto cam = mScene->createOrGetCamera("main");
+		cam->setFOVy(value["value"]);
+	}
 }

@@ -34,6 +34,7 @@ public:
 		Renderer::Texture::Ptr n,
 		Renderer::DepthStencil::Ptr d, 
 		Renderer::Texture::Ptr dl,
+		Renderer::Buffer::Ptr lights,
 		Renderer::Buffer::Ptr lightsindex = {});
 	~PBR();
 

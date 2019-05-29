@@ -11,15 +11,16 @@ PBR::PBR(
 	Renderer::Texture::Ptr n,
 	Renderer::DepthStencil::Ptr d,
 	Renderer::Texture::Ptr dl,
+	Renderer::Buffer::Ptr lights,
 	Renderer::Buffer::Ptr lightsindex) :
 	Pipeline::Stage(r, s, q,set, p),
 	mAlbedo(a),
 	mNormal(n),
 	mDepth(d),
 	mDepthLinear(dl),
+	mLightsBuffer (lights),
 	mLightsIndex(lightsindex)
 {
-	this->set("fillmode", { {"type","set"}, {"value",2},{"min","2"},{"max",3},{"interval", "1"} });
 	mName = "pbr lighting";
 	this->set("roughness", { {"type","set"}, {"value",0.5f},{"min","0.01"},{"max",1.0f},{"interval", "0.01"} });
 	this->set("metallic", { {"type","set"}, {"value",0.5f},{"min","0"},{"max",1.0f},{"interval", "0.01"} });
@@ -75,7 +76,6 @@ PBR::PBR(
 	}
 
 	mLightVolumeConstants = r->createBuffer(sizeof(LightVolumeConstants), D3D11_BIND_CONSTANT_BUFFER, 0, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-	mLightsBuffer = r->createRWBuffer(sizeof(Vector4) * 2 * s->getNumLights(),sizeof(Vector4) , DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 }
 
 PBR::~PBR()
@@ -134,18 +134,13 @@ void PBR::renderNormal(Renderer::Texture::Ptr rt)
 
 	Constants constants;
 
-
-
-
 	constants.roughness = getValue<float>("roughness");
 	constants.metallic = getValue<float>("metallic");
 	auto desc = mAlbedo.lock()->getDesc();
 	constants.width = desc.Width;
 	constants.height = desc.Height;
-	constants.maxLightsPerTile = std::min(getValue<int>("maxLightsPerTile"),(int) getScene()->getNumLights());
+	constants.maxLightsPerTile =  getScene()->getNumLights();
 	constants.tilePerline = ((desc.Width + 16 - 1) & ~15) / 16;
-
-
 	constants.invertPorj = cam->getProjectionMatrix().Invert().Transpose();
 
 	mConstants.lock()->blit(&constants, sizeof(constants));
@@ -219,14 +214,14 @@ void PBR::renderLightVolumes(Renderer::Texture::Ptr rt)
 	constants.metallic = getValue<float>("metallic");
 	constants.width = renderer->getWidth();
 	constants.height = renderer->getHeight();
-
+	mConstants.lock()->blit(&constants, sizeof(constants));
+	renderer->setPSConstantBuffers({ mConstants });
 	// point
 	{
 		int count = getScene()->getNumLights();
 		if (has("numLights"))
 			count = getValue<int>("numLights");
-		mConstants.lock()->blit(&constants, sizeof(constants));
-		renderer->setPSConstantBuffers({ mConstants });
+
 
 		auto instances = mLightVolumesInstances[Scene::Light::LT_POINT];
 		auto context = renderer->getContext();
@@ -287,7 +282,7 @@ void PBR::renderLightVolumes(Renderer::Texture::Ptr rt)
 		dsdesc.FrontFace.StencilFunc = D3D11_COMPARISON_NOT_EQUAL;
 		dsdesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
 		dsdesc.BackFace.StencilFunc = D3D11_COMPARISON_NOT_EQUAL;
-		dsdesc.DepthEnable = false;
+		dsdesc.DepthEnable = true;
 		dsdesc.StencilEnable = false;
 		renderer->setDepthStencilState(dsdesc, 1);
 

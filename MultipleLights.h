@@ -11,6 +11,8 @@ public:
 	virtual void initPipeline();
 	virtual void initScene();
 	virtual void update()override;
+	virtual void onChanged(const std::string& key, const nlohmann::json::value_type& value);
+
 protected:
 	virtual void initDRPipeline();
 	virtual void initTBDRPipeline();

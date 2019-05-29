@@ -1,13 +1,12 @@
 
 Texture2D depthboundsTex: register(t0);
-Buffer lightslist: register(t1);
+Buffer<float4> lights: register(t1);
 RWBuffer<uint> lightsOutput: register(u0);
 
 
 cbuffer ConstantBuffer: register(b0)
 {
 	matrix invertProj;
-	float4 lights[100];
 	int numLights;
 	float texelwidth;
 	float texelheight;
@@ -62,11 +61,11 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 	float3 aabbcenter = (aabbmax + aabbmin) * 0.5f;
 	float3 aabbhalf = (aabbmax - aabbmin) * 0.5f;
 
-	uint startOffset = (globalIdx.x + globalIdx.y * tilePerline) * (100 + 1);
+	uint startOffset = (globalIdx.x + globalIdx.y * tilePerline) * (maxLightsPerTile + 1);
 	int lightcount = 0;
 	for (int i = 0; i < numLights; ++i)
 	{
-		float4 light = lights[i];
+		float4 light = lights[i * 2];
 		float3 pos = light.xyz;
 		float range = light.w;
 

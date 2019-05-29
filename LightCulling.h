@@ -9,7 +9,6 @@ class LightCulling: public Pipeline::Stage
 	struct Constants
 	{
 		Matrix invertProj;
-		Vector4 lights[100];
 		int numLights;
 		float texelwidth;
 		float texelheight;
@@ -24,6 +23,7 @@ public:
 		Setting::Ptr set,
 		Pipeline* p,
 		Renderer::Texture::Ptr depthBounds,
+		Renderer::Buffer::Ptr lights,
 		Renderer::Buffer::Ptr lightsindex
 	);
 	void render(Renderer::Texture::Ptr rt)  override final;
@@ -32,5 +32,6 @@ private:
 	GPUComputer mComputer;
 	Renderer::ComputeShader::Weak mCS;
 	Renderer::Buffer::Ptr mConstants;
+	Renderer::Buffer::Ptr mLights;
 	Renderer::Buffer::Ptr mLightsOutput;
 };

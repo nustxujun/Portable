@@ -7,10 +7,12 @@ LightCulling::LightCulling(
 	Setting::Ptr set,
 	Pipeline * p,
 	Renderer::Texture::Ptr depthBounds,
+	Renderer::Buffer::Ptr lights,
 	Renderer::Buffer::Ptr lightsindex) :
 	Pipeline::Stage(r, s, q,set, p), mComputer(r),
 	mDepthBounds(depthBounds),
-	mLightsOutput (lightsindex)
+	mLightsOutput (lightsindex),
+	mLights(lights)
 {
 	mName = "cull lights";
 	auto blob = r->compileFile("hlsl/lightculling.hlsl", "main", "cs_5_0");
@@ -21,7 +23,6 @@ LightCulling::LightCulling(
 	this->set("tiled", { {"value",true } });
 	
 	
-	this->set("maxLightsPerTile", { {"value", 100}, {"min", 1}, {"max", 100}, {"interval", 1}, {"type","set"} });
 
 
 	auto desc = depthBounds.lock()->getDesc();
@@ -37,25 +38,17 @@ void LightCulling::render(Renderer::Texture::Ptr rt)
 	consts.invertProj = cam->getProjectionMatrix().Invert().Transpose();
 	const Matrix& view = cam->getViewMatrix();
 	consts.numLights = 0;
-	getScene()->visitLights([&consts, &view,this](Scene::Light::Ptr l)
-	{
-		const Vector3 pos = l->getNode()->getRealPosition();
-		Vector4 wpos = { pos.x, pos.y, pos.z, 1 };
-		wpos = Vector4::Transform(wpos, view);
-		consts.lights[consts.numLights++] = { wpos.x, wpos.y ,wpos.z ,getValue<float>("lightRange") };
-	});
-
 	consts.numLights = getValue<int>("numLights");
 	auto desc = mDepthBounds.lock()->getDesc();
 	consts.texelwidth = 1.0f / (float)desc.Width;
 	consts.texelheight = 1.0f/ (float)desc.Height;
-	consts.maxLightsPerTile = getValue<int>("maxLightsPerTile");
+	consts.maxLightsPerTile = getScene()->getNumLights();
 	consts.tilePerline = desc.Width;
 
 	mConstants.lock()->blit(&consts, sizeof(Constants));
 
 	mComputer.setConstants({ mConstants });
-	mComputer.setInputs({ mDepthBounds });
+	mComputer.setInputs({ mDepthBounds ,mLights });
 	mComputer.setOuputs({ mLightsOutput });
 	mComputer.setShader(mCS);
 	mComputer.compute(desc.Width, desc.Height, 1);

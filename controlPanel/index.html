@@ -21,7 +21,7 @@
         </div>
         <div v-for="( prop,propname) in properties">
           {{propname}} : {{prop.value}}
-          <vue-slider v-model="prop.value":min="prop.min":max="prop.max":interval="prop.interval":width="'80%'" @change="prop.change" ></vue-slider>
+          <vue-slider v-model="prop.value":min="prop.min":max="prop.max":interval="prop.interval":width="'80%'" @change="prop.change"  ></vue-slider>
         </div>
 
     </div>
