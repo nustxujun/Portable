@@ -184,6 +184,7 @@ void MultipleLights::initTBDRPipeline()
 	auto normal = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	auto worldpos = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R32_TYPELESS, true);
+	auto depthLinear = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32_FLOAT);
 	auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 
 
@@ -217,10 +218,11 @@ void MultipleLights::initTBDRPipeline()
 	});
 
 	mPipeline->pushStage<GBuffer>(albedo, normal, worldpos, depth);
+	mPipeline->pushStage<DepthLinearing>(depth, depthLinear);
 	mPipeline->pushStage<DepthBounding>(depth, depthBounds);
 	mPipeline->pushStage<LightCulling>(depthBounds, lightindex);
 
-	//mPipeline->pushStage<PBR>(albedo, normal, depth, lightindex);
+	mPipeline->pushStage<PBR>(albedo, normal, depth, depthLinear, lightindex);
 	//mPipeline->pushStage<AO>(normal,depth, 10);
 	//mPipeline->pushStage<HDR>();
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");

@@ -44,6 +44,7 @@ public:
 	void render(Renderer::Texture::Ptr rt)  override final;
 private:
 	void renderLightVolumes(Renderer::Texture::Ptr rt);
+	void renderNormal(Renderer::Texture::Ptr rt);
 private:
 	Renderer::Texture::Ptr mAlbedo;
 	Renderer::Texture::Ptr mNormal;
@@ -60,4 +61,5 @@ private:
 	Mesh::Ptr mLightVolumes[3];
 	Renderer::VertexShader::Weak mLightVolumeVS;
 	Renderer::Buffer::Ptr mLightVolumeConstants;
+	Renderer::Profile::Ptr mOnlyLighting;
 };

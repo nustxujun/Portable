@@ -28,7 +28,9 @@ struct PS_INPUT
 {
 	float4 Pos : SV_POSITION;
 	float2 Tex: TEXCOORD0;
+#ifndef TILED
 	uint index:TEXCOORD1;
+#endif
 };
 
 static const float PI = 3.14159265359;
@@ -84,6 +86,8 @@ float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
 
 float4 main(PS_INPUT input) : SV_TARGET
 {
+	return 1;
+	input.Tex.xy = float2(input.Pos.x / width, input.Pos.y / height);
 	float4 texcolor = albedoTexture.Sample(sampLinear, input.Tex.xy);
 	float3 albedo = pow(texcolor.rgb, 2.2);
 
@@ -109,8 +113,8 @@ float4 main(PS_INPUT input) : SV_TARGET
 
 #ifdef TILED
 	
-	int x = input.Tex.x * width;
-	int y = input.Tex.y * height;
+	int x = input.Pos.x;
+	int y = input.Pos.y;
 	x /= 16;
 	y /= 16;
 
