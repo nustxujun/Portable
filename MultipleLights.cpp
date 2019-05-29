@@ -15,10 +15,10 @@
 void MultipleLights::initPipeline()
 {
 	set("numLights", { {"value", 100}, {"min", 1}, {"max", 100}, {"interval", 1}, {"type","set"} });
-	set("lightRange", { {"value", 10}, {"min", 1}, {"max", 1000}, {"interval", 1}, {"type","set"} });
+	set("lightRange", { {"value", 500}, {"min", 1}, {"max", 1000}, {"interval", 1}, {"type","set"} });
 
-	initDRPipeline();
-	//initTBDRPipeline();
+	//initDRPipeline();
+	initTBDRPipeline();
 }
 
 void MultipleLights::initScene()
@@ -42,7 +42,7 @@ void MultipleLights::initScene()
 		Parameters params;
 		params["geom"] = "sphere";
 		params["radius"] = "10";
-		params["resolution"] = "10";
+		params["resolution"] = "500";
 		auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
 		{
 			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
@@ -166,7 +166,7 @@ void MultipleLights::initDRPipeline()
 	mPipeline->pushStage<DepthLinearing>(depth, depthLinear);
 	mPipeline->pushStage<PBR>(albedo, normal, depth,depthLinear);
 	//mPipeline->pushStage<HDR>();
-	//mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
+	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 
 	mPipeline->pushStage("draw to backbuffer",[bb, quad](Renderer::Texture::Ptr rt)
 	{

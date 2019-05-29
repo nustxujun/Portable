@@ -28,9 +28,10 @@ Framework::~Framework()
 
 void Framework::init()
 {
-	initPipeline();
 	initScene();
 	initInput();
+
+	initPipeline();
 }
 
 void Framework::update()

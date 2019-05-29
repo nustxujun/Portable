@@ -1,9 +1,10 @@
 Texture2D albedoTexture: register(t0);
 Texture2D normalTexture: register(t1);
 Texture2D depthTexture: register(t2);
+Buffer<float4> lights: register(t3);
 
 #ifdef TILED
-Buffer<uint> lightsIndex: register(t3);
+Buffer<uint> lightsIndex: register(t4);
 #endif
 
 SamplerState sampLinear: register(s0);
@@ -13,9 +14,6 @@ cbuffer ConstantBuffer: register(b0)
 {
 	matrix invertProj;
 	matrix View;
-	float4 lightspos[100];
-	float4 lightscolor[100];
-	int numLights;
 	float roughness;
 	float metallic;
 	float width;
@@ -27,9 +25,8 @@ cbuffer ConstantBuffer: register(b0)
 struct PS_INPUT
 {
 	float4 Pos : SV_POSITION;
-	float2 Tex: TEXCOORD0;
 #ifndef TILED
-	uint index:TEXCOORD1;
+	uint index:TEXCOORD0;
 #endif
 };
 
@@ -86,18 +83,17 @@ float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
 
 float4 main(PS_INPUT input) : SV_TARGET
 {
-	return 1;
-	input.Tex.xy = float2(input.Pos.x / width, input.Pos.y / height);
-	float4 texcolor = albedoTexture.Sample(sampLinear, input.Tex.xy);
+	float2 texcoord = float2(input.Pos.x / width, input.Pos.y / height);
+	float4 texcolor = albedoTexture.Sample(sampLinear, texcoord);
 	float3 albedo = pow(texcolor.rgb, 2.2);
 
-	float4 normalData = normalTexture.Sample(sampPoint, input.Tex.xy);
+	float4 normalData = normalTexture.Sample(sampPoint, texcoord);
 	normalData = mul(normalData, View);
 	float3 N = normalize(normalData.xyz);
-	float depthVal = depthTexture.Sample(sampPoint, input.Tex.xy).g;
+	float depthVal = depthTexture.Sample(sampPoint, texcoord).g;
 	float4 worldPos;
-	worldPos.x = input.Tex.x * 2.0f - 1.0f;
-	worldPos.y = -(input.Tex.y * 2.0f - 1.0f);
+	worldPos.x = texcoord.x * 2.0f - 1.0f;
+	worldPos.y = -(texcoord.y * 2.0f - 1.0f);
 	worldPos.z = depthVal;
 	worldPos.w = 1.0f;
 	worldPos = mul(worldPos, invertProj);
@@ -124,15 +120,12 @@ float4 main(PS_INPUT input) : SV_TARGET
 	for (uint i = 1; i<= num; ++i)
 	{
 		uint index = lightsIndex[startoffset + i];
-		float4 lightpos = lightspos[index];
-		float3 lightcolor = lightscolor[index].rgb;
+		float4 lightpos = lights[index * 2];
+		float3 lightcolor = lights[index * 2 + 1].rgb;
 #else
-	//for (int i = 0; i < numLights; ++i)
-	//{
-	//	float4 lightpos = lightspos[i];
-	//	float3 lightcolor = lightscolor[i].rgb;
-	float4 lightpos = lightspos[input.index];
-	float3 lightcolor = lightscolor[input.index].rgb;
+
+	float4 lightpos = lights[input.index * 2];
+	float3 lightcolor = lights[input.index * 2 + 1].rgb;
 #endif
 
 #ifdef POINT
@@ -145,12 +138,12 @@ float4 main(PS_INPUT input) : SV_TARGET
 		float3 radiance = lightcolor * attenuation;
 
 
-		//float x = distance / lightpos.w;
-		//// fake inverse squared falloff:
-		//// -(1/k)*(1-(k+1)/(1+k*x^2))
-		//// k=20: -(1/20)*(1 - 21/(1+20*x^2))
-		//float fFalloff = -0.05 + 1.05 / (1 + 20 * x*x);
-		//radiance *= fFalloff;
+		float x = distance / lightpos.w;
+		// fake inverse squared falloff:
+		// -(1/k)*(1-(k+1)/(1+k*x^2))
+		// k=20: -(1/20)*(1 - 21/(1+20*x^2))
+		float fFalloff = -0.05 + 1.05 / (1 + 20 * x*x);
+		radiance *= fFalloff;
 
 #endif
 #ifdef DIR

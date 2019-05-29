@@ -47,9 +47,7 @@ PBR::PBR(
 
 	D3D11_INPUT_ELEMENT_DESC layout[] = {
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0, D3D11_INPUT_PER_INSTANCE_DATA,1},
-		{"TEXCOORD", 1, DXGI_FORMAT_R32_FLOAT, 1, 16, D3D11_INPUT_PER_INSTANCE_DATA,1},
-
+		{"TEXCOORD", 0, DXGI_FORMAT_R32_UINT, 1, 0, D3D11_INPUT_PER_INSTANCE_DATA,1},
 	};
 	mLightVolumeLayout = r->createLayout(layout, ARRAYSIZE(layout));
 
@@ -60,10 +58,15 @@ PBR::PBR(
 		params["resolution"] = "5";
 		mLightVolumes[Scene::Light::LT_POINT] = Mesh::Ptr(new GeometryMesh(params, r));
 
-		int numlights = 100;
-		if (has("numlights"))
-			numlights = get("numlights")["max"];
-		mLightVolumesInstances[Scene::Light::LT_POINT] = r->createBuffer( (sizeof(Vector4) + sizeof(float))* numlights , D3D11_BIND_VERTEX_BUFFER, 0,D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+
+		size_t numlights = s->getNumLights();
+		std::vector<unsigned int> indices(numlights);
+		for (size_t i = 0; i < indices.size(); ++i)
+			indices[i] = i;
+
+		D3D11_SUBRESOURCE_DATA data = {0};
+		data.pSysMem = indices.data();
+		mLightVolumesInstances[Scene::Light::LT_POINT] = r->createBuffer(sizeof(float) * numlights , D3D11_BIND_VERTEX_BUFFER, &data);
 	}
 
 	{
@@ -72,8 +75,7 @@ PBR::PBR(
 	}
 
 	mLightVolumeConstants = r->createBuffer(sizeof(LightVolumeConstants), D3D11_BIND_CONSTANT_BUFFER, 0, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-
-	mOnlyLighting = r->createProfile();
+	mLightsBuffer = r->createRWBuffer(sizeof(Vector4) * 2 * s->getNumLights(),sizeof(Vector4) , DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 }
 
 PBR::~PBR()
@@ -82,15 +84,44 @@ PBR::~PBR()
 
 void PBR::render(Renderer::Texture::Ptr rt) 
 {
+	updateLights();
 	if (has("tiled"))
 		renderNormal(rt);
 	else
 		renderLightVolumes(rt);
 	
-	std::stringstream ss;
-	ss.precision(4);
-	ss << mOnlyLighting.lock()->getElapsedTime();
-	set("lighting", { {"cost",ss.str().c_str()}, {"type", "stage"} });
+
+}
+
+void PBR::updateLights()
+{
+	auto cam = getScene()->createOrGetCamera("main");
+	Matrix view = cam->getViewMatrix();
+	D3D11_MAP map = D3D11_MAP_WRITE_DISCARD;
+	D3D11_MAPPED_SUBRESOURCE subresource;
+	auto context = getRenderer()->getContext();
+	auto buffer = mLightsBuffer.lock();
+	context->Map(*buffer, 0, map, 0,&subresource);
+	char* data = (char*)subresource.pData;
+	float range = 1000.0f;
+	if (has("lightRange"))
+		range = getValue<float>("lightRange");
+	float radiance = 1.0f;
+	if (has("radiance"))
+		radiance = getValue<float>("radiance");
+	getScene()->visitLights([view, range, &data, radiance](Scene::Light::Ptr light)
+	{
+		Vector3 pos = light->getNode()->getRealPosition();
+		Vector4 vpos = Vector4::Transform({ pos.x, pos.y, pos.z, 1 }, view);
+		vpos.w = range;
+		memcpy(data, &vpos, sizeof(vpos));
+		data += sizeof(vpos);
+		Vector3 color = light->getColor();
+		color *= radiance;
+		memcpy(data, &Vector4(color.x, color.y, color.z,1.0f),sizeof(Vector4));
+		data += sizeof(Vector4);
+	});
+	context->Unmap(*buffer, 0);
 }
 
 void PBR::renderNormal(Renderer::Texture::Ptr rt)
@@ -102,37 +133,16 @@ void PBR::renderNormal(Renderer::Texture::Ptr rt)
 
 
 	Constants constants;
-	int index = 0;
-	Matrix view = cam->getViewMatrix();
-	getScene()->visitLights([&constants, &index,view,this](Scene::Light::Ptr light) {
-		Vector3 color = light->getColor();
-		color *= getValue<float>("radiance");
-		constants.lightscolor[index] = {color.x,color.y,color.z,1};
 
-		auto dir = light->getDirection();
-		dir.Normalize();
-		auto pos = light->getNode()->getRealPosition();
-		if (light->getType() == Scene::Light::LT_DIR)
-			constants.lightspos[index] = { dir.x, dir.y,dir.z ,0 };
-		else
-			constants.lightspos[index] = { pos.x, pos.y,pos.z , 1};
 
-		constants.lightspos[index] = Vector4::Transform(constants.lightspos[index], view);
-		if (light->getType() != Scene::Light::LT_DIR)
-			constants.lightspos[index].w = getValue<float>("lightRange");
-		index++;
-	});
 
-	constants.numLights = index;
-	if (has("numLights"))
-		constants.numLights = std::min(index, getValue<int>("numLights"));
 
 	constants.roughness = getValue<float>("roughness");
 	constants.metallic = getValue<float>("metallic");
 	auto desc = mAlbedo.lock()->getDesc();
 	constants.width = desc.Width;
 	constants.height = desc.Height;
-	constants.maxLightsPerTile = std::min(getValue<int>("maxLightsPerTile"), constants.numLights);
+	constants.maxLightsPerTile = std::min(getValue<int>("maxLightsPerTile"),(int) getScene()->getNumLights());
 	constants.tilePerline = ((desc.Width + 16 - 1) & ~15) / 16;
 
 
@@ -142,7 +152,7 @@ void PBR::renderNormal(Renderer::Texture::Ptr rt)
 
 	auto quad = getQuad();
 	quad->setRenderTarget(rt);
-	quad->setTextures({ mAlbedo, mNormal, mDepthLinear ,mLightsIndex});
+	quad->setTextures({ mAlbedo, mNormal, mDepthLinear , mLightsBuffer, mLightsIndex});
 	quad->setPixelShader(mPSs[Scene::Light::LT_POINT]);
 	quad->setSamplers({ mLinear, mPoint });
 	quad->setConstant(mConstants);
@@ -162,10 +172,7 @@ void PBR::renderNormal(Renderer::Texture::Ptr rt)
 
 	quad->setBlend(blend);
 
-	{
-		PROFILE(mOnlyLighting);
-		quad->draw();
-	}
+	quad->draw();
 }
 
 
@@ -178,7 +185,9 @@ void PBR::renderLightVolumes(Renderer::Texture::Ptr rt)
 	renderer->setDefaultRasterizer();
 	renderer->setDefaultDepthStencilState();
 	renderer->setSamplers({ mLinear, mPoint });
-	renderer->setTextures({ mAlbedo, mNormal, mDepthLinear });
+	renderer->setTextures({ mAlbedo, mNormal, mDepthLinear ,mLightsBuffer });
+	ID3D11ShaderResourceView* srvs = *mLightsBuffer.lock();
+	renderer->getContext()->VSSetShaderResources(0, 1, &srvs);
 
 	D3D11_BLEND_DESC blend = { 0 };
 	blend.RenderTarget[0] = {
@@ -191,7 +200,6 @@ void PBR::renderLightVolumes(Renderer::Texture::Ptr rt)
 		D3D11_BLEND_OP_ADD,
 		D3D11_COLOR_WRITE_ENABLE_ALL
 	};
-
 	renderer->setBlendState(blend);
 
 
@@ -207,55 +215,26 @@ void PBR::renderLightVolumes(Renderer::Texture::Ptr rt)
 
 	Constants constants;
 	constants.invertPorj = cam->getProjectionMatrix().Invert().Transpose();
-	constants.numLights = 1;
 	constants.roughness = getValue<float>("roughness");
 	constants.metallic = getValue<float>("metallic");
-	constants.range = getValue<float>("lightRange");
 	constants.width = renderer->getWidth();
 	constants.height = renderer->getHeight();
 
 	// point
 	{
-		std::vector<float> lights;
-		float range = 10.0f;
-		if (has("lightRange"))
-			range = get("lightRange")["value"];
-		int index = 0;
-		float radiance = getValue<float>("radiance");
-		getScene()->visitLights([&lights, range,&index,&constants, view, radiance](Scene::Light::Ptr light)
-		{
-			if (light->getType() != Scene::Light::LT_POINT)
-				return;
-
-			auto pos = light->getNode()->getRealPosition();
-			Vector4 vpos = Vector4::Transform({ pos.x, pos.y, pos.z, 1 }, view);
-			constants.lightspos[index] = { vpos.x, vpos.y, vpos.z, range };
-			auto color = light->getColor();
-			color *= radiance;
-			constants.lightscolor[index] = {color.x, color.y, color.z, 1};
-
-			lights.push_back(pos.x);
-			lights.push_back(pos.y);
-			lights.push_back(pos.z);
-			lights.push_back(range);
-			lights.push_back((float)index);
-			index++;
-		});
-
-
+		int count = getScene()->getNumLights();
+		if (has("numLights"))
+			count = getValue<int>("numLights");
 		mConstants.lock()->blit(&constants, sizeof(constants));
 		renderer->setPSConstantBuffers({ mConstants });
 
 		auto instances = mLightVolumesInstances[Scene::Light::LT_POINT];
-		instances.lock()->blit(lights.data(), lights.size() * sizeof(float));
-
-		int instacesCount = lights.size() / 5;
 		auto context = renderer->getContext();
 		Mesh::Ptr mesh = mLightVolumes[Scene::Light::LT_POINT];
 		auto layout = mLightVolumeLayout;
 		auto rend = mesh->getMesh(0);
 		ID3D11Buffer* vbs[] = { *rend.vertices.lock(),*instances.lock() };
-		UINT stride[] = { rend.layout.lock()->getSize(),20 };
+		UINT stride[] = { rend.layout.lock()->getSize(),4 };
 		UINT offset[] = { 0, 0 };
 
 		renderer->setVertexShader(mLightVolumeVS);
@@ -269,7 +248,7 @@ void PBR::renderLightVolumes(Renderer::Texture::Ptr rt)
 		rasterDesc.DepthBias = 0;
 		rasterDesc.DepthBiasClamp = 0.0f;
 		rasterDesc.DepthClipEnable = false;
-		rasterDesc.FillMode = getValue<D3D11_FILL_MODE>("fillmode");
+		rasterDesc.FillMode = D3D11_FILL_SOLID;
 		rasterDesc.FrontCounterClockwise = false;
 		rasterDesc.MultisampleEnable = false;
 		rasterDesc.ScissorEnable = false;
@@ -302,7 +281,7 @@ void PBR::renderLightVolumes(Renderer::Texture::Ptr rt)
 		renderer->setDepthStencilState(dsdesc, 1);
 		renderer->setPixelShader({});
 		renderer->setRenderTargets({}, mDepth);
-		context->DrawIndexedInstanced(rend.numIndices, instacesCount, 0, 0, 0);
+		context->DrawIndexedInstanced(rend.numIndices, count, 0, 0, 0);
 
 		dsdesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
 		dsdesc.FrontFace.StencilFunc = D3D11_COMPARISON_NOT_EQUAL;
@@ -316,10 +295,7 @@ void PBR::renderLightVolumes(Renderer::Texture::Ptr rt)
 		renderer->setRasterizer(rasterDesc);
 		renderer->setPixelShader(mPSs[Scene::Light::LT_POINT]);
 		renderer->setRenderTarget(rt, mDepth);
-		{
-			PROFILE(mOnlyLighting);
-			context->DrawIndexedInstanced(rend.numIndices, instacesCount, 0, 0, 0);
-		}
+		context->DrawIndexedInstanced(rend.numIndices, count, 0, 0, 0);
 
 	}
 

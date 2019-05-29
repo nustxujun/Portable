@@ -9,16 +9,12 @@ class PBR:public Pipeline::Stage
 	{
 		Matrix invertPorj;
 		Matrix View;
-		Vector4 lightspos[100];
-		Vector4 lightscolor[100];
-		int numLights;
 		float roughness;
 		float metallic;
 		float width;
 		float height;
 		int maxLightsPerTile;
 		int tilePerline;
-		float range;
 	};
 
 	__declspec(align(16))
@@ -45,6 +41,7 @@ public:
 private:
 	void renderLightVolumes(Renderer::Texture::Ptr rt);
 	void renderNormal(Renderer::Texture::Ptr rt);
+	void updateLights();
 private:
 	Renderer::Texture::Ptr mAlbedo;
 	Renderer::Texture::Ptr mNormal;
@@ -61,5 +58,6 @@ private:
 	Mesh::Ptr mLightVolumes[3];
 	Renderer::VertexShader::Weak mLightVolumeVS;
 	Renderer::Buffer::Ptr mLightVolumeConstants;
-	Renderer::Profile::Ptr mOnlyLighting;
+
+	Renderer::Buffer::Ptr mLightsBuffer;
 };

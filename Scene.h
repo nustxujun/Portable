@@ -190,6 +190,7 @@ public:
 	Light::Ptr createOrGetLight(const std::string& name);
 	void visitRenderables(std::function<void(const Renderable&)> callback, std::function<bool(Entity::Ptr)> cond = {});
 	void visitLights(std::function<void(Light::Ptr)> callback);
+	size_t getNumLights()const { return mLights.size(); }
 	Node::Ptr getRoot() { return mRoot; }
 	Node::Ptr createNode(const std::string& name = {});
 private:
