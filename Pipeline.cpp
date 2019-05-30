@@ -5,7 +5,6 @@ Pipeline::Stage::Stage(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q,Setting::Ptr s
 {
 	setSetting(set);
 	mProfile = r->createProfile();
-	init();
 }
 
 Pipeline::Stage::~Stage()

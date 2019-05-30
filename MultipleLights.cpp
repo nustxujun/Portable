@@ -9,6 +9,7 @@
 #include "LightCulling.h"
 #include "AO.h"
 #include "DepthLinearing.h"
+#include "ClusteredLightCulling.h"
 
 #include <random>
 
@@ -318,6 +319,9 @@ void MultipleLights::initCDRPipeline()
 
 	mPipeline->pushStage<GBuffer>();
 	mPipeline->pushStage<DepthLinearing>();
+
+	mPipeline->pushStage<ClusteredLightCulling>();
+
 	mPipeline->pushStage<PBR>();
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);

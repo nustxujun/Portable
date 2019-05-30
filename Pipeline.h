@@ -80,7 +80,8 @@ public:
 	template<class T, class ... Args>
 	void pushStage(Args ... args)
 	{
-		auto ptr = new T(mRenderer, mScene, mQuad,mSetting,this, args...);
+		auto ptr = new T(mRenderer, mScene, mQuad,mSetting,this);
+		ptr->init( args...);
 		mStages.emplace_back(Stage::Ptr(ptr));
 	}
 

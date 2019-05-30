@@ -592,6 +592,13 @@ Renderer::ComputeShader::Weak Renderer::createComputeShader(const void * data, s
 	return mCSs.back();
 }
 
+Renderer::ComputeShader::Weak Renderer::createComputeShader(const std::string& name, const std::string& entry)
+{
+	auto blob = compileFile(name, entry, "cs_5_0");
+	return createComputeShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
+}
+
+
 Renderer::Layout::Ptr Renderer::createLayout(const D3D11_INPUT_ELEMENT_DESC * descarray, size_t count)
 {
 	mLayouts.emplace_back(new Layout(this, descarray, count));

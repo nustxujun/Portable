@@ -132,6 +132,9 @@
     <ClInclude Include="DepthLinearing.h">
       <Filter>Pipeline\Stage</Filter>
     </ClInclude>
+    <ClInclude Include="ClusteredLightCulling.h">
+      <Filter>Pipeline\Stage</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -210,6 +213,9 @@
       <Filter>Pipeline\Stage</Filter>
     </ClCompile>
     <ClCompile Include="DepthLinearing.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="ClusteredLightCulling.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

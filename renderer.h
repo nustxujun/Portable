@@ -409,6 +409,8 @@ public:
 	PixelShader::Weak createPixelShader(const std::string& file, const std::string& entry);
 
 	ComputeShader::Weak createComputeShader(const void* data, size_t size);
+	ComputeShader::Weak createComputeShader(const std::string& name, const std::string& entry);
+
 	Layout::Ptr createLayout(const D3D11_INPUT_ELEMENT_DESC* descarray, size_t count);
 	Font::Ptr createOrGetFont(const std::wstring& font);
 	Rasterizer::Ptr createOrGetRasterizer(  const D3D11_RASTERIZER_DESC& desc);

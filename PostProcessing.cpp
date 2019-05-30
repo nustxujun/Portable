@@ -1,12 +1,16 @@
 #include "PostProcessing.h"
 
-PostProcessing::PostProcessing(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr st, Pipeline * p, const std::string & ps):
+PostProcessing::PostProcessing(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr st, Pipeline * p):
 	Pipeline::Stage(r,s,q,st,p), mQuad(r)
 {
-	mName = ps;
-	auto blob = r->compileFile(ps, "main", "ps_5_0");
-	mPS = r->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
 }
+
+void PostProcessing::init(const std::string& file)
+{
+	mName = file;
+	mPS = getRenderer()->createPixelShader(file, "main");
+}
+
 
 PostProcessing::~PostProcessing()
 {

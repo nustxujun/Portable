@@ -5,11 +5,9 @@ DepthBounding::DepthBounding(
 	Scene::Ptr s, 
 	Quad::Ptr q,
 	Setting::Ptr set, 
-	Pipeline * p, 
-	int w, int h):
+	Pipeline * p):
 	Pipeline::Stage(r,s,q,set,p), 
-	mComputer(r), 
-	mWidth(w),mHeight(h)
+	mComputer(r)
 {
 	mName = "depth bounding";
 	auto blob = r->compileFile("hlsl/depthbounding.hlsl", "main", "cs_5_0");
@@ -20,6 +18,13 @@ DepthBounding::DepthBounding(
 	mDepth = getShaderResource("depth");
 
 }
+
+void DepthBounding::init(int width, int height)
+{
+	mWidth = (width);
+	mHeight = (height);
+}
+
 
 void DepthBounding::render(Renderer::Texture::Ptr rt) 
 {

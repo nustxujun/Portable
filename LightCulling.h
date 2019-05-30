@@ -21,11 +21,10 @@ public:
 		Scene::Ptr s,
 		Quad::Ptr q,
 		Setting::Ptr set,
-		Pipeline* p,
-		int w, 
-		int h
+		Pipeline* p
 	);
 	void render(Renderer::Texture::Ptr rt)  override final;
+	void init(int w, int h) { mWidth = w; mHeight = h; }
 private:
 	Renderer::ShaderResource::Ptr mDepthBounds;
 	GPUComputer mComputer;

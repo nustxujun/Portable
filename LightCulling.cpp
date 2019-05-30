@@ -5,10 +5,8 @@ LightCulling::LightCulling(
 	Scene::Ptr s,
 	Quad::Ptr q,
 	Setting::Ptr set,
-	Pipeline * p,
-	int w, int h) :
-	Pipeline::Stage(r, s, q,set, p), mComputer(r),
-	mWidth(w), mHeight(h)
+	Pipeline * p) :
+	Pipeline::Stage(r, s, q,set, p), mComputer(r)
 {
 	mName = "cull lights";
 	auto blob = r->compileFile("hlsl/lightculling.hlsl", "main", "cs_5_0");
@@ -33,7 +31,7 @@ void LightCulling::render(Renderer::Texture::Ptr rt)
 	consts.numLights = 0;
 	consts.numLights = getValue<int>("numLights");
 	consts.texelwidth = 1.0f / (float)mWidth;
-	consts.texelheight = 1.0f/ (float)mWidth;
+	consts.texelheight = 1.0f/ (float)mHeight;
 	consts.maxLightsPerTile = getScene()->getNumLights();
 	consts.tilePerline = mWidth;
 

@@ -156,6 +156,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="AO.h" />
+    <ClInclude Include="ClusteredLightCulling.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="D3D11Helper.h" />
     <ClInclude Include="deferredRendering.h" />
@@ -192,6 +193,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AO.cpp" />
+    <ClCompile Include="ClusteredLightCulling.cpp" />
     <ClCompile Include="DepthBounding.cpp" />
     <ClCompile Include="DepthLinearing.cpp" />
     <ClCompile Include="GBuffer.cpp" />
@@ -231,7 +233,9 @@
     <Image Include="small.ico" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
+    <None Include="packages.config">
+      <SubType>Designer</SubType>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <None Include="hlsl\castshadow.hlsl">

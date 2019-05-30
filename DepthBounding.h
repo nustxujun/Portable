@@ -10,8 +10,9 @@ public:
 		Scene::Ptr s,
 		Quad::Ptr q,
 		Setting::Ptr set,
-		Pipeline* p , int width, int height);
+		Pipeline* p );
 	void render(Renderer::Texture::Ptr rt)  override final;
+	void init(int width, int height) ;
 private:
 	GPUComputer mComputer;
 	Renderer::ComputeShader::Weak mCS;
