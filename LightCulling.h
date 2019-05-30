@@ -22,16 +22,17 @@ public:
 		Quad::Ptr q,
 		Setting::Ptr set,
 		Pipeline* p,
-		Renderer::Texture::Ptr depthBounds,
-		Renderer::Buffer::Ptr lights,
-		Renderer::Buffer::Ptr lightsindex
+		int w, 
+		int h
 	);
 	void render(Renderer::Texture::Ptr rt)  override final;
 private:
-	Renderer::Texture::Ptr mDepthBounds;
+	Renderer::ShaderResource::Ptr mDepthBounds;
 	GPUComputer mComputer;
 	Renderer::ComputeShader::Weak mCS;
 	Renderer::Buffer::Ptr mConstants;
-	Renderer::Buffer::Ptr mLights;
-	Renderer::Buffer::Ptr mLightsOutput;
+	Renderer::ShaderResource::Ptr mLights;
+	Renderer::UnorderedAccess::Ptr mLightsOutput;
+	int mWidth;
+	int mHeight;
 };

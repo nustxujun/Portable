@@ -16,6 +16,7 @@ public:
 protected:
 	virtual void initDRPipeline();
 	virtual void initTBDRPipeline();
+	virtual void initCDRPipeline();
 
 	std::function<void(void)> mUpdater;
 };

@@ -6,13 +6,9 @@ LightCulling::LightCulling(
 	Quad::Ptr q,
 	Setting::Ptr set,
 	Pipeline * p,
-	Renderer::Texture::Ptr depthBounds,
-	Renderer::Buffer::Ptr lights,
-	Renderer::Buffer::Ptr lightsindex) :
+	int w, int h) :
 	Pipeline::Stage(r, s, q,set, p), mComputer(r),
-	mDepthBounds(depthBounds),
-	mLightsOutput (lightsindex),
-	mLights(lights)
+	mWidth(w), mHeight(h)
 {
 	mName = "cull lights";
 	auto blob = r->compileFile("hlsl/lightculling.hlsl", "main", "cs_5_0");
@@ -22,12 +18,9 @@ LightCulling::LightCulling(
 
 	this->set("tiled", { {"value",true } });
 	
-	
-
-
-	auto desc = depthBounds.lock()->getDesc();
-
-
+	mDepthBounds = getShaderResource("depthbounds");
+	mLightsOutput = getUnorderedAccess("lightsindex");
+	mLights = getShaderResource("lights");
 }
 
 void LightCulling::render(Renderer::Texture::Ptr rt) 
@@ -39,11 +32,10 @@ void LightCulling::render(Renderer::Texture::Ptr rt)
 	const Matrix& view = cam->getViewMatrix();
 	consts.numLights = 0;
 	consts.numLights = getValue<int>("numLights");
-	auto desc = mDepthBounds.lock()->getDesc();
-	consts.texelwidth = 1.0f / (float)desc.Width;
-	consts.texelheight = 1.0f/ (float)desc.Height;
+	consts.texelwidth = 1.0f / (float)mWidth;
+	consts.texelheight = 1.0f/ (float)mWidth;
 	consts.maxLightsPerTile = getScene()->getNumLights();
-	consts.tilePerline = desc.Width;
+	consts.tilePerline = mWidth;
 
 	mConstants.lock()->blit(&consts, sizeof(Constants));
 
@@ -51,7 +43,7 @@ void LightCulling::render(Renderer::Texture::Ptr rt)
 	mComputer.setInputs({ mDepthBounds ,mLights });
 	mComputer.setOuputs({ mLightsOutput });
 	mComputer.setShader(mCS);
-	mComputer.compute(desc.Width, desc.Height, 1);
+	mComputer.compute(mWidth, mHeight, 1);
 
 	//Quad quad(getRenderer());
 	//quad.setRenderTarget(rt);

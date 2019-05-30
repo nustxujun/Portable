@@ -6,20 +6,8 @@ PBR::PBR(
 	Scene::Ptr s,
 	Quad::Ptr q,
 	Setting::Ptr set,
-	Pipeline* p,
-	Renderer::Texture::Ptr a,
-	Renderer::Texture::Ptr n,
-	Renderer::DepthStencil::Ptr d,
-	Renderer::Texture::Ptr dl,
-	Renderer::Buffer::Ptr lights,
-	Renderer::Buffer::Ptr lightsindex) :
-	Pipeline::Stage(r, s, q,set, p),
-	mAlbedo(a),
-	mNormal(n),
-	mDepth(d),
-	mDepthLinear(dl),
-	mLightsBuffer (lights),
-	mLightsIndex(lightsindex)
+	Pipeline* p) :
+	Pipeline::Stage(r, s, q,set, p)
 {
 	mName = "pbr lighting";
 	this->set("roughness", { {"type","set"}, {"value",0.5f},{"min","0.01"},{"max",1.0f},{"interval", "0.01"} });
@@ -76,6 +64,15 @@ PBR::PBR(
 	}
 
 	mLightVolumeConstants = r->createBuffer(sizeof(LightVolumeConstants), D3D11_BIND_CONSTANT_BUFFER, 0, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+
+	mAlbedo = getShaderResource("albedo");
+	mNormal = getShaderResource("normal");
+	mDepth = getDepthStencil("depth");
+	mDepthLinear = getShaderResource("depthlinear");
+	mLightsBuffer = getBuffer("lights");
+
+	if (has("tiled"))
+		mLightsIndex = getShaderResource("lightsindex");
 }
 
 PBR::~PBR()
@@ -136,7 +133,7 @@ void PBR::renderNormal(Renderer::Texture::Ptr rt)
 
 	constants.roughness = getValue<float>("roughness");
 	constants.metallic = getValue<float>("metallic");
-	auto desc = mAlbedo.lock()->getDesc();
+	auto desc = rt.lock()->getDesc();
 	constants.width = desc.Width;
 	constants.height = desc.Height;
 	constants.maxLightsPerTile =  getScene()->getNumLights();
@@ -282,8 +279,8 @@ void PBR::renderLightVolumes(Renderer::Texture::Ptr rt)
 		dsdesc.FrontFace.StencilFunc = D3D11_COMPARISON_NOT_EQUAL;
 		dsdesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
 		dsdesc.BackFace.StencilFunc = D3D11_COMPARISON_NOT_EQUAL;
-		dsdesc.DepthEnable = true;
-		dsdesc.StencilEnable = false;
+		dsdesc.DepthEnable = false;
+		dsdesc.StencilEnable = true;
 		renderer->setDepthStencilState(dsdesc, 1);
 
 		rasterDesc.CullMode = D3D11_CULL_FRONT;

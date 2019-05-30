@@ -29,13 +29,7 @@ public:
 		Scene::Ptr s,
 		Quad::Ptr q,
 		Setting::Ptr set,
-		Pipeline* p,
-		Renderer::Texture::Ptr a,
-		Renderer::Texture::Ptr n,
-		Renderer::DepthStencil::Ptr d, 
-		Renderer::Texture::Ptr dl,
-		Renderer::Buffer::Ptr lights,
-		Renderer::Buffer::Ptr lightsindex = {});
+		Pipeline* p);
 	~PBR();
 
 	void render(Renderer::Texture::Ptr rt)  override final;
@@ -44,11 +38,11 @@ private:
 	void renderNormal(Renderer::Texture::Ptr rt);
 	void updateLights();
 private:
-	Renderer::Texture::Ptr mAlbedo;
-	Renderer::Texture::Ptr mNormal;
+	Renderer::ShaderResource::Ptr mAlbedo;
+	Renderer::ShaderResource::Ptr mNormal;
 	Renderer::DepthStencil::Ptr mDepth;
-	Renderer::Texture::Ptr mDepthLinear;
-	Renderer::Buffer::Ptr mLightsIndex;
+	Renderer::ShaderResource::Ptr mDepthLinear;
+	Renderer::ShaderResource::Ptr mLightsIndex;
 
 	std::array<Renderer::PixelShader::Weak,3> mPSs;
 	Renderer::Sampler::Ptr mLinear;

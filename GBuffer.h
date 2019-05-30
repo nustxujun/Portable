@@ -11,11 +11,7 @@ public:
 		Scene::Ptr s, 
 		Quad::Ptr q,
 		Setting::Ptr set,
-		Pipeline* p,
-		Renderer::RenderTarget::Ptr a, 
-		Renderer::RenderTarget::Ptr n,
-		Renderer::RenderTarget::Ptr w,
-		Renderer::DepthStencil::Ptr d);
+		Pipeline* p);
 	~GBuffer();
 
 

@@ -6,19 +6,19 @@ DepthBounding::DepthBounding(
 	Quad::Ptr q,
 	Setting::Ptr set, 
 	Pipeline * p, 
-	Renderer::ShaderResource::Ptr depth,
-	Renderer::Texture::Ptr db):
+	int w, int h):
 	Pipeline::Stage(r,s,q,set,p), 
 	mComputer(r), 
-	mDepth(depth),
-	mDepthMinMax(db)
+	mWidth(w),mHeight(h)
 {
 	mName = "depth bounding";
 	auto blob = r->compileFile("hlsl/depthbounding.hlsl", "main", "cs_5_0");
 	mCS = r->createComputeShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
 
 	mConstants = r->createBuffer(sizeof(Matrix), D3D11_BIND_CONSTANT_BUFFER);
-	//mDepthMinMax = r->createTexture( desc);
+	mDepthMinMax = getUnorderedAccess("depthbounds");
+	mDepth = getShaderResource("depth");
+
 }
 
 void DepthBounding::render(Renderer::Texture::Ptr rt) 
@@ -32,7 +32,6 @@ void DepthBounding::render(Renderer::Texture::Ptr rt)
 	mComputer.setOuputs({ mDepthMinMax });
 	mComputer.setShader(mCS);
 
-	auto desc = mDepthMinMax.lock()->getDesc();
-	mComputer.compute(desc.Width, desc.Height, 1);
+	mComputer.compute(mWidth, mHeight, 1);
 
 }

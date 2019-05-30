@@ -138,12 +138,12 @@ float4 main(PS_INPUT input) : SV_TARGET
 		float3 radiance = lightcolor * attenuation;
 
 
-		float x = distance / lightpos.w;
-		// fake inverse squared falloff:
-		// -(1/k)*(1-(k+1)/(1+k*x^2))
-		// k=20: -(1/20)*(1 - 21/(1+20*x^2))
-		float fFalloff = -0.05 + 1.05 / (1 + 20 * x*x);
-		radiance *= fFalloff;
+		//float x = distance / lightpos.w;
+		//// fake inverse squared falloff:
+		//// -(1/k)*(1-(k+1)/(1+k*x^2))
+		//// k=20: -(1/20)*(1 - 21/(1+20*x^2))
+		//float fFalloff = -0.05 + 1.05 / (1 + 20 * x*x);
+		//radiance *= fFalloff;
 
 #endif
 #ifdef DIR

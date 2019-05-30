@@ -45,39 +45,39 @@ void Framework::update()
 
 void Framework::initPipeline()
 {
-	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
-	auto w = mRenderer->getWidth();
-	auto h = mRenderer->getHeight();
-	auto albedo = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
-	auto normal = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
-	auto worldpos = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
-	auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R32_TYPELESS, true);
-	auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	//Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
+	//auto w = mRenderer->getWidth();
+	//auto h = mRenderer->getHeight();
+	//auto albedo = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
+	//auto normal = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
+	//auto worldpos = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	//auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R32_TYPELESS, true);
+	//auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 
-	mPipeline->setFrameBuffer(frame);
-	auto bb = mRenderer->getBackbuffer();
-	mPipeline->pushStage("clear rt", [bb](Renderer::Texture::Ptr rt)
-	{
-		bb.lock()->clear({ 1,1,1,0 });
-		rt.lock()->clear({ 0,0,0,0 });
-	});
+	//mPipeline->setFrameBuffer(frame);
+	//auto bb = mRenderer->getBackbuffer();
+	//mPipeline->pushStage("clear rt", [bb](Renderer::Texture::Ptr rt)
+	//{
+	//	bb.lock()->clear({ 1,1,1,0 });
+	//	rt.lock()->clear({ 0,0,0,0 });
+	//});
 
 
 
-	mPipeline->pushStage<GBuffer>(albedo, normal, worldpos, depth);
-	//mPipeline->pushStage<PBR>(albedo, normal, depth);
-	//mPipeline->pushStage<AO>(normal, depth,10.0f);
-	//mPipeline->pushStage<ShadowMap>(worldpos, depth, 2048, 8);
-	//mPipeline->pushStage<VolumetricLighting>();
+	//mPipeline->pushStage<GBuffer>(albedo, normal, worldpos, depth);
+	////mPipeline->pushStage<PBR>(albedo, normal, depth);
+	////mPipeline->pushStage<AO>(normal, depth,10.0f);
+	////mPipeline->pushStage<ShadowMap>(worldpos, depth, 2048, 8);
+	////mPipeline->pushStage<VolumetricLighting>();
 
-	mPipeline->pushStage<HDR>();
-	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
+	//mPipeline->pushStage<HDR>();
+	//mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 
-	mPipeline->pushStage("draw to backbuffer", [bb, quad](Renderer::Texture::Ptr rt)
-	{
-		quad->setRenderTarget(bb);
-		quad->drawTexture(rt, false);
-	});
+	//mPipeline->pushStage("draw to backbuffer", [bb, quad](Renderer::Texture::Ptr rt)
+	//{
+	//	quad->setRenderTarget(bb);
+	//	quad->drawTexture(rt, false);
+	//});
 }
 
 void Framework::initScene()

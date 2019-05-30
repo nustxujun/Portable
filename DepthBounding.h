@@ -10,14 +10,14 @@ public:
 		Scene::Ptr s,
 		Quad::Ptr q,
 		Setting::Ptr set,
-		Pipeline* p ,
-		Renderer::ShaderResource::Ptr depth,
-		Renderer::Texture::Ptr db);
+		Pipeline* p , int width, int height);
 	void render(Renderer::Texture::Ptr rt)  override final;
 private:
 	GPUComputer mComputer;
 	Renderer::ComputeShader::Weak mCS;
-	Renderer::Texture::Ptr mDepthMinMax;
+	Renderer::UnorderedAccess::Ptr mDepthMinMax;
 	Renderer::ShaderResource::Ptr mDepth;
 	Renderer::Buffer::Ptr mConstants;
+	int mWidth;
+	int mHeight;
 };

@@ -5,16 +5,9 @@ GBuffer::GBuffer(
 	Scene::Ptr s,
 	Quad::Ptr q,
 	Setting::Ptr st,
-	Pipeline* p,
-	Renderer::RenderTarget::Ptr a,
-	Renderer::RenderTarget::Ptr n,
-	Renderer::RenderTarget::Ptr w,
-	Renderer::DepthStencil::Ptr d):
-	Pipeline::Stage(r,s,q,st,p),
-	mAlbedo(a), 
-	mNormal(n), 
-	mWorldPos(w),
-	mDepth(d)
+	Pipeline* p):
+	Pipeline::Stage(r,s,q,st,p)
+
 {
 	mName = "gbuffer";
 	auto blob = getRenderer()->compileFile("hlsl/gbuffer.fx", "", "fx_5_0");
@@ -28,6 +21,11 @@ GBuffer::GBuffer(
 	};
 
 	mLayout = getRenderer()->createLayout(modelLayout, ARRAYSIZE(modelLayout));
+
+	mAlbedo = getRenderTarget("albedo");
+	mNormal = getRenderTarget("normal");
+	mWorldPos = getRenderTarget("worldpos");
+	mDepth = getDepthStencil("depth");
 }
 
 GBuffer::~GBuffer()

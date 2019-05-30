@@ -5,6 +5,7 @@ Pipeline::Stage::Stage(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q,Setting::Ptr s
 {
 	setSetting(set);
 	mProfile = r->createProfile();
+	init();
 }
 
 Pipeline::Stage::~Stage()
@@ -60,3 +61,77 @@ void Pipeline::setFrameBuffer(Renderer::Texture::Ptr rt)
 	mFrameBuffer = rt;
 }
 
+
+void Pipeline::addShaderResource(const std::string & name, Renderer::ShaderResource::Ptr ptr)
+{
+	mShaderResources[name] = ptr;
+}
+
+void Pipeline::addRenderTarget(const std::string & name, Renderer::RenderTarget::Ptr ptr)
+{
+	mRenderTargets[name] = ptr;
+}
+
+void Pipeline::addDepthStencil(const std::string & name, Renderer::DepthStencil::Ptr ptr)
+{
+	mDepthStencils[name] = ptr;
+}
+
+void Pipeline::addUnorderedAccess(const std::string & name, Renderer::UnorderedAccess::Ptr ptr)
+{
+	mUnorderedAccesses[name] = ptr;
+}
+
+void Pipeline::addBuffer(const std::string & name, Renderer::Buffer::Ptr ptr)
+{
+	mBuffers[name] = ptr;
+}
+
+#define CHECK_EXISTED(C) if (C.find(name) == C.end()) report( name + " is not existed in "#C); 
+
+
+Renderer::ShaderResource::Ptr Pipeline::getShaderResource(const std::string& name) 
+{
+	CHECK_EXISTED(mShaderResources)
+	return mShaderResources[name];
+}
+
+Renderer::RenderTarget::Ptr Pipeline::getRenderTarget(const std::string& name) 
+{
+	CHECK_EXISTED(mRenderTargets)
+
+	return mRenderTargets[name];
+}
+
+Renderer::DepthStencil::Ptr Pipeline::getDepthStencil(const std::string& name) 
+{
+	CHECK_EXISTED(mDepthStencils)
+
+	return mDepthStencils[name];
+}
+
+Renderer::UnorderedAccess::Ptr Pipeline::getUnorderedAccess(const std::string& name) 
+{
+	CHECK_EXISTED(mUnorderedAccesses)
+
+	return mUnorderedAccesses[name];
+}
+
+Renderer::Buffer::Ptr Pipeline::getBuffer(const std::string& name) 
+{
+	CHECK_EXISTED(mBuffers)
+
+	return mBuffers[name];
+}
+
+void Pipeline::report(const std::string & msg)
+{
+	std::string str = msg + "\n";
+	OutputDebugStringA("WARN --------------------\n");
+	OutputDebugStringA(str.c_str());
+	OutputDebugStringA("-------------------------\n");
+
+	MessageBoxA(NULL, msg.c_str(), NULL, NULL);
+	abort();
+
+}

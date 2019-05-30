@@ -1,13 +1,15 @@
 #include "DepthLinearing.h"
 
-DepthLinearing::DepthLinearing(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr set, Pipeline * p, 
-	Renderer::DepthStencil::Ptr depth, Renderer::Texture::Ptr depthlinear):
-	Pipeline::Stage(r,s,q,set,p), mDepth(depth), mDepthLinear(depthlinear)
+DepthLinearing::DepthLinearing(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr set, Pipeline * p):
+	Pipeline::Stage(r,s,q,set,p)
 {
 	mName = "linear depth";
 	mPS = r->createPixelShader("hlsl/depthlinearing.hlsl", "main");
 
 	mConstants = r->createBuffer(sizeof(Matrix), D3D11_BIND_CONSTANT_BUFFER);
+
+	mDepth = getShaderResource("depth");
+	mDepthLinear = getRenderTarget("depthlinear");
 }
 
 void DepthLinearing::render(Renderer::Texture::Ptr rt)
