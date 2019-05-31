@@ -7,6 +7,13 @@ Buffer<float4> lights: register(t3);
 Buffer<uint> lightsIndex: register(t4);
 #endif
 
+#ifdef CLUSTERED
+Buffer<uint> lightsIndices: register(t4);
+Texture3D<uint2> clusters: register(t5);
+
+
+#endif
+
 SamplerState sampLinear: register(s0);
 SamplerState sampPoint: register(s1);
 
@@ -14,12 +21,15 @@ cbuffer ConstantBuffer: register(b0)
 {
 	matrix invertProj;
 	matrix View;
+	float3 clustersize;
 	float roughness;
 	float metallic;
 	float width;
 	float height;
 	int maxLightsPerTile;
 	int tilePerline;
+	float near;
+	float far;
 }
 
 struct PS_INPUT
@@ -71,15 +81,12 @@ float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
 	return ggx1 * ggx2;
 }
 
-//float3 decode(float2 enc)
-//{
-//	float4 nn = float4(enc,0,0) * float4(2, 2, 0, 0) + float4(-1, -1, 1, -1);
-//	float l = dot(nn.xyz, -nn.xyw);
-//	nn.z = l;
-//	nn.xy *= sqrt(l);
-//	return nn.xyz * 2 + float3(0, 0, -1);
-//}
-//
+uint viewToSlice(float z)
+{
+	return (uint)floor(k * log(z / near) / log(far / near));
+}
+
+
 
 float4 main(PS_INPUT input) : SV_TARGET
 {
@@ -91,24 +98,25 @@ float4 main(PS_INPUT input) : SV_TARGET
 	normalData = mul(normalData, View);
 	float3 N = normalize(normalData.xyz);
 	float depthVal = depthTexture.Sample(sampPoint, texcoord).g;
-	float4 worldPos;
-	worldPos.x = texcoord.x * 2.0f - 1.0f;
-	worldPos.y = -(texcoord.y * 2.0f - 1.0f);
-	worldPos.z = depthVal;
-	worldPos.w = 1.0f;
-	worldPos = mul(worldPos, invertProj);
-	worldPos /= worldPos.w;
+	float4 viewPos;
+	viewPos.x = texcoord.x * 2.0f - 1.0f;
+	viewPos.y = -(texcoord.y * 2.0f - 1.0f);
+	viewPos.z = depthVal;
+	viewPos.w = 1.0f;
+	viewPos = mul(viewPos, invertProj);
+	viewPos /= viewPos.w;
 
 
-	float3 V = normalize( - worldPos.xyz);
+	float3 V = normalize( - viewPos.xyz);
 	float3 F0 = 0.04;
 	F0 = lerp(F0, albedo, metallic);
 
 	float3 Lo = 0;
 
 
-#ifdef TILED
-	
+#ifdef TILED || CLUSTERED
+	#ifdef TILED
+
 	int x = input.Pos.x;
 	int y = input.Pos.y;
 	x /= 16;
@@ -122,17 +130,31 @@ float4 main(PS_INPUT input) : SV_TARGET
 		uint index = lightsIndex[startoffset + i];
 		float4 lightpos = lights[index * 2];
 		float3 lightcolor = lights[index * 2 + 1].rgb;
-#else
+
+	#else
+	
+	uint x = input.Pos.x / clustersize.x;
+	uint y = input.Pos.y / clustersize.y;
+	uint z = viewToSlice(viewPos.z);
+
+	uint cluster = clusters[uint3(x, y, z)];
+	for (uint i = 0; i < cluster.y,++i )
+	{
+		uint index = lightsIndices[cluster.x];
+		float4 lightpos = lights[index * 2];
+		float3 lightcolor = lights[index * 2 + 1].rgb;
+	#endif
+#else 
 
 	float4 lightpos = lights[input.index * 2];
 	float3 lightcolor = lights[input.index * 2 + 1].rgb;
 #endif
 
 #ifdef POINT
-		float3 L = normalize(lightpos.xyz - worldPos.xyz);
+		float3 L = normalize(lightpos.xyz - viewPos.xyz);
 
 
-		float distance = length(lightpos.xyz - worldPos.xyz);
+		float distance = length(lightpos.xyz - viewPos.xyz);
 
 		float attenuation = 1.0 / (distance * distance);
 		float3 radiance = lightcolor * attenuation;
@@ -152,7 +174,7 @@ float4 main(PS_INPUT input) : SV_TARGET
 
 #endif
 #ifdef SPOT
-		float3 L = -normalize(lightpos.xyz - worldPos);
+		float3 L = -normalize(lightpos.xyz - viewPos);
 		float3 radiance = lightcolor;
 
 #endif
@@ -175,7 +197,7 @@ float4 main(PS_INPUT input) : SV_TARGET
 		// add to outgoing radiance Lo
 		float NdotL = max(dot(N, L), 0.0);
 		Lo += (kD * albedo / PI + specular)  * NdotL * radiance ;
-#ifdef TILED
+#ifdef TILED || CLUSTERED
 	}
 #endif
 

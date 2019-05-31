@@ -16,11 +16,12 @@ PostProcessing::~PostProcessing()
 {
 }
 
-void PostProcessing::render(Renderer::Texture::Ptr rt) 
+void PostProcessing::render(Renderer::Texture2D::Ptr rt) 
 {
 	if (mTarget.lock() == nullptr)
-		mTarget = rt.lock()->clone();
-
+	{
+		mTarget = getRenderer()->createTexture(rt.lock()->getDesc());
+	}
 	mQuad.setDefaultSampler();
 	mQuad.setDefaultViewport();
 	mQuad.setDefaultBlend(false);

@@ -41,7 +41,7 @@ public:
 		T getValue(const std::string& key, const T& dft = T(0))
 		{
 			if (!mSetting) 
-				return T(0);
+				return dft;
 
 			auto& j = mSetting->get(key);
 			if (j.type() == nlohmann::json::value_t::object)

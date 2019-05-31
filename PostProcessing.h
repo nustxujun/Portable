@@ -8,10 +8,10 @@ public:
 	~PostProcessing();
 
 	void init(const std::string& file);
-	void render(Renderer::Texture::Ptr rt)  override ;
+	void render(Renderer::Texture2D::Ptr rt)  override ;
 
 private:
 	Renderer::PixelShader::Weak mPS;
 	Quad mQuad;
-	Renderer::Texture::Ptr mTarget;
+	Renderer::Texture2D::Ptr mTarget;
 };

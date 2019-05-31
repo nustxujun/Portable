@@ -73,7 +73,7 @@ void Renderer::init(HWND win, int width, int height)
 	ID3D11Texture2D* backbuffer = NULL;
 	checkResult( mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backbuffer) );
 
-	auto shared = std::shared_ptr<Texture>(new Texture(this, backbuffer));
+	auto shared = std::shared_ptr<Texture2D>(new Texture2D(this, backbuffer));
 	mTextures.emplace_back(shared);
 	mBackbuffer = mTextures.back();
 
@@ -480,20 +480,42 @@ Renderer::Sampler::Ptr Renderer::createSampler(const std::string& name, D3D11_FI
 	return Sampler::Ptr(ret.first->second);
 }
 
-Renderer::Texture::Ptr Renderer::createTexture(const std::string & filename)
+Renderer::Texture2D::Ptr Renderer::createTexture(const std::string & filename)
 {
-	mTextures.emplace_back(new Texture(this,filename));
-	return mTextures.back();
+	ID3D11Texture2D* tex;
+	checkResult(D3DX11CreateTextureFromFileA(mDevice, filename.c_str(), NULL, NULL, (ID3D11Resource**)&tex, NULL));
+
+	auto ptr = std::shared_ptr<Texture2D>(new Texture2D(this, tex));
+	mTextures.emplace_back(ptr);
+	return ptr;
 }
 
-Renderer::Texture::Ptr Renderer::createTexture( const D3D11_TEXTURE2D_DESC& desc, const void* data, size_t size)
+Renderer::Texture2D::Ptr Renderer::createTexture( const D3D11_TEXTURE2D_DESC& desc, const void* data, size_t size)
 {
-	mTextures.emplace_back( new Texture(this,desc,data,size));
-	return mTextures.back();
+	D3D11_SUBRESOURCE_DATA initdata = {0};
+	initdata.pSysMem = data;
+	ID3D11Texture2D* tex;
+	checkResult(mDevice->CreateTexture2D(&desc, data == nullptr ? nullptr : &initdata, &tex));
+
+	auto ptr = std::shared_ptr<Texture2D>(new Texture2D(this, tex));
+	mTextures.emplace_back(ptr);
+	return ptr;
+}
+
+Renderer::Texture3D::Ptr Renderer::createTexture3D(const D3D11_TEXTURE3D_DESC & desc, const void * data, size_t size)
+{
+	D3D11_SUBRESOURCE_DATA initdata = { 0 };
+	initdata.pSysMem = data;
+	ID3D11Texture3D* tex;
+	checkResult(mDevice->CreateTexture3D(&desc, data == nullptr ? nullptr : &initdata, &tex));
+
+	auto ptr = std::shared_ptr<Texture3D>(new Texture3D(this, tex));
+	mTextures.emplace_back(ptr);
+	return ptr;
 }
 
 
-Renderer::Texture::Ptr Renderer::createRenderTarget(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage)
+Renderer::Texture2D::Ptr Renderer::createRenderTarget(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage)
 {
 	D3D11_TEXTURE2D_DESC desc = {0};
 	desc.Width = width;
@@ -506,9 +528,7 @@ Renderer::Texture::Ptr Renderer::createRenderTarget(int width, int height, DXGI_
 	desc.ArraySize = 1;
 	desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 
-
-	mTextures.emplace_back(new Texture(this, desc));
-	return mTextures.back();
+	return createTexture(desc);
 }
 
 Renderer::Buffer::Ptr Renderer::createBuffer(int size, D3D11_BIND_FLAG flag, const D3D11_SUBRESOURCE_DATA* initialdata, D3D11_USAGE usage, size_t CPUaccess)
@@ -671,7 +691,7 @@ Renderer::Profile::Ptr Renderer::createProfile()
 }
 
 
-Renderer::ShaderResource::ShaderResource(ID3D11ShaderResourceView* srv): mSRView(srv)
+Renderer::ShaderResource::ShaderResource(Renderer* r, ID3D11ShaderResourceView* srv):D3DObject(r), mSRView(srv)
 {
 
 }
@@ -683,7 +703,7 @@ Renderer::ShaderResource::~ShaderResource()
 	mSRView = nullptr;
 }
 
-Renderer::RenderTarget::RenderTarget(ID3D11RenderTargetView* rt)
+Renderer::RenderTarget::RenderTarget(Renderer* r, ID3D11RenderTargetView* rt):D3DObject(r)
 {
 	mRTView = rt;
 }
@@ -695,14 +715,19 @@ Renderer::RenderTarget::~RenderTarget()
 		mRTView->Release();
 }
 
+void Renderer::RenderTarget::clear(const std::array<float, 4> c)
+{
+	getContext()->ClearRenderTargetView(mRTView, c.data());
+}
 
-Renderer::Buffer::Buffer(Renderer* renderer, const D3D11_BUFFER_DESC& desc, const D3D11_SUBRESOURCE_DATA* data):D3DObject(renderer)
+
+Renderer::Buffer::Buffer(Renderer* r, const D3D11_BUFFER_DESC& desc, const D3D11_SUBRESOURCE_DATA* data):D3DObject(r)
 {
 	mDesc = desc;
 	checkResult(getDevice()->CreateBuffer(&desc, data, &mBuffer));
 }
 
-Renderer::Buffer::Buffer(Renderer * renderer, int size, int stride, DXGI_FORMAT format, size_t bindflags, D3D11_USAGE usage, size_t cpuaccess):D3DObject(renderer)
+Renderer::Buffer::Buffer(Renderer * r, int size, int stride, DXGI_FORMAT format, size_t bindflags, D3D11_USAGE usage, size_t cpuaccess) :D3DObject(r)
 {
 	D3D11_BUFFER_DESC mDesc = { 0 };
 	mDesc.BindFlags = bindflags;
@@ -842,35 +867,36 @@ ID3DX11EffectConstantBuffer * Renderer::Effect::getConstantBuffer(const std::str
 }
 
 
-Renderer::Texture::Texture(Renderer* renderer, const D3D11_TEXTURE2D_DESC& desc, const void* data, size_t size) :D3DObject(renderer)
-{
-	mDesc = desc;
-	D3D11_SUBRESOURCE_DATA initdata;
-	initdata.pSysMem = data;
-	initdata.SysMemPitch = size;
-	initdata.SysMemSlicePitch = 0;
-	checkResult(getDevice()->CreateTexture2D(&desc,  nullptr, &mTexture));
-
-
-	initTexture();
-
-}
-Renderer::Texture::Texture(Renderer* renderer, const std::string& filename):D3DObject(renderer)
-{
-	checkResult(D3DX11CreateTextureFromFileA(getDevice(), filename.c_str(), NULL, NULL, (ID3D11Resource**)&mTexture, NULL));
-	initTexture();
-}
-
-Renderer::Texture::Texture(Renderer * renderer, ID3D11Texture2D * t) :D3DObject(renderer)
-{
-	mTexture = t;
-	initTexture();
-}
 
 Renderer::Texture::~Texture()
 {
-	mTexture->Release();
 }
+
+
+//Renderer::Texture::Texture(Renderer* renderer, const D3D11_TEXTURE2D_DESC& desc, const void* data, size_t size) :D3DObject(renderer)
+//{
+//	mDesc = desc;
+//	D3D11_SUBRESOURCE_DATA initdata;
+//	initdata.pSysMem = data;
+//	initdata.SysMemPitch = size;
+//	initdata.SysMemSlicePitch = 0;
+//	checkResult(getDevice()->CreateTexture2D(&desc,  nullptr, &mTexture));
+//
+//
+//	initTexture();
+//
+//}
+//Renderer::Texture::Texture(Renderer* r, const std::string& filename):D3DObject(r)
+//{
+//	checkResult(D3DX11CreateTextureFromFileA(getDevice(), filename.c_str(), NULL, NULL, (ID3D11Resource**)&mTexture, NULL));
+//	initTexture();
+//}
+//
+//Renderer::Texture::Texture(Renderer * r, ID3D11Texture2D * t) :D3DObject(r)
+//{
+//	mTexture = t;
+//	initTexture();
+//}
 
 
 Renderer::Layout::Layout(Renderer* renderer, const D3D11_INPUT_ELEMENT_DESC * descarray, size_t count): D3DObject(renderer)
@@ -886,62 +912,8 @@ Renderer::Layout::Layout(Renderer* renderer, const D3D11_INPUT_ELEMENT_DESC * de
 	}
 }
 
-void Renderer::Texture::clear(const std::array<float, 4> c) 
-{
-	if (mRTView)
-	{
-		getContext()->ClearRenderTargetView(mRTView, c.data());
-	}
-}
 
-void Renderer::Texture::swap(Texture::Ptr t, bool force)
-{
-	auto ptr = t.lock();
-	if (ptr == nullptr) return;
-	if (memcmp(&mDesc, &ptr->mDesc, sizeof(mDesc)) != 0 && !force)
-	{
-		error("only can swap the same textures.");
-		return;
-	}
 
-	std::swap(mTexture, ptr->mTexture);
-	std::swap(mRTView, ptr->mRTView);
-	std::swap(mSRView, ptr->mSRView);
-	std::swap(mUAV, ptr->mUAV);
-	std::swap(mDesc, ptr->mDesc);
-}
-
-Renderer::Texture::Ptr Renderer::Texture::clone()const
-{
-	return getRenderer()->createTexture(mDesc);
-}
-
-void Renderer::Texture::initTexture()
-{
-	mTexture->GetDesc(&mDesc);
-	bool unorderedAccess = ((mDesc.BindFlags & D3D11_BIND_UNORDERED_ACCESS) != 0);
-	bool shaderRecource = ((mDesc.BindFlags & D3D11_BIND_SHADER_RESOURCE) != 0);
-	bool rendertarget = ((mDesc.BindFlags & D3D11_BIND_RENDER_TARGET) != 0);
-
-	if (rendertarget)
-		checkResult(getDevice()->CreateRenderTargetView(mTexture, NULL, &mRTView));
-
-	if (shaderRecource)
-	{
-		checkResult(getDevice()->CreateShaderResourceView(mTexture, nullptr, &mSRView));
-	}
-
-	if (unorderedAccess)
-	{
-		D3D11_UNORDERED_ACCESS_VIEW_DESC UAVDesc;
-		ZeroMemory(&UAVDesc, sizeof(D3D11_UNORDERED_ACCESS_VIEW_DESC));
-		UAVDesc.Format = mDesc.Format;
-		UAVDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
-		UAVDesc.Buffer.FirstElement = 0;
-		UAVDesc.Buffer.NumElements = mDesc.Width * mDesc.Height;
-		checkResult(getDevice()->CreateUnorderedAccessView(mTexture, NULL, &mUAV));
-	}
-}
 
 
 ID3D11InputLayout * Renderer::Layout::bind(ID3DX11EffectPass* pass)
@@ -1027,7 +999,7 @@ Renderer::Rasterizer::~Rasterizer()
 	mRasterizer->Release();
 }
 
-Renderer::DepthStencil::DepthStencil(Renderer* renderer, const D3D11_TEXTURE2D_DESC & desc):D3DObject(renderer), ShaderResource(nullptr)
+Renderer::DepthStencil::DepthStencil(Renderer* renderer, const D3D11_TEXTURE2D_DESC & desc):D3DObject(renderer)
 {
 	bool access = (desc.BindFlags & D3D11_BIND_SHADER_RESOURCE) != 0;
 
@@ -1105,30 +1077,24 @@ void Renderer::DepthStencil::clearStencil(int s)
 	getContext()->ClearDepthStencilView(mDSView, D3D11_CLEAR_STENCIL, 1.0f, s);
 }
 
-Renderer::UnorderedAccess::UnorderedAccess(ID3D11UnorderedAccessView* uav):mUAV(uav)
+Renderer::UnorderedAccess::UnorderedAccess(Renderer* r, ID3D11UnorderedAccessView* uav):D3DObject(r),mUAV(uav)
 {
-	//D3D11_SHADER_RESOURCE_VIEW_DESC srDesc;
-	//srDesc.Format = DXGI_FORMAT_UNKNOWN;
-	//srDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
-	//srDesc.Buffer.FirstElement = 0;
-	//srDesc.Buffer.NumElements = desc.ByteWidth / desc.StructureByteStride;
-	//
-	//checkResult(getDevice()->CreateShaderResourceView(getBuffer(), &srDesc, &mSRView));
 
-	//D3D11_UNORDERED_ACCESS_VIEW_DESC DescUAV;
-	//ZeroMemory(&DescUAV, sizeof(D3D11_UNORDERED_ACCESS_VIEW_DESC));
-	//DescUAV.Format = DXGI_FORMAT_UNKNOWN;
-	//DescUAV.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
-	//DescUAV.Buffer.FirstElement = 0;
-	//DescUAV.Buffer.NumElements = srDesc.Buffer.NumElements;
-
-	//checkResult(getDevice()->CreateUnorderedAccessView(getBuffer(), &DescUAV, &mUAV));
 }
 
 Renderer::UnorderedAccess::~UnorderedAccess()
 {
 	if (mUAV)
 		mUAV->Release();
+}
+
+void Renderer::UnorderedAccess::clear( const std::array<UINT, 4>& value)
+{
+	getContext()->ClearUnorderedAccessViewUint(mUAV, value.data());
+}
+void Renderer::UnorderedAccess::clear( const std::array<float, 4>& value)
+{
+	getContext()->ClearUnorderedAccessViewFloat(mUAV, value.data());
 }
 
 Renderer::Profile::Profile(Renderer * r):D3DObject(r)

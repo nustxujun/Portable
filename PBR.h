@@ -9,12 +9,15 @@ class PBR:public Pipeline::Stage
 	{
 		Matrix invertPorj;
 		Matrix View;
+		Vector3 clustersize;
 		float roughness;
 		float metallic;
 		float width;
 		float height;
 		int maxLightsPerTile;
 		int tilePerline;
+		float nearZ;
+		float farZ;
 	};
 
 	__declspec(align(16))
@@ -32,10 +35,10 @@ public:
 		Pipeline* p);
 	~PBR();
 
-	void render(Renderer::Texture::Ptr rt)  override final;
+	void render(Renderer::Texture2D::Ptr rt)  override final;
 private:
-	void renderLightVolumes(Renderer::Texture::Ptr rt);
-	void renderNormal(Renderer::Texture::Ptr rt);
+	void renderLightVolumes(Renderer::Texture2D::Ptr rt);
+	void renderNormal(Renderer::Texture2D::Ptr rt);
 	void updateLights();
 private:
 	Renderer::ShaderResource::Ptr mAlbedo;

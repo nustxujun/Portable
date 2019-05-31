@@ -79,7 +79,7 @@ PBR::~PBR()
 {
 }
 
-void PBR::render(Renderer::Texture::Ptr rt) 
+void PBR::render(Renderer::Texture2D::Ptr rt) 
 {
 	updateLights();
 	if (has("tiled"))
@@ -121,7 +121,7 @@ void PBR::updateLights()
 	context->Unmap(*buffer, 0);
 }
 
-void PBR::renderNormal(Renderer::Texture::Ptr rt)
+void PBR::renderNormal(Renderer::Texture2D::Ptr rt)
 {
 	using namespace DirectX;
 	using namespace DirectX::SimpleMath;
@@ -139,6 +139,8 @@ void PBR::renderNormal(Renderer::Texture::Ptr rt)
 	constants.maxLightsPerTile =  getScene()->getNumLights();
 	constants.tilePerline = ((desc.Width + 16 - 1) & ~15) / 16;
 	constants.invertPorj = cam->getProjectionMatrix().Invert().Transpose();
+	constants.nearZ = cam->getNear();
+	constants.farZ = cam->getFar();
 
 	mConstants.lock()->blit(&constants, sizeof(constants));
 
@@ -169,7 +171,7 @@ void PBR::renderNormal(Renderer::Texture::Ptr rt)
 
 
 
-void PBR::renderLightVolumes(Renderer::Texture::Ptr rt)
+void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 {
 	auto renderer = getRenderer();
 	renderer->setViewport({ 0,0, (float)renderer->getWidth(), (float)renderer->getHeight(), 0, 1.0f });

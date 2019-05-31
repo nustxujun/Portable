@@ -21,7 +21,7 @@ LightCulling::LightCulling(
 	mLights = getShaderResource("lights");
 }
 
-void LightCulling::render(Renderer::Texture::Ptr rt) 
+void LightCulling::render(Renderer::Texture2D::Ptr rt) 
 {
 
 	Constants consts;

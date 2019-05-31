@@ -3,7 +3,7 @@ Buffer<float4> lights:register(t0);
 
 RWBuffer<uint> curIndex:register(u0);
 RWBuffer<uint> lightIndices:register(u1);
-RWTexture2D<uint2> clusters:register(u2);
+RWTexture3D<uint2> clusters:register(u2);
 
 
 cbuffer Constants: register(c0)
@@ -14,17 +14,19 @@ cbuffer Constants: register(c0)
 	float texelheight;
 	float nearZ;
 	float farZ;
+	float invclusterwidth;
+	float invclusterheight;
 };
 
 
-#define CLUSTER_DIM 64
-#define INV_CLUSTER_DIM (1.0f / (float)CLUSTER_DIM)
+
 #define LIGHT_THREAD 4
 #define MAX_LIGHTS_PER_CLUSTER 1024
+#define NUM_SLICES 16
 
 float sliceZ(uint level)
 {
-	float k = (float)level * (1.0f / 16.0f);
+	float k = (float)level * (1.0f / (float)NUM_SLICES);
 	return nearZ * pow(farZ / nearZ, k);
 }
 
@@ -72,7 +74,7 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 		groupCurIndex = 0;
 		float2 coord = float2(float(globalIdx.x) * texelwidth, float(globalIdx.y) * texelheight);
 		float2 lt = float2((float)coord.x  * 2.0f - 1.0f, 1.0f - (float)coord.y * 2.0f);
-		float2 rb = float2((float)(coord.x + INV_CLUSTER_DIM) * 2.0f - 1.0f, 1.0f - (float)(coord.y + INV_CLUSTER_DIM)* 2.0f);
+		float2 rb = float2((float)(coord.x + invclusterwidth) * 2.0f - 1.0f, 1.0f - (float)(coord.y + invclusterheight)* 2.0f);
 
 		float4 flt = mul(float4(lt, 1, 1), invertProj);
 		flt /= flt.w;
@@ -114,7 +116,7 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 	groupCurIndex = min(groupCurIndex, MAX_LIGHTS_PER_CLUSTER);
 	uint offset;
 	InterlockedAdd(curIndex[0], groupCurIndex, offset);
-	clusters[groupIdx.xy] = uint2(offset, groupCurIndex);
+	clusters[groupIdx] = uint2(offset, groupCurIndex);
 	for (uint i = 0; i < groupCurIndex; ++i)
 		lightIndices[offset + i] = grouplights[i];
 }

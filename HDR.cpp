@@ -32,7 +32,7 @@ HDR::~HDR()
 {
 }
 
-void HDR::render(Renderer::Texture::Ptr rt) 
+void HDR::render(Renderer::Texture2D::Ptr rt) 
 {
 	renderLuminance(rt);
 	renderHDR(rt);
@@ -61,10 +61,10 @@ void HDR::render(Renderer::Texture::Ptr rt)
 	
 }
 
-void HDR::renderLuminance(Renderer::Texture::Ptr rt)
+void HDR::renderLuminance(Renderer::Texture2D::Ptr rt)
 {
 	float len = pow(3, mLuminance.size() - 1);
-	mLuminance.back().lock()->clear({ 1,1,1,1 });
+	mLuminance.back().lock()->RenderTarget::clear({ 1,1,1,1 });
 	auto quad = getQuad();
 	quad->setDefaultBlend(false);
 
@@ -89,7 +89,7 @@ void HDR::renderLuminance(Renderer::Texture::Ptr rt)
 	//quad->drawTexture(mLuminance[0],false);
 }
 
-void HDR::renderHDR(Renderer::Texture::Ptr frame)
+void HDR::renderHDR(Renderer::Texture2D::Ptr frame)
 {
 	auto quad = getQuad();
 	quad->setDefaultViewport();

@@ -32,7 +32,7 @@ GBuffer::~GBuffer()
 {
 }
 
-void GBuffer::render(Renderer::Texture::Ptr rt) 
+void GBuffer::render(Renderer::Texture2D::Ptr rt) 
 {
 
 	using namespace DirectX;

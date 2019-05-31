@@ -11,7 +11,7 @@ public:
 		Quad::Ptr q,
 		Setting::Ptr set,
 		Pipeline* p );
-	void render(Renderer::Texture::Ptr rt)  override final;
+	void render(Renderer::Texture2D::Ptr rt)  override final;
 	void init(int width, int height) ;
 private:
 	GPUComputer mComputer;

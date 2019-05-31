@@ -12,7 +12,7 @@ DepthLinearing::DepthLinearing(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setti
 	mDepthLinear = getRenderTarget("depthlinear");
 }
 
-void DepthLinearing::render(Renderer::Texture::Ptr rt)
+void DepthLinearing::render(Renderer::Texture2D::Ptr rt)
 {
 	auto cam = getScene()->createOrGetCamera("main");
 	Matrix proj = cam->getViewMatrix().Invert().Transpose();

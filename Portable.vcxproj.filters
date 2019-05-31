@@ -249,5 +249,6 @@
     <None Include="hlsl\ssao.hlsl">
       <Filter>shader</Filter>
     </None>
+    <None Include="cpp.hint" />
   </ItemGroup>
 </Project>

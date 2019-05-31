@@ -26,7 +26,7 @@ void DepthBounding::init(int width, int height)
 }
 
 
-void DepthBounding::render(Renderer::Texture::Ptr rt) 
+void DepthBounding::render(Renderer::Texture2D::Ptr rt) 
 {
 	auto cam = getScene()->createOrGetCamera("main");
 	Matrix invertproj = cam->getProjectionMatrix().Invert().Transpose();

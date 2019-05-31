@@ -13,6 +13,10 @@
 
 #include <random>
 
+#define ALIGN(x,y) (((x + y - 1) & ~(y - 1)) )
+#define SLICE(x,y) ALIGN(x, y) / y
+#define SLICE16(x) SLICE(x,16)
+
 void MultipleLights::initPipeline()
 {
 
@@ -200,7 +204,7 @@ void MultipleLights::initDRPipeline()
 	//mPipeline->pushStage<HDR>();
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 
-	mPipeline->pushStage("draw to backbuffer",[bb, quad](Renderer::Texture::Ptr rt)
+	mPipeline->pushStage("draw to backbuffer",[bb, quad](Renderer::Texture2D::Ptr rt)
 	{
 		quad->setRenderTarget(bb);
 		quad->drawTexture(rt, false);
@@ -232,8 +236,8 @@ void MultipleLights::initTBDRPipeline()
 	mPipeline->addShaderResource("lights", lights);
 	mPipeline->addBuffer("lights", lights);
 
-	int bw = ((w + 16 - 1) & ~15) / 16;
-	int bh = ((h + 16 - 1) & ~15) / 16;
+	int bw = SLICE16(w);
+	int bh = SLICE16(h);
 	D3D11_TEXTURE2D_DESC desc = { 0 };
 	desc.Width = bw;
 	desc.Height = bh;
@@ -275,7 +279,7 @@ void MultipleLights::initTBDRPipeline()
 	//mPipeline->pushStage<HDR>();
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 
-	mPipeline->pushStage("draw to backbuffer",[bb, quad](Renderer::Texture::Ptr rt)
+	mPipeline->pushStage("draw to backbuffer",[bb, quad](Renderer::Texture2D::Ptr rt)
 	{
 		quad->setRenderTarget(bb);
 		quad->drawTexture(rt, false);
@@ -309,6 +313,32 @@ void MultipleLights::initCDRPipeline()
 	mPipeline->addShaderResource("lights", lights);
 	mPipeline->addBuffer("lights", lights);
 
+	constexpr auto maxlightspercluster = 1024;
+	int numlights = 1000;
+	if (has("numlights"))
+		numlights = get("numlights")["max"];
+	auto lightindices = mRenderer->createRWBuffer(maxlightspercluster * numlights, sizeof(UINT), DXGI_FORMAT_R32_UINT, D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE);
+	mPipeline->addShaderResource("lightindices", lightindices);
+	mPipeline->addUnorderedAccess("lightindices", lightindices);
+
+	constexpr auto SLICED_Z = 16;
+	constexpr auto SLICED_LEN = 64;
+	int bw = SLICE(w, SLICED_LEN);
+	int bh = SLICE(h, SLICED_LEN);
+
+	D3D11_TEXTURE3D_DESC texdesc;
+	texdesc.Width = SLICED_LEN;
+	texdesc.Height = SLICED_LEN;
+	texdesc.Depth = SLICED_Z;
+	texdesc.MipLevels = 1;
+	texdesc.Format = DXGI_FORMAT_R16G16_UINT;
+	texdesc.Usage = D3D11_USAGE_DEFAULT;
+	texdesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
+	texdesc.CPUAccessFlags = 0;
+	texdesc.MiscFlags = 0;
+	auto clusteredlights = mRenderer->createTexture3D(texdesc);
+	mPipeline->addShaderResource("clusteredlights", clusteredlights);
+	mPipeline->addUnorderedAccess("clusteredlights", clusteredlights);
 
 	mPipeline->setFrameBuffer(frame);
 	auto bb = mRenderer->getBackbuffer();
@@ -320,12 +350,12 @@ void MultipleLights::initCDRPipeline()
 	mPipeline->pushStage<GBuffer>();
 	mPipeline->pushStage<DepthLinearing>();
 
-	mPipeline->pushStage<ClusteredLightCulling>();
+	mPipeline->pushStage<ClusteredLightCulling>(Vector3(SLICED_LEN, SLICED_LEN, SLICED_Z), Vector3(bw,bh,0));
 
 	mPipeline->pushStage<PBR>();
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
-	mPipeline->pushStage("draw to backbuffer", [bb, quad](Renderer::Texture::Ptr rt)
+	mPipeline->pushStage("draw to backbuffer", [bb, quad](Renderer::Texture2D::Ptr rt)
 	{
 		quad->setRenderTarget(bb);
 		quad->drawTexture(rt, false);

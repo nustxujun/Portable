@@ -22,9 +22,9 @@ class AO :public Pipeline::Stage
 public:
 	AO(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr set,Pipeline* p, Renderer::ShaderResource::Ptr normal, Renderer::ShaderResource::Ptr depth, float radius);
 	
-	void render(Renderer::Texture::Ptr rt) override;
+	void render(Renderer::Texture2D::Ptr rt) override;
 private:
-	Renderer::Texture::Ptr mNoise;
+	Renderer::Texture2D::Ptr mNoise;
 	Renderer::ShaderResource::Ptr mNormal;
 	Renderer::ShaderResource::Ptr mDepth;
 

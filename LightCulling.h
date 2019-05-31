@@ -23,7 +23,7 @@ public:
 		Setting::Ptr set,
 		Pipeline* p
 	);
-	void render(Renderer::Texture::Ptr rt)  override final;
+	void render(Renderer::Texture2D::Ptr rt)  override final;
 	void init(int w, int h) { mWidth = w; mHeight = h; }
 private:
 	Renderer::ShaderResource::Ptr mDepthBounds;

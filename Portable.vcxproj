@@ -233,6 +233,7 @@
     <Image Include="small.ico" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="cpp.hint" />
     <None Include="packages.config">
       <SubType>Designer</SubType>
     </None>

@@ -5,7 +5,7 @@
 class GPUComputer
 {
 public:
-	using Ptr = std::function<GPUComputer>;
+	using Ptr = std::shared_ptr<GPUComputer>;
 public:
 	GPUComputer(Renderer::Ptr r);
 	~GPUComputer();

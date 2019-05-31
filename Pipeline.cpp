@@ -11,7 +11,7 @@ Pipeline::Stage::~Stage()
 {
 }
 
-void Pipeline::Stage::update(Renderer::Texture::Ptr rt)
+void Pipeline::Stage::update(Renderer::Texture2D::Ptr rt)
 {
 	PROFILE(mProfile);
 	render(rt);
@@ -55,7 +55,7 @@ void Pipeline::render()
 	set("total", { {"cost",ss.str().c_str()}, {"type", "stage"} });
 }
 
-void Pipeline::setFrameBuffer(Renderer::Texture::Ptr rt)
+void Pipeline::setFrameBuffer(Renderer::Texture2D::Ptr rt)
 {
 	mFrameBuffer = rt;
 }

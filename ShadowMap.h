@@ -28,7 +28,7 @@ public:
 	ShadowMap(Renderer::Ptr r, Scene::Ptr s,Quad::Ptr q, Setting::Ptr set, Pipeline* p,Renderer::ShaderResource::Ptr worldpos, Renderer::ShaderResource::Ptr depth, int mapsize, int numlevels);
 	~ShadowMap();
 
-	void render(Renderer::Texture::Ptr rt) ;
+	void render(Renderer::Texture2D::Ptr rt) ;
 private:
 	void fitToScene();
 	void renderToShadowMap();

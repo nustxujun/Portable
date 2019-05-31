@@ -72,7 +72,7 @@ AO::AO(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr st, Pipeline* p,
 
 }
 
-void AO::render(Renderer::Texture::Ptr rt) 
+void AO::render(Renderer::Texture2D::Ptr rt) 
 {
 	using namespace DirectX;
 	auto cam = getScene()->createOrGetCamera("main");

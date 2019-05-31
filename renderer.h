@@ -34,12 +34,13 @@ private:
 	{
 	public:
 		D3DObject(Renderer* renderer): mRenderer(renderer){}
+		D3DObject() { abort(); }
 	protected:
 		ID3D11Device* getDevice()const { return mRenderer->mDevice; }
 		ID3D11DeviceContext* getContext()const { return mRenderer->mContext; }
 		Renderer* getRenderer()const { return mRenderer; }
 	private:
-		Renderer* mRenderer;
+		Renderer* mRenderer = nullptr;
 	};
 public:
 	template<class T>
@@ -57,13 +58,13 @@ public:
 		T* mInterface;
 	};
 
-	class ShaderResource
+	class ShaderResource : public NODefault, virtual public D3DObject
 	{
 	public:
 		using Ptr = std::weak_ptr<ShaderResource>;
 	public:
-		ShaderResource() {};
-		ShaderResource(ID3D11ShaderResourceView* srv );
+		ShaderResource() {}
+		ShaderResource(Renderer* r, ID3D11ShaderResourceView* srv );
 		~ShaderResource();
 
 		ID3D11ShaderResourceView* getShaderResourceView()const { return mSRView; }
@@ -72,44 +73,50 @@ public:
 		ID3D11ShaderResourceView* mSRView = NULL;
 	};
 
-	class UnorderedAccess
+	class UnorderedAccess : public NODefault, virtual public D3DObject
 	{
 	public:
 		using Ptr = std::weak_ptr<UnorderedAccess>;
 
 	public:
-		UnorderedAccess() {}
-		UnorderedAccess(ID3D11UnorderedAccessView* uav);
+		UnorderedAccess()  {}
+
+		UnorderedAccess(Renderer* r, ID3D11UnorderedAccessView* uav);
 
 		~UnorderedAccess();
 
 		operator ID3D11UnorderedAccessView* ()const { return mUAV; }
 		ID3D11UnorderedAccessView* getUnorderedAccess()const { return mUAV; }
+
+		void clear(const std::array<UINT, 4>& value);
+		void clear( const std::array<float, 4>& value);
+
 	protected:
 		ID3D11UnorderedAccessView* mUAV = NULL;
 	};
 
 
 
-	class RenderTarget : public NODefault
+	class RenderTarget : public NODefault, virtual public D3DObject
 	{
 	public:
 		using Ptr = std::weak_ptr<RenderTarget>;
 	public:
-		RenderTarget() :mRTView(nullptr) {};
-		RenderTarget(ID3D11RenderTargetView* rt);
+		RenderTarget()  {}
+
+		RenderTarget(Renderer* r,ID3D11RenderTargetView* rt);
 
 		~RenderTarget();
 		operator ID3D11RenderTargetView*() { return mRTView; }
 		ID3D11RenderTargetView* getRenderTargetView() const{ return mRTView; }
 
-		virtual void clear(const std::array<float, 4> c) = 0;
+		void clear(const std::array<float, 4> c);
 
 	protected:
-		ID3D11RenderTargetView* mRTView;
+		ID3D11RenderTargetView* mRTView = nullptr;
 	};
 
-	class Buffer : public NODefault, public D3DObject, public UnorderedAccess, public ShaderResource
+	class Buffer : public UnorderedAccess, public ShaderResource
 	{
 	public: 
 		using Ptr = std::weak_ptr<Buffer>;
@@ -118,6 +125,11 @@ public:
 		Buffer(Renderer* renderer, const D3D11_BUFFER_DESC& desc, const D3D11_SUBRESOURCE_DATA* data);
 		~Buffer();
 
+		template<class T>
+		void blit(const T& value)
+		{
+			blit(&value, sizeof(value));
+		}
 		void blit(const void* data, size_t size);
 
 
@@ -152,27 +164,83 @@ public:
 		std::unordered_map<std::string, ID3DX11EffectTechnique*> mTechs;
 	};
 
-	class Texture final :public D3DObject, public RenderTarget,public ShaderResource, public UnorderedAccess
+	class Texture : public RenderTarget,public ShaderResource, public UnorderedAccess
 	{
 	public:
 		using Ptr = std::weak_ptr<Texture>;
 	public:
-		Texture(Renderer* renderer, const D3D11_TEXTURE2D_DESC& desc, const void* data = nullptr, size_t size = 0);
-		Texture(Renderer* renderer, const std::string& file);
-		Texture(Renderer* renderer, ID3D11Texture2D* t);
-		~Texture();
-
-		void clear(const std::array<float, 4> c) override;
-		void swap(Texture::Ptr rt, bool force = false);
-		Texture::Ptr clone()const;
-
-		const D3D11_TEXTURE2D_DESC& getDesc()const { return mDesc; }
+		virtual ~Texture();
 	private:
-		void initTexture();
-	private:
-		D3D11_TEXTURE2D_DESC mDesc;
-		ID3D11Texture2D* mTexture;
+
 	};
+
+	template<class T, class D>
+	class TextureUnknown : public Texture
+	{
+	public:
+		using Ptr = std::weak_ptr<TextureUnknown>;
+	public:
+		TextureUnknown(Renderer* r,T* tex ):D3DObject(r)
+		{
+			mTexture = tex;
+			tex->GetDesc(&mDesc);
+			initTexture();
+		}
+
+		virtual ~TextureUnknown()
+		{
+			mTexture->Release();
+		}
+
+		const D& getDesc() { return mDesc; }
+		operator T*()const { return mTexture; }
+		T* getTexture()const { return mTexture; }
+
+		void swap(Ptr t, bool force = false)
+		{
+			auto ptr = t.lock();
+			if (ptr == nullptr) return;
+			if (memcmp(&mDesc, &ptr->mDesc, sizeof(mDesc)) != 0 && !force)
+			{
+				error("only can swap the same textures.");
+				return;
+			}
+
+			std::swap(mTexture, ptr->mTexture);
+			std::swap(mRTView, ptr->mRTView);
+			std::swap(mSRView, ptr->mSRView);
+			std::swap(mUAV, ptr->mUAV);
+			std::swap(mDesc, ptr->mDesc);
+		}
+
+	private:
+		void initTexture()
+		{
+			mTexture->GetDesc(&mDesc);
+			bool unorderedAccess = ((mDesc.BindFlags & D3D11_BIND_UNORDERED_ACCESS) != 0);
+			bool shaderRecource = ((mDesc.BindFlags & D3D11_BIND_SHADER_RESOURCE) != 0);
+			bool rendertarget = ((mDesc.BindFlags & D3D11_BIND_RENDER_TARGET) != 0);
+
+			if (rendertarget)
+				checkResult(getDevice()->CreateRenderTargetView(mTexture, nullptr, &mRTView));
+
+			if (shaderRecource)
+			{
+				checkResult(getDevice()->CreateShaderResourceView(mTexture, nullptr, &mSRView));
+			}
+
+			if (unorderedAccess)
+			{
+				checkResult(getDevice()->CreateUnorderedAccessView(mTexture, nullptr, &mUAV));
+			}
+		}
+	protected:
+		T* mTexture;
+		D mDesc;
+	};
+
+	using Texture2D = TextureUnknown<ID3D11Texture2D, D3D11_TEXTURE2D_DESC>;
+	using Texture3D = TextureUnknown<ID3D11Texture3D, D3D11_TEXTURE3D_DESC>;
 
 	class Sampler final : public NODefault
 	{
@@ -268,7 +336,7 @@ public:
 		ID3D11RasterizerState* mRasterizer;
 	};
 
-	class DepthStencil:public NODefault, public D3DObject, public ShaderResource
+	class DepthStencil:  public ShaderResource
 	{
 	public:
 		using Ptr = std::weak_ptr<DepthStencil>;
@@ -396,9 +464,11 @@ public:
 
 	Sampler::Ptr createSampler(const std::string& name, D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV,
 		D3D11_TEXTURE_ADDRESS_MODE addrW = D3D11_TEXTURE_ADDRESS_WRAP, D3D11_COMPARISON_FUNC cmpfunc = D3D11_COMPARISON_NEVER, float minlod = 0, float maxlod = D3D11_FLOAT32_MAX);
-	Texture::Ptr createTexture(const std::string& filename);
-	Texture::Ptr createTexture( const D3D11_TEXTURE2D_DESC& desc, const void* data = 0, size_t size = 0);
-	Texture::Ptr createRenderTarget(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage = D3D11_USAGE_DEFAULT);
+	Texture2D::Ptr createTexture(const std::string& filename);
+	Texture2D::Ptr createTexture( const D3D11_TEXTURE2D_DESC& desc, const void* data = 0, size_t size = 0);
+	Texture3D::Ptr createTexture3D(const D3D11_TEXTURE3D_DESC& desc, const void* data = 0, size_t size = 0);
+
+	Texture2D::Ptr createRenderTarget(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage = D3D11_USAGE_DEFAULT);
 	Buffer::Ptr createBuffer(int size, D3D11_BIND_FLAG bindflag, const D3D11_SUBRESOURCE_DATA* initialdata = NULL,D3D11_USAGE usage = D3D11_USAGE_DEFAULT, size_t CPUaccess = 0);
 	Buffer::Ptr createRWBuffer(int size, int stride, DXGI_FORMAT format, size_t bindflag,  D3D11_USAGE usage = D3D11_USAGE_DEFAULT, size_t CPUaccess = 0);
 

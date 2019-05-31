@@ -105,7 +105,7 @@ public :
 		//mPipeline->pushStage<HDR>();
 		//mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 
-		//mPipeline->pushStage("draw to backbuffer",[bb, quad](Renderer::Texture::Ptr rt)
+		//mPipeline->pushStage("draw to backbuffer",[bb, quad](Renderer::Texture2D::Ptr rt)
 		//{
 		//	quad->setRenderTarget(bb);
 		//	quad->drawTexture(rt, false);
