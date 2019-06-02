@@ -36,6 +36,7 @@ public:
 	~PBR();
 
 	void render(Renderer::Texture2D::Ptr rt)  override final;
+	void init(const Vector3& cluster = { 0,0,0 }) { mCluster = cluster; }
 private:
 	void renderLightVolumes(Renderer::Texture2D::Ptr rt);
 	void renderNormal(Renderer::Texture2D::Ptr rt);
@@ -58,4 +59,5 @@ private:
 	Renderer::Buffer::Ptr mLightVolumeConstants;
 
 	Renderer::Buffer::Ptr mLightsBuffer;
+	Vector3 mCluster;
 };

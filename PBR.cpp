@@ -19,8 +19,10 @@ PBR::PBR(
 	{
 
 		std::vector<D3D10_SHADER_MACRO> macros = { {definitions[i],""} };
-		if (has("tiled") && getValue<bool>("tiled"))
-			macros.push_back({ "TILED", ""});
+		if (has("tiled") )
+			macros.push_back({ "TILED", "1"});
+		else if (has("clustered"))
+			macros.push_back({ "CLUSTERED", "1" });
 
 		macros.push_back({ NULL, NULL });
 		
@@ -82,7 +84,7 @@ PBR::~PBR()
 void PBR::render(Renderer::Texture2D::Ptr rt) 
 {
 	updateLights();
-	if (has("tiled"))
+	if (has("tiled") || has("clustered"))
 		renderNormal(rt);
 	else
 		renderLightVolumes(rt);
@@ -141,12 +143,18 @@ void PBR::renderNormal(Renderer::Texture2D::Ptr rt)
 	constants.invertPorj = cam->getProjectionMatrix().Invert().Transpose();
 	constants.nearZ = cam->getNear();
 	constants.farZ = cam->getFar();
+	constants.clustersize = mCluster;
 
 	mConstants.lock()->blit(&constants, sizeof(constants));
 
 	auto quad = getQuad();
 	quad->setRenderTarget(rt);
-	quad->setTextures({ mAlbedo, mNormal, mDepthLinear , mLightsBuffer, mLightsIndex});
+	if (has("tiled"))
+		quad->setTextures({ mAlbedo, mNormal, mDepthLinear , mLightsBuffer, mLightsIndex});
+	else if (has("clustered"))
+	{
+		quad->setTextures({ mAlbedo, mNormal, mDepthLinear , mLightsBuffer, getShaderResource("lightindices"), getShaderResource("clusteredlights") });
+	}
 	quad->setPixelShader(mPSs[Scene::Light::LT_POINT]);
 	quad->setSamplers({ mLinear, mPoint });
 	quad->setConstant(mConstants);

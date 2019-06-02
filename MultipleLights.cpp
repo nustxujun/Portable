@@ -27,18 +27,45 @@ void MultipleLights::initPipeline()
 
 void MultipleLights::initScene()
 {
-	int numlights = 1000;
+	int numlights = 100;
 
 
 	set("numLights", { {"value", 100}, {"min", 1}, {"max", numlights}, {"interval", 1}, {"type","set"} });
-	set("lightRange", { {"value", 500}, {"min", 1}, {"max", 1000}, {"interval", 1}, {"type","set"} });
+	set("lightRange", { {"value", 100}, {"min", 1}, {"max", 1000}, {"interval", 1}, {"type","set"} });
 	set("fovy", { {"value", "0.7"}, {"min", "0.1"}, {"max", "2"}, {"interval", "0.01"}, {"type","set"} });
 
 	auto root = mScene->getRoot();
+
+	//{
+	//	Parameters params;
+	//	params["geom"] = "room";
+	//	params["size"] = "100";
+	//	auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
+	//	{
+	//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+	//	});
+	//	model->setCastShadow(false);
+	//	model->attach(root);
+	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+	//}
+	//{
+	//	Parameters params;
+	//	params["geom"] = "cube";
+	//	params["size"] = "101";
+	//	auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
+	//	{
+	//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+	//	});
+	//	model->setCastShadow(false);
+	//	model->attach(root);
+	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+	//}
+
 	{
 		Parameters params;
-		params["geom"] = "room";
+		params["geom"] = "plane";
 		params["size"] = "100";
+		//params["resolution"] = "500";
 		auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
 		{
 			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
@@ -46,40 +73,28 @@ void MultipleLights::initScene()
 		model->setCastShadow(false);
 		model->attach(root);
 		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-	}
-	{
-		Parameters params;
-		params["geom"] = "cube";
-		params["size"] = "101";
-		auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
-		{
-			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		});
-		model->setCastShadow(false);
-		model->attach(root);
-		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-	}
 
-
-	{
-		Parameters params;
-		params["geom"] = "sphere";
-		params["radius"] = "10";
-		params["resolution"] = "500";
-		auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
-		{
-			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		});
-		model->setCastShadow(false);
-		model->attach(root);
-		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-	
 	}
 
 	//{
 	//	Parameters params;
+	//	params["geom"] = "sphere";
+	//	params["radius"] = "10";
+	//	params["resolution"] = "500";
+	//	auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
+	//	{
+	//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+	//	});
+	//	model->setCastShadow(false);
+	//	model->attach(root);
+	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+	//
+	//}
+
+	//{
+	//	Parameters params;
 	//	//params["file"] = "tiny.x";
-	//	params["file"] = "lost-empire/lost_empire.obj";
+	//	params["file"] = "media/sponza/sponza.obj";
 	//	auto model = mScene->createModel("test", params, [this](const Parameters& p) {
 	//		return Mesh::Ptr(new Mesh(p, mRenderer));
 	//	});
@@ -96,9 +111,10 @@ void MultipleLights::initScene()
 	auto len = aabb.second - aabb.first;
 	cam->setNearFar(1.0f, (len).Length());
 
-	cam->getNode()->setPosition((aabb.second + aabb.first) * 0.5f);
-	cam->setDirection({ 0,0,1 });
-	//cam->lookat((aabb.second + aabb.first) * 0.5f, aabb.first);
+	//cam->getNode()->setPosition((aabb.second + aabb.first) * 0.5f);
+	cam->getNode()->setPosition(0.0f, 100.0f, 0.0f);
+	cam->setDirection({ 0,-1,0 });
+	//cam->lookat(aabb.second, aabb.first);
 	std::uniform_real_distribution<float> rand(0.0f, 0.1f);
 	std::uniform_real_distribution<float> rand2(-1.0f, 1.0f);
 
@@ -125,10 +141,12 @@ void MultipleLights::initScene()
 		float t = i * step;
 		float z = sin(t) * 30;
 		float x = cos(t) * 30;
-		light->getNode()->setPosition(rand2(gen) *len.x * 0.5f, rand2(gen) * len.y  * 0.5f, rand2(gen) * len.z  * 0.5f);
+		//light->getNode()->setPosition(rand2(gen) *len.x * 0.5f, rand2(gen) * len.y  * 0.5f, rand2(gen) * len.z  * 0.5f);
 		//light->getNode()->setPosition( 0.0f, len.y  * 0.5f - 0.1f,0.0f );
 		//light->getNode()->setPosition(x, 49.0f, z);
 		//light->getNode()->setPosition(0.0f, 49.0f, ((i % 2) * 2.0f - 1) * 30.0f);
+		light->getNode()->setPosition(rand2(gen) *len.x * 0.5f, 10.0f, rand2(gen) * len.z  * 0.5f);
+
 		light->attach(root);
 		Vector3 vel = { rand(gen),rand(gen),rand(gen) };
 		vel.Normalize();
@@ -276,7 +294,7 @@ void MultipleLights::initTBDRPipeline()
 
 	mPipeline->pushStage<PBR>();
 	//mPipeline->pushStage<AO>(normal,depth, 10);
-	//mPipeline->pushStage<HDR>();
+	mPipeline->pushStage<HDR>();
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 
 	mPipeline->pushStage("draw to backbuffer",[bb, quad](Renderer::Texture2D::Ptr rt)
@@ -314,17 +332,15 @@ void MultipleLights::initCDRPipeline()
 	mPipeline->addBuffer("lights", lights);
 
 	constexpr auto maxlightspercluster = 1024;
-	int numlights = 1000;
-	if (has("numlights"))
-		numlights = get("numlights")["max"];
-	auto lightindices = mRenderer->createRWBuffer(maxlightspercluster * numlights, sizeof(UINT), DXGI_FORMAT_R32_UINT, D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE);
-	mPipeline->addShaderResource("lightindices", lightindices);
-	mPipeline->addUnorderedAccess("lightindices", lightindices);
 
 	constexpr auto SLICED_Z = 16;
-	constexpr auto SLICED_LEN = 64;
+	constexpr auto SLICED_LEN = 16;
 	int bw = SLICE(w, SLICED_LEN);
 	int bh = SLICE(h, SLICED_LEN);
+
+	auto lightindices = mRenderer->createRWBuffer(maxlightspercluster * SLICED_LEN * SLICED_LEN * SLICED_Z * sizeof(UINT), sizeof(UINT), DXGI_FORMAT_R32_UINT, D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE);
+	mPipeline->addShaderResource("lightindices", lightindices);
+	mPipeline->addUnorderedAccess("lightindices", lightindices);
 
 	D3D11_TEXTURE3D_DESC texdesc;
 	texdesc.Width = SLICED_LEN;
@@ -350,9 +366,10 @@ void MultipleLights::initCDRPipeline()
 	mPipeline->pushStage<GBuffer>();
 	mPipeline->pushStage<DepthLinearing>();
 
-	mPipeline->pushStage<ClusteredLightCulling>(Vector3(SLICED_LEN, SLICED_LEN, SLICED_Z), Vector3(bw,bh,0));
+	mPipeline->pushStage<ClusteredLightCulling>(Vector3(SLICED_LEN, SLICED_LEN, SLICED_Z), Vector3(bw, bh,0));
 
-	mPipeline->pushStage<PBR>();
+	mPipeline->pushStage<PBR>(Vector3(bw, bh,0));
+	//mPipeline->pushStage<HDR>();
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
 	mPipeline->pushStage("draw to backbuffer", [bb, quad](Renderer::Texture2D::Ptr rt)

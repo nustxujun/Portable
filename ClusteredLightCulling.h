@@ -23,10 +23,13 @@ public:
 	virtual void render(Renderer::Texture2D::Ptr rt)override;
 
 private:
+	void genFrustums();
+private:
 	Renderer::ComputeShader::Weak mCS;
 	Renderer::Buffer::Ptr mConstants;
 	GPUComputer::Ptr mComputer;
 	Renderer::Buffer::Ptr mCurIndex;
 	Vector3 mSlices;
 	Vector3 mCluster;
+	Renderer::Buffer::Ptr mFrustums;
 };

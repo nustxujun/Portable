@@ -36,7 +36,9 @@ struct PS_INPUT
 {
 	float4 Pos : SV_POSITION;
 #ifndef TILED
+#ifndef CLUSTERED
 	uint index:TEXCOORD0;
+#endif
 #endif
 };
 
@@ -81,9 +83,13 @@ float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
 	return ggx1 * ggx2;
 }
 
+
+#define NUM_SLICES 16
+
 uint viewToSlice(float z)
 {
-	return (uint)floor(k * log(z / near) / log(far / near));
+	//return (uint)floor(NUM_SLICES * log(z / near) / log(far / near));
+	return NUM_SLICES * (z - near) / (far - near);
 }
 
 
@@ -114,8 +120,7 @@ float4 main(PS_INPUT input) : SV_TARGET
 	float3 Lo = 0;
 
 
-#ifdef TILED || CLUSTERED
-	#ifdef TILED
+#ifdef TILED
 
 	int x = input.Pos.x;
 	int y = input.Pos.y;
@@ -124,84 +129,96 @@ float4 main(PS_INPUT input) : SV_TARGET
 
 	int startoffset = (x + y * tilePerline) * (maxLightsPerTile + 1);
 	uint num = lightsIndex[startoffset];
-	//return (float)num / (float)maxLightsPerTile;
-	for (uint i = 1; i<= num; ++i)
+	for (uint i = 1; i <= num; ++i)
 	{
 		uint index = lightsIndex[startoffset + i];
 		float4 lightpos = lights[index * 2];
 		float3 lightcolor = lights[index * 2 + 1].rgb;
 
-	#else
-	
+#elif CLUSTERED
 	uint x = input.Pos.x / clustersize.x;
 	uint y = input.Pos.y / clustersize.y;
 	uint z = viewToSlice(viewPos.z);
+	uint3 coord = uint3(x, y, z);
 
-	uint cluster = clusters[uint3(x, y, z)];
-	for (uint i = 0; i < cluster.y,++i )
+	uint2 cluster = clusters[coord];
+
+	//float4 final = float4((float)x / 256.0f, (float)y / 256.0f, (float)z/ 16.0f,1);
+	//float4 final = (float)cluster.y / (float)100;
+	//return (float)cluster.y / (float)100;
+	for (uint i = 0; i < cluster.y; ++i)
 	{
-		uint index = lightsIndices[cluster.x];
+		uint index = lightsIndices[cluster.x + i];
 		float4 lightpos = lights[index * 2];
 		float3 lightcolor = lights[index * 2 + 1].rgb;
-	#endif
-#else 
+
+#else
 
 	float4 lightpos = lights[input.index * 2];
 	float3 lightcolor = lights[input.index * 2 + 1].rgb;
 #endif
 
 #ifdef POINT
-		float3 L = normalize(lightpos.xyz - viewPos.xyz);
+	float3 L = normalize(lightpos.xyz - viewPos.xyz);
 
 
-		float distance = length(lightpos.xyz - viewPos.xyz);
+	float distance = length(lightpos.xyz - viewPos.xyz);
+	if (distance > lightpos.w)
+		continue;
 
-		float attenuation = 1.0 / (distance * distance);
-		float3 radiance = lightcolor * attenuation;
+
+	float attenuation = 1.0 / (distance * distance);
+	float3 radiance = lightcolor * attenuation;
 
 
-		//float x = distance / lightpos.w;
-		//// fake inverse squared falloff:
-		//// -(1/k)*(1-(k+1)/(1+k*x^2))
-		//// k=20: -(1/20)*(1 - 21/(1+20*x^2))
-		//float fFalloff = -0.05 + 1.05 / (1 + 20 * x*x);
-		//radiance *= fFalloff;
+	//float x = distance / lightpos.w;
+	//// fake inverse squared falloff:
+	//// -(1/k)*(1-(k+1)/(1+k*x^2))
+	//// k=20: -(1/20)*(1 - 21/(1+20*x^2))
+	//float fFalloff = -0.05 + 1.05 / (1 + 20 * x*x);
+	//radiance *= fFalloff;
 
 #endif
 #ifdef DIR
-		float3 L = -normalize(lightpos.xyz);
-		float3 radiance = lightcolor;
+	float3 L = -normalize(lightpos.xyz);
+	float3 radiance = lightcolor;
 
 #endif
 #ifdef SPOT
-		float3 L = -normalize(lightpos.xyz - viewPos);
-		float3 radiance = lightcolor;
+	float3 L = -normalize(lightpos.xyz - viewPos);
+	float3 radiance = lightcolor;
 
 #endif
-		float3 H = normalize(V + L);
+	float3 H = normalize(V + L);
 
 
-		// cook-torrance brdf
-		float NDF = DistributionGGX(N, H, roughness);
-		float G = GeometrySmith(N, V, L, roughness);
-		float3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+	// cook-torrance brdf
+	float NDF = DistributionGGX(N, H, roughness);
+	float G = GeometrySmith(N, V, L, roughness);
+	float3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
 
-		float3 kS = F;
-		float3 kD = 1.0 - kS;
-		kD *= 1.0 - metallic;
+	float3 kS = F;
+	float3 kD = 1.0 - kS;
+	kD *= 1.0 - metallic;
 
-		float3 nominator = NDF * G * F;
-		float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.001;
-		float3 specular = nominator / denominator;
+	float3 nominator = NDF * G * F;
+	float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.001;
+	float3 specular = nominator / denominator;
 
-		// add to outgoing radiance Lo
-		float NdotL = max(dot(N, L), 0.0);
-		Lo += (kD * albedo / PI + specular)  * NdotL * radiance ;
-#ifdef TILED || CLUSTERED
+	// add to outgoing radiance Lo
+	float NdotL = max(dot(N, L), 0.0);
+	Lo += (kD * albedo / PI + specular)  * NdotL * radiance;
+#if  TILED 
 	}
 #endif
+#if CLUSTERED
+	}
 
-	//float3 ambient = 0.1 * albedo;// *ao;
+	
+#endif
+
+
+	//float3 ambient = 0.01 * albedo;// *ao;
 	//float3 color = ambient + Lo;
 
 

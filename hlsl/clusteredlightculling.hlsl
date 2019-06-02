@@ -20,14 +20,16 @@ cbuffer Constants: register(c0)
 
 
 
-#define LIGHT_THREAD 4
-#define MAX_LIGHTS_PER_CLUSTER 1024
+#define LIGHT_THREAD 1
+#define MAX_LIGHTS_PER_CLUSTER 100
 #define NUM_SLICES 16
 
 float sliceZ(uint level)
 {
 	float k = (float)level * (1.0f / (float)NUM_SLICES);
-	return nearZ * pow(farZ / nearZ, k);
+	//return nearZ * pow(farZ / nearZ, k);
+
+	return nearZ + (farZ - nearZ) * k;
 }
 
 // GPU-friendly version of the squared distance calculation 
@@ -72,17 +74,17 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 	if (threadindex == 0)
 	{
 		groupCurIndex = 0;
-		float2 coord = float2(float(globalIdx.x) * texelwidth, float(globalIdx.y) * texelheight);
+		float2 coord = float2(float(groupIdx.x) * texelwidth, float(groupIdx.y) * texelheight);
 		float2 lt = float2((float)coord.x  * 2.0f - 1.0f, 1.0f - (float)coord.y * 2.0f);
-		float2 rb = float2((float)(coord.x + invclusterwidth) * 2.0f - 1.0f, 1.0f - (float)(coord.y + invclusterheight)* 2.0f);
+		float2 rb = float2((float)(coord.x + texelwidth) * 2.0f - 1.0f, 1.0f - (float)(coord.y + texelheight)* 2.0f);
 
 		float4 flt = mul(float4(lt, 1, 1), invertProj);
 		flt /= flt.w;
 		float4 frb = mul(float4(rb, 1, 1), invertProj);
 		frb /= frb.w;
 
-		float near = sliceZ(groupIdx.x);
-		float far = sliceZ(groupIdx.x + 1);
+		float near = sliceZ(groupIdx.z);
+		float far = sliceZ(groupIdx.z + 1);
 
 		float3 backlt, backrb, frontlt, frontrb;
 		genLTRB(far / flt.z, flt, frb, far, backlt, backrb);
