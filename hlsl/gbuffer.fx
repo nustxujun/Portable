@@ -26,7 +26,6 @@ struct GBufferVertexShaderOutput
 	float4 Position : SV_POSITION;
 	float3 Normal : NORMAL0;
 	float2 TexCoord : TEXCOORD0;
-	float4 WorldPos: TEXCOORD1;
 };
 
 GBufferVertexShaderOutput vs(GBufferVertexShaderInput input)

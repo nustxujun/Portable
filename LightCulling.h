@@ -32,6 +32,8 @@ private:
 	Renderer::Buffer::Ptr mConstants;
 	Renderer::ShaderResource::Ptr mLights;
 	Renderer::UnorderedAccess::Ptr mLightsOutput;
+	Renderer::Buffer::Ptr mCurIndex;
+
 	int mWidth;
 	int mHeight;
 };

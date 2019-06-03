@@ -19,8 +19,8 @@ void ClusteredLightCulling::render(Renderer::Texture2D::Ptr rt)
 	std::array<UINT, 4> clear = {0,0,0,0};
 	mCurIndex.lock()->clear( clear);
 
-	mComputer->setInputs({ getShaderResource("lights") });
-	mComputer->setOuputs({ mCurIndex ,getUnorderedAccess("lightindices"), getUnorderedAccess("clusteredlights") });
+	mComputer->setInputs({ getShaderResource("pointlights") });
+	mComputer->setOuputs({ mCurIndex ,getUnorderedAccess("lightindices"), getUnorderedAccess("lighttable") });
 	
 	Constants constants;
 	auto cam = getScene()->createOrGetCamera("main");

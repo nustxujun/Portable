@@ -71,10 +71,9 @@ PBR::PBR(
 	mNormal = getShaderResource("normal");
 	mDepth = getDepthStencil("depth");
 	mDepthLinear = getShaderResource("depthlinear");
-	mLightsBuffer = getBuffer("lights");
+	mLightsBuffer = getBuffer("pointlights");
 
-	if (has("tiled"))
-		mLightsIndex = getShaderResource("lightsindex");
+
 }
 
 PBR::~PBR()
@@ -149,12 +148,7 @@ void PBR::renderNormal(Renderer::Texture2D::Ptr rt)
 
 	auto quad = getQuad();
 	quad->setRenderTarget(rt);
-	if (has("tiled"))
-		quad->setTextures({ mAlbedo, mNormal, mDepthLinear , mLightsBuffer, mLightsIndex});
-	else if (has("clustered"))
-	{
-		quad->setTextures({ mAlbedo, mNormal, mDepthLinear , mLightsBuffer, getShaderResource("lightindices"), getShaderResource("clusteredlights") });
-	}
+	quad->setTextures({ mAlbedo, mNormal, mDepthLinear , mLightsBuffer, getShaderResource("lightindices"), getShaderResource("lighttable") });
 	quad->setPixelShader(mPSs[Scene::Light::LT_POINT]);
 	quad->setSamplers({ mLinear, mPoint });
 	quad->setConstant(mConstants);

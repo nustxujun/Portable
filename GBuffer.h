@@ -19,7 +19,6 @@ public:
 private:
 	Renderer::RenderTarget::Ptr mAlbedo;
 	Renderer::RenderTarget::Ptr mNormal;
-	Renderer::RenderTarget::Ptr mWorldPos;
 	Renderer::DepthStencil::Ptr mDepth;
 
 	Renderer::Effect::Ptr mEffect;

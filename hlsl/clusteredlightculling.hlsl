@@ -3,7 +3,7 @@ Buffer<float4> lights:register(t0);
 
 RWBuffer<uint> curIndex:register(u0);
 RWBuffer<uint> lightIndices:register(u1);
-RWTexture3D<uint2> clusters:register(u2);
+RWTexture3D<uint4> clusters:register(u2);
 
 
 cbuffer Constants: register(c0)
@@ -104,7 +104,7 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 	groupCurIndex = min(groupCurIndex, MAX_LIGHTS_PER_CLUSTER);
 	uint offset;
 	InterlockedAdd(curIndex[0], groupCurIndex, offset);
-	clusters[groupIdx] = uint2(offset, groupCurIndex);
+	clusters[groupIdx] = uint4(offset, groupCurIndex, 0, 0);
 	for (uint i = 0; i < groupCurIndex; ++i)
 		lightIndices[offset + i] = grouplights[i];
 }

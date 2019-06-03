@@ -17,12 +17,16 @@ LightCulling::LightCulling(
 	this->set("tiled", { {"value",true } });
 	
 	mDepthBounds = getShaderResource("depthbounds");
-	mLightsOutput = getUnorderedAccess("lightsindex");
-	mLights = getShaderResource("lights");
+	mLightsOutput = getUnorderedAccess("lightindices");
+	mLights = getShaderResource("pointlights");
+	mCurIndex = getRenderer()->createRWBuffer(4, 4, DXGI_FORMAT_R32_UINT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS);
+
 }
 
 void LightCulling::render(Renderer::Texture2D::Ptr rt) 
 {
+	std::array<UINT, 4> clear = { 0,0,0,0 };
+	mCurIndex.lock()->clear(clear);
 
 	Constants consts;
 	auto cam = getScene()->createOrGetCamera("main");
@@ -39,7 +43,7 @@ void LightCulling::render(Renderer::Texture2D::Ptr rt)
 
 	mComputer.setConstants({ mConstants });
 	mComputer.setInputs({ mDepthBounds ,mLights });
-	mComputer.setOuputs({ mLightsOutput });
+	mComputer.setOuputs({ mCurIndex,  mLightsOutput , getUnorderedAccess("lighttable")});
 	mComputer.setShader(mCS);
 	mComputer.compute(mWidth, mHeight, 1);
 

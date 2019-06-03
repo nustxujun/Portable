@@ -3,18 +3,17 @@
 Texture2D albedoTexture: register(t0);
 Texture2D normalTexture: register(t1);
 Texture2D depthTexture: register(t2);
-Buffer<float4> lights: register(t3);
+Buffer<float4> pointlights: register(t3);
 
-#ifdef TILED
-Buffer<uint> lightsIndex: register(t4);
-#endif
-
-#ifdef CLUSTERED
+#if TILED || CLUSTERED
 Buffer<uint> lightsIndices: register(t4);
-Texture3D<uint2> clusters: register(t5);
-
-
+#if TILED
+Texture2D<uint4> tiles:register(t5);
+#else
+Texture3D<uint4> clusters: register(t5);
 #endif
+#endif
+
 
 SamplerState sampLinear: register(s0);
 SamplerState sampPoint: register(s1);
@@ -57,15 +56,41 @@ uint viewToSlice(float z)
 
 float3 pointlight(float dist, float range, float3 color)
 {
-#ifdef TILED || CLUSTERED
+#if TILED || CLUSTERED
 	if (dist > range)
 		return 0;
 #endif
 	return color * attenuate(dist, range) / (dist * dist);
 }
 
+#if TILED || CLUSTERED
+float3 travelLights(uint pointoffset, uint pointnum, uint spotoffset, uint spotnum, float3 N, float3 pos, float3 albedo)
+{
+	float3 F0 = F0_DEFAULT;
+	float3 Lo = 0;
+	for (uint i = 0; i < pointnum; ++i)
+	{
+		uint index = lightsIndices[pointoffset + i];
 
+		float4 lightpos = pointlights[index * 2];
+		float4 lightcolor = pointlights[index * 2 + 1];
 
+		float3 L = normalize(lightpos.xyz - pos);
+
+		float dist = length(pos - lightpos.xyz);
+		float3 radiance = pointlight(dist, lightpos.w, lightcolor.rgb);
+		Lo += BRDF(roughness, metallic, F0, albedo, N, L, -pos.xyz) * radiance;
+	}
+
+	for (uint i = 0; i < spotnum; ++i)
+	{
+
+	}
+
+	return Lo;
+}
+
+#endif
 
 
 float4 main(PS_INPUT input) : SV_TARGET
@@ -99,13 +124,8 @@ float4 main(PS_INPUT input) : SV_TARGET
 	x /= 16;
 	y /= 16;
 
-	int startoffset = (x + y * tilePerline) * (maxLightsPerTile + 1);
-	uint num = lightsIndex[startoffset];
-	for (uint i = 1; i <= num; ++i)
-	{
-		uint index = lightsIndex[startoffset + i];
-		float4 lightpos = lights[index * 2];
-		float3 lightcolor = lights[index * 2 + 1].rgb;
+	uint4 tile = tiles[uint2(x,y)];
+	Lo += travelLights(tile.x, tile.y, 0, 0, N, viewPos.xyz, albedo);
 
 #elif CLUSTERED
 	uint x = input.Pos.x / clustersize.x;
@@ -113,64 +133,22 @@ float4 main(PS_INPUT input) : SV_TARGET
 	uint z = viewToSlice(viewPos.z);
 	uint3 coord = uint3(x, y, z);
 
-	uint2 cluster = clusters[coord];
+	uint4 cluster = clusters[coord];
 
-	//float4 final = float4((float)x / 256.0f, (float)y / 256.0f, (float)z/ 16.0f,1);
-	//float4 final = (float)cluster.y / (float)100;
-	//return (float)cluster.y / (float)100;
-	//return (float)cluster.x / 16.0f * 100.0f;
-	for (uint i = 0; i < cluster.y; ++i)
-	{
-		uint index = lightsIndices[cluster.x + i];
-		float4 lightpos = lights[index * 2];
-		float3 lightcolor = lights[index * 2 + 1].rgb;
-
+	Lo += travelLights(cluster.x, cluster.y, 0, 0, N, viewPos.xyz, albedo);
 #else
 
-	float4 lightpos = lights[input.index * 2];
-	float3 lightcolor = lights[input.index * 2 + 1].rgb;
-#endif
+	float4 lightpos = pointlights[input.index * 2];
+	float3 lightcolor = pointlights[input.index * 2 + 1].rgb;
 
-#ifdef POINT
 	float3 L = normalize(lightpos.xyz - viewPos.xyz);
-
-
 	float distance = length(lightpos.xyz - viewPos.xyz);
 	float3 radiance = pointlight(distance, lightpos.w, lightcolor);
-	
-
-#endif
-#ifdef DIR
-	float3 L = -normalize(lightpos.xyz);
-	float3 radiance = lightcolor;
-
-#endif
-#ifdef SPOT
-	float3 L = -normalize(lightpos.xyz - viewPos);
-	float3 radiance = lightcolor;
-
-#endif
-
-
 	Lo += BRDF(roughness, metallic, F0, albedo, N, L, -viewPos.xyz) * radiance;
-#if  TILED 
-	}
-#endif
-#if CLUSTERED
-	}
-
 	
 #endif
 
 
-	//float3 ambient = 0.01 * albedo;// *ao;
-	//float3 color = ambient + Lo;
-
-
-	float3 color = Lo;
-	//color = color / (color + 1);
-	//color = pow(color, 1.0 / 2.2);
-
-	return float4(color, texcolor.a);
+	return float4(Lo, 1);
 }
 

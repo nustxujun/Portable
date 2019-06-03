@@ -1,7 +1,10 @@
 #include "math.hlsl"
 Texture2D depthboundsTex: register(t0);
 Buffer<float4> lights: register(t1);
-RWBuffer<uint> lightsOutput: register(u0);
+
+RWBuffer<uint> curIndex:register(u0);
+RWBuffer<uint> lightIndices:register(u1);
+RWTexture2D<uint4> tiles: register(u2);
 
 
 cbuffer ConstantBuffer: register(b0)
@@ -14,11 +17,15 @@ cbuffer ConstantBuffer: register(b0)
 	int tilePerline;
 }
 
-
+#ifndef MAX_LIGHTS_PER_TILE
+#define MAX_LIGHTS_PER_TILE 1024
+#endif
 
 [numthreads(1, 1,1)]
 void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadID, uint3 groupIdx: SV_GroupID)
 {
+	float4 indices[MAX_LIGHTS_PER_TILE];
+
 	float2 db = depthboundsTex.Load(uint3(globalIdx.x, globalIdx.y, 0)).rg;
 	float depthmin = db.x;
 	float depthmax = db.y;
@@ -40,7 +47,7 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 	float3 aabbcenter, aabbhalf;
 	createAABBFromFrustum(front, back, depthmin, depthmax, aabbcenter, aabbhalf);
 
-	uint startOffset = (globalIdx.x + globalIdx.y * tilePerline) * (maxLightsPerTile + 1);
+	//uint startOffset = (globalIdx.x + globalIdx.y * tilePerline) * (maxLightsPerTile + 1);
 	int lightcount = 0;
 	for (int i = 0; i < numLights; ++i)
 	{
@@ -51,11 +58,18 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 		if (!TestSphereVsAABB(pos, range, aabbcenter, aabbhalf) )
 			continue;
 
-		lightsOutput[startOffset + 1 + lightcount] = i;
+		indices[lightcount] = i;
+		//lightsOutput[startOffset + 1 + lightcount] = i;
 
 		lightcount++;
-		if (lightcount >= maxLightsPerTile)
+		if (lightcount >= MAX_LIGHTS_PER_TILE)
 			break;
 	}
-	lightsOutput[startOffset] = lightcount;
+
+
+	uint offset;
+	InterlockedAdd(curIndex[0], lightcount, offset);
+	tiles[groupIdx.xy] = uint4(offset, lightcount, 0, 0);
+	for (uint i = 0; i < lightcount; ++i)
+		lightIndices[offset + i] = indices[i];
 }

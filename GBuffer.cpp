@@ -24,7 +24,6 @@ GBuffer::GBuffer(
 
 	mAlbedo = getRenderTarget("albedo");
 	mNormal = getRenderTarget("normal");
-	mWorldPos = getRenderTarget("worldpos");
 	mDepth = getDepthStencil("depth");
 }
 
@@ -54,10 +53,9 @@ void GBuffer::render(Renderer::Texture2D::Ptr rt)
 	proj->SetMatrix((const float*)&cam->getProjectionMatrix());
 	renderer->setViewport(cam->getViewport());
 
-	std::vector<Renderer::RenderTarget::Ptr> rts = { mAlbedo, mNormal,mWorldPos};
+	std::vector<Renderer::RenderTarget::Ptr> rts = { mAlbedo, mNormal};
 	mAlbedo.lock()->clear({ 0,0,0,0 });
 	mNormal.lock()->clear({ 0,0,0,0 });
-	mWorldPos.lock()->clear({ 0,0,0 });
 
 	mDepth.lock()->clearDepth(1.0f);
 	renderer->setRenderTargets(rts, mDepth);

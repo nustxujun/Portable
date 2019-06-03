@@ -19,10 +19,30 @@
 
 void MultipleLights::initPipeline()
 {
+	auto w = mRenderer->getWidth();
+	auto h = mRenderer->getHeight();
+	auto albedo = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
+	mPipeline->addShaderResource("albedo", albedo);
+	mPipeline->addRenderTarget("albedo", albedo);
+	auto normal = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
+	mPipeline->addShaderResource("normal", normal);
+	mPipeline->addRenderTarget("normal", normal);
+	auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R32_TYPELESS, true);
+	mPipeline->addShaderResource("depth", depth);
+	mPipeline->addDepthStencil("depth", depth);
+	auto depthLinear = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32_FLOAT);
+	mPipeline->addShaderResource("depthlinear", depthLinear);
+	mPipeline->addRenderTarget("depthlinear", depthLinear);
+
+
+	constexpr auto MAX_NUM_LIGHTS = 1024;
+	auto pointlights = mRenderer->createRWBuffer(sizeof(Vector4) * 2 * MAX_NUM_LIGHTS, sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+	mPipeline->addShaderResource("pointlights", pointlights);
+	mPipeline->addBuffer("pointlights", pointlights);
 
 	//initDRPipeline();
-	//initTBDRPipeline();
-	initCDRPipeline();
+	initTBDRPipeline();
+	//initCDRPipeline();
 }
 
 void MultipleLights::initScene()
@@ -187,34 +207,15 @@ void MultipleLights::initDRPipeline()
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
 	auto w = mRenderer->getWidth();
 	auto h = mRenderer->getHeight();
-	auto albedo = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
-	mPipeline->addShaderResource("albedo", albedo);
-	mPipeline->addRenderTarget("albedo", albedo);
-	auto normal = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
-	mPipeline->addShaderResource("normal", normal);
-	mPipeline->addRenderTarget("normal", normal);
-	auto worldpos = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
-	mPipeline->addShaderResource("worldpos", worldpos);
-	mPipeline->addRenderTarget("worldpos", worldpos);
-	auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R32_TYPELESS, true);
-	mPipeline->addShaderResource("depth", depth);
-	mPipeline->addDepthStencil("depth", depth);
-	auto depthLinear = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32_FLOAT);
-	mPipeline->addShaderResource("depthlinear", depthLinear);
-	mPipeline->addRenderTarget("depthlinear", depthLinear);
-	auto lights = mRenderer->createRWBuffer(sizeof(Vector4) * 2 * mScene->getNumLights(), sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-	mPipeline->addShaderResource("lights", lights);
-	mPipeline->addBuffer("lights", lights);
+
 
 	auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 
 	mPipeline->setFrameBuffer(frame);
 	auto bb = mRenderer->getBackbuffer();
-	mPipeline->pushStage("clear rt",[bb,depth](Renderer::RenderTarget::Ptr rt)
+	mPipeline->pushStage("clear rt",[bb](Renderer::RenderTarget::Ptr rt)
 	{
 		rt.lock()->clear({ 0,0,0,0 });
-		depth.lock()->clearDepth(1.0f);
-		depth.lock()->clearStencil(1);
 	});
 
 	mPipeline->pushStage<GBuffer>();
@@ -235,25 +236,8 @@ void MultipleLights::initTBDRPipeline()
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
 	auto w = mRenderer->getWidth();
 	auto h = mRenderer->getHeight();
-	auto albedo = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
-	mPipeline->addShaderResource("albedo", albedo);
-	mPipeline->addRenderTarget("albedo", albedo);
-	auto normal = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
-	mPipeline->addShaderResource("normal", normal);
-	mPipeline->addRenderTarget("normal", normal);
-	auto worldpos = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
-	mPipeline->addShaderResource("worldpos", worldpos);
-	mPipeline->addRenderTarget("worldpos", worldpos);
-	auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R32_TYPELESS, true);
-	mPipeline->addShaderResource("depth", depth);
-	mPipeline->addDepthStencil("depth", depth);
-	auto depthLinear = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32_FLOAT);
-	mPipeline->addShaderResource("depthlinear", depthLinear);
-	mPipeline->addRenderTarget("depthlinear", depthLinear);
 	auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
-	auto lights = mRenderer->createRWBuffer(sizeof(Vector4) * 2 * mScene->getNumLights(), sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-	mPipeline->addShaderResource("lights", lights);
-	mPipeline->addBuffer("lights", lights);
+
 
 	int bw = SLICE16(w);
 	int bh = SLICE16(h);
@@ -273,13 +257,29 @@ void MultipleLights::initTBDRPipeline()
 	mPipeline->addUnorderedAccess("depthbounds", depthBounds);
 	mPipeline->addShaderResource("depthbounds", depthBounds);
 
-	auto lightsindex = mRenderer->createRWBuffer(
-		desc.Width * desc.Height * (1 + mScene->getNumLights()) * sizeof(int),
-		sizeof(int),
-		DXGI_FORMAT_R16_UINT,
-		D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE);
-	mPipeline->addShaderResource("lightsindex", lightsindex);
-	mPipeline->addUnorderedAccess("lightsindex", lightsindex);
+	constexpr auto maxlightspercluster = 1024;
+	auto lightindices = mRenderer->createRWBuffer(maxlightspercluster * bw * bh * sizeof(UINT), sizeof(UINT), DXGI_FORMAT_R32_UINT, D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE);
+	mPipeline->addShaderResource("lightindices", lightindices);
+	mPipeline->addUnorderedAccess("lightindices", lightindices);
+
+	D3D11_TEXTURE2D_DESC texdesc = {0};
+	texdesc.Width = bw;
+	texdesc.Height = bh;
+	texdesc.MipLevels = 1;
+	texdesc.Format = DXGI_FORMAT_R32G32B32A32_UINT;
+	texdesc.Usage = D3D11_USAGE_DEFAULT;
+	texdesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
+	texdesc.CPUAccessFlags = 0;
+	texdesc.MiscFlags = 0;
+	texdesc.ArraySize = 1;
+	texdesc.SampleDesc.Quality = 0;
+	texdesc.SampleDesc.Count = 1;
+
+
+	auto lighttable = mRenderer->createTexture(texdesc);
+	mPipeline->addShaderResource("lighttable", lighttable);
+	mPipeline->addUnorderedAccess("lighttable", lighttable);
+
 
 	mPipeline->setFrameBuffer(frame);
 	auto bb = mRenderer->getBackbuffer();
@@ -295,7 +295,7 @@ void MultipleLights::initTBDRPipeline()
 
 	mPipeline->pushStage<PBR>();
 	//mPipeline->pushStage<AO>(normal,depth, 10);
-	mPipeline->pushStage<HDR>();
+	//mPipeline->pushStage<HDR>();
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 
 	mPipeline->pushStage("draw to backbuffer",[bb, quad](Renderer::Texture2D::Ptr rt)
@@ -312,33 +312,17 @@ void MultipleLights::initCDRPipeline()
 {
 	auto w = mRenderer->getWidth();
 	auto h = mRenderer->getHeight();
-	auto albedo = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
-	mPipeline->addShaderResource("albedo", albedo);
-	mPipeline->addRenderTarget("albedo", albedo);
-	auto normal = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
-	mPipeline->addShaderResource("normal", normal);
-	mPipeline->addRenderTarget("normal", normal);
-	auto worldpos = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
-	mPipeline->addShaderResource("worldpos", worldpos);
-	mPipeline->addRenderTarget("worldpos", worldpos);
-	auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R32_TYPELESS, true);
-	mPipeline->addShaderResource("depth", depth);
-	mPipeline->addDepthStencil("depth", depth);
-	auto depthLinear = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32_FLOAT);
-	mPipeline->addShaderResource("depthlinear", depthLinear);
-	mPipeline->addRenderTarget("depthlinear", depthLinear);
-	auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
-	auto lights = mRenderer->createRWBuffer(sizeof(Vector4) * 2 * mScene->getNumLights(), sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-	mPipeline->addShaderResource("lights", lights);
-	mPipeline->addBuffer("lights", lights);
 
-	constexpr auto maxlightspercluster = 1024;
+	auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
+
+
 
 	constexpr auto SLICED_Z = 16;
 	constexpr auto SLICED_LEN = 16;
 	int bw = SLICE(w, SLICED_LEN);
 	int bh = SLICE(h, SLICED_LEN);
 
+	constexpr auto maxlightspercluster = 1024;
 	auto lightindices = mRenderer->createRWBuffer(maxlightspercluster * SLICED_LEN * SLICED_LEN * SLICED_Z * sizeof(UINT), sizeof(UINT), DXGI_FORMAT_R32_UINT, D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE);
 	mPipeline->addShaderResource("lightindices", lightindices);
 	mPipeline->addUnorderedAccess("lightindices", lightindices);
@@ -348,14 +332,14 @@ void MultipleLights::initCDRPipeline()
 	texdesc.Height = SLICED_LEN;
 	texdesc.Depth = SLICED_Z;
 	texdesc.MipLevels = 1;
-	texdesc.Format = DXGI_FORMAT_R32G32_UINT;
+	texdesc.Format = DXGI_FORMAT_R32G32B32A32_UINT;
 	texdesc.Usage = D3D11_USAGE_DEFAULT;
 	texdesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
 	texdesc.CPUAccessFlags = 0;
 	texdesc.MiscFlags = 0;
-	auto clusteredlights = mRenderer->createTexture3D(texdesc);
-	mPipeline->addShaderResource("clusteredlights", clusteredlights);
-	mPipeline->addUnorderedAccess("clusteredlights", clusteredlights);
+	auto lighttable = mRenderer->createTexture3D(texdesc);
+	mPipeline->addShaderResource("lighttable", lighttable);
+	mPipeline->addUnorderedAccess("lighttable", lighttable);
 
 	mPipeline->setFrameBuffer(frame);
 	auto bb = mRenderer->getBackbuffer();
