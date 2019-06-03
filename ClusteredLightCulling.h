@@ -8,13 +8,10 @@ class ClusteredLightCulling: public Pipeline::Stage
 	struct Constants
 	{
 		Matrix invertProj;
+		Vector3 slicesSize;
 		int numLights;
-		float texelwidth;
-		float texelheight;
 		float nearZ;
 		float farZ;
-		float invclusterwidth;
-		float invclusterheight;
 	};
 public:
 	using Pipeline::Stage::Stage;
@@ -22,8 +19,6 @@ public:
 	void init(const Vector3& slices, const Vector3& clustersize) ;
 	virtual void render(Renderer::Texture2D::Ptr rt)override;
 
-private:
-	void genFrustums();
 private:
 	Renderer::ComputeShader::Weak mCS;
 	Renderer::Buffer::Ptr mConstants;

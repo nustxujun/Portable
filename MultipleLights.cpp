@@ -36,9 +36,21 @@ void MultipleLights::initScene()
 
 	auto root = mScene->getRoot();
 
+	{
+		Parameters params;
+		params["geom"] = "room";
+		params["size"] = "100";
+		auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
+		{
+			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+		});
+		model->setCastShadow(false);
+		model->attach(root);
+		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+	}
 	//{
 	//	Parameters params;
-	//	params["geom"] = "room";
+	//	params["geom"] = "cube";
 	//	params["size"] = "100";
 	//	auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
 	//	{
@@ -48,10 +60,12 @@ void MultipleLights::initScene()
 	//	model->attach(root);
 	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
 	//}
+
 	//{
 	//	Parameters params;
-	//	params["geom"] = "cube";
-	//	params["size"] = "101";
+	//	params["geom"] = "plane";
+	//	params["size"] = "1000";
+	//	//params["resolution"] = "500";
 	//	auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
 	//	{
 	//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
@@ -59,13 +73,14 @@ void MultipleLights::initScene()
 	//	model->setCastShadow(false);
 	//	model->attach(root);
 	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+
 	//}
 
 	{
 		Parameters params;
-		params["geom"] = "plane";
-		params["size"] = "100";
-		//params["resolution"] = "500";
+		params["geom"] = "sphere";
+		params["radius"] = "10";
+		params["resolution"] = "500";
 		auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
 		{
 			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
@@ -73,28 +88,13 @@ void MultipleLights::initScene()
 		model->setCastShadow(false);
 		model->attach(root);
 		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-
+	
 	}
 
 	//{
 	//	Parameters params;
-	//	params["geom"] = "sphere";
-	//	params["radius"] = "10";
-	//	params["resolution"] = "500";
-	//	auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
-	//	{
-	//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-	//	});
-	//	model->setCastShadow(false);
-	//	model->attach(root);
-	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-	//
-	//}
-
-	//{
-	//	Parameters params;
 	//	//params["file"] = "tiny.x";
-	//	params["file"] = "media/sponza/sponza.obj";
+	//	params["file"] = "sponza/sponza.obj";
 	//	auto model = mScene->createModel("test", params, [this](const Parameters& p) {
 	//		return Mesh::Ptr(new Mesh(p, mRenderer));
 	//	});
@@ -111,9 +111,10 @@ void MultipleLights::initScene()
 	auto len = aabb.second - aabb.first;
 	cam->setNearFar(1.0f, (len).Length());
 
+	cam->lookat({ 0.0f, 10.0f, 0.0f }, { 1000.0f, 10.0f, 0.0f });
 	//cam->getNode()->setPosition((aabb.second + aabb.first) * 0.5f);
-	cam->getNode()->setPosition(0.0f, 100.0f, 0.0f);
-	cam->setDirection({ 0,-1,0 });
+	//cam->getNode()->setPosition(0.0f, 100.0f, 0.0f);
+	//cam->setDirection({ 0,0,1 });
 	//cam->lookat(aabb.second, aabb.first);
 	std::uniform_real_distribution<float> rand(0.0f, 0.1f);
 	std::uniform_real_distribution<float> rand2(-1.0f, 1.0f);
@@ -141,11 +142,11 @@ void MultipleLights::initScene()
 		float t = i * step;
 		float z = sin(t) * 30;
 		float x = cos(t) * 30;
-		//light->getNode()->setPosition(rand2(gen) *len.x * 0.5f, rand2(gen) * len.y  * 0.5f, rand2(gen) * len.z  * 0.5f);
+		light->getNode()->setPosition(rand2(gen) *len.x * 0.5f, rand2(gen) * len.y  * 0.5f, rand2(gen) * len.z  * 0.5f);
 		//light->getNode()->setPosition( 0.0f, len.y  * 0.5f - 0.1f,0.0f );
 		//light->getNode()->setPosition(x, 49.0f, z);
 		//light->getNode()->setPosition(0.0f, 49.0f, ((i % 2) * 2.0f - 1) * 30.0f);
-		light->getNode()->setPosition(rand2(gen) *len.x * 0.5f, 10.0f, rand2(gen) * len.z  * 0.5f);
+		//light->getNode()->setPosition((float)i, 10.0f, 0.0f);
 
 		light->attach(root);
 		Vector3 vel = { rand(gen),rand(gen),rand(gen) };
@@ -347,7 +348,7 @@ void MultipleLights::initCDRPipeline()
 	texdesc.Height = SLICED_LEN;
 	texdesc.Depth = SLICED_Z;
 	texdesc.MipLevels = 1;
-	texdesc.Format = DXGI_FORMAT_R16G16_UINT;
+	texdesc.Format = DXGI_FORMAT_R32G32_UINT;
 	texdesc.Usage = D3D11_USAGE_DEFAULT;
 	texdesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
 	texdesc.CPUAccessFlags = 0;

@@ -26,7 +26,7 @@ PBR::PBR(
 
 		macros.push_back({ NULL, NULL });
 		
-		auto blob = r->compileFile("hlsl/pbr.hlsl", "main", "ps_5_0", macros.data());
+		auto blob = r->compileFile("hlsl/lighting.hlsl", "main", "ps_5_0", macros.data());
 		mPSs[i] = r->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
 	}
 

@@ -1,4 +1,4 @@
-
+#include "math.hlsl"
 Buffer<float4> lights:register(t0);
 
 RWBuffer<uint> curIndex:register(u0);
@@ -9,43 +9,27 @@ RWTexture3D<uint2> clusters:register(u2);
 cbuffer Constants: register(c0)
 {
 	matrix invertProj;
+	float3 slicesSize;
 	int numLights;
-	float texelwidth;
-	float texelheight;
 	float nearZ;
 	float farZ;
-	float invclusterwidth;
-	float invclusterheight;
 };
 
 
-
+#ifndef LIGHT_THREAD
 #define LIGHT_THREAD 1
-#define MAX_LIGHTS_PER_CLUSTER 100
-#define NUM_SLICES 16
+#endif
 
+#ifndef MAX_LIGHTS_PER_CLUSTER
+#define MAX_LIGHTS_PER_CLUSTER 1024
+#endif
 float sliceZ(uint level)
 {
-	float k = (float)level * (1.0f / (float)NUM_SLICES);
-	//return nearZ * pow(farZ / nearZ, k);
-
-	return nearZ + (farZ - nearZ) * k;
+	float k = (float)level * (1.0f / (float)slicesSize.z);
+	return nearZ * pow(farZ / nearZ, k);
+	//return nearZ + (farZ - nearZ) * k;
 }
 
-// GPU-friendly version of the squared distance calculation 
-// for the Arvo box-sphere intersection test
-float ComputeSquaredDistanceToAABB(float3 Pos, float3 AABBCenter, float3 AABBHalfSize)
-{
-	float3 delta = max(0, abs(AABBCenter - Pos) - AABBHalfSize);
-	return dot(delta, delta);
-}
-
-// Arvo box-sphere intersection test
-bool TestSphereVsAABB(float3 sphereCenter, float sphereRadius, float3 AABBCenter, float3 AABBHalfSize)
-{
-	float distSq = ComputeSquaredDistanceToAABB(sphereCenter, AABBCenter, AABBHalfSize);
-	return distSq <= sphereRadius * sphereRadius;
-}
 
 void genAABB(in float3 frontlt, in float3 frontrb, in float3 backlt, in float3 backrb, out float3 center, out float3 halflen)
 {
@@ -74,6 +58,9 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 	if (threadindex == 0)
 	{
 		groupCurIndex = 0;
+		float texelwidth = 1.0f / slicesSize.x;
+		float texelheight = 1.0f / slicesSize.y;
+
 		float2 coord = float2(float(groupIdx.x) * texelwidth, float(groupIdx.y) * texelheight);
 		float2 lt = float2((float)coord.x  * 2.0f - 1.0f, 1.0f - (float)coord.y * 2.0f);
 		float2 rb = float2((float)(coord.x + texelwidth) * 2.0f - 1.0f, 1.0f - (float)(coord.y + texelheight)* 2.0f);
@@ -86,11 +73,10 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 		float near = sliceZ(groupIdx.z);
 		float far = sliceZ(groupIdx.z + 1);
 
-		float3 backlt, backrb, frontlt, frontrb;
-		genLTRB(far / flt.z, flt, frb, far, backlt, backrb);
-		genLTRB(near / flt.z, flt, frb, near, frontlt, frontrb);
+		float4 back = float4(flt.xy, frb.xy) * (far / farZ);
+		float4 front = float4(flt.xy, frb.xy) * (near / farZ);
 
-		genAABB(frontlt, frontrb, backlt, backrb, aabbCenter, aabbHalf);
+		createAABBFromFrustum(front, back , near, far, aabbCenter, aabbHalf);
 	}
 
 	GroupMemoryBarrierWithGroupSync();
