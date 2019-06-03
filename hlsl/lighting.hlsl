@@ -4,13 +4,15 @@ Texture2D albedoTexture: register(t0);
 Texture2D normalTexture: register(t1);
 Texture2D depthTexture: register(t2);
 Buffer<float4> pointlights: register(t3);
+Buffer<float4> spotlights: register(t4);
+
 
 #if TILED || CLUSTERED
-Buffer<uint> lightsIndices: register(t4);
+Buffer<uint> lightsIndices: register(t5);
 #if TILED
-Texture2D<uint4> tiles:register(t5);
+Texture2D<uint4> tiles:register(t6);
 #else
-Texture3D<uint4> clusters: register(t5);
+Texture3D<uint4> clusters: register(t6);
 #endif
 #endif
 
@@ -63,6 +65,19 @@ float3 pointlight(float dist, float range, float3 color)
 	return color * attenuate(dist, range) / (dist * dist);
 }
 
+float3 spotlight(float dist, float range,  float theta, float phi, float3 color)
+{
+#if TILED || CLUSTERED
+	//if (dist > range)
+	//	return 0;
+#endif
+	if (theta < phi)
+		return 0;
+
+	return color;
+}
+
+
 #if TILED || CLUSTERED
 float3 travelLights(uint pointoffset, uint pointnum, uint spotoffset, uint spotnum, float3 N, float3 pos, float3 albedo)
 {
@@ -72,7 +87,7 @@ float3 travelLights(uint pointoffset, uint pointnum, uint spotoffset, uint spotn
 	{
 		uint index = lightsIndices[pointoffset + i];
 
-		float4 lightpos = pointlights[index * 2];
+		float4 lightpos = pointlights[index * 2]; // pos and range
 		float4 lightcolor = pointlights[index * 2 + 1];
 
 		float3 L = normalize(lightpos.xyz - pos);
@@ -84,7 +99,16 @@ float3 travelLights(uint pointoffset, uint pointnum, uint spotoffset, uint spotn
 
 	for (uint i = 0; i < spotnum; ++i)
 	{
+		uint index = lightsIndices[spotoffset + i];
+		float4 lightpos = spotlights[index * 3]; // pos and range
+		float4 lightdir = spotlights[index * 3 + 1]; // dir and phi
+		float4 lightcolor = spotlights[index * 3 + 2];
 
+		float3 L = normalize(lightpos.xyz - pos);
+
+		float dist = length(pos - lightpos.xyz);
+		float3 radiance = spotlight(dist, lightpos.w, dot(-L, lightdir.xyz), lightdir.w, lightcolor.rgb);
+		Lo += BRDF(roughness, metallic, F0, albedo, N, L, -pos.xyz) * radiance ;
 	}
 
 	return Lo;
@@ -135,7 +159,7 @@ float4 main(PS_INPUT input) : SV_TARGET
 
 	uint4 cluster = clusters[coord];
 
-	Lo += travelLights(cluster.x, cluster.y, 0, 0, N, viewPos.xyz, albedo);
+	Lo += travelLights(cluster.x, cluster.y, cluster.x + cluster.y, cluster.z, N, viewPos.xyz, albedo);
 #else
 
 	float4 lightpos = pointlights[input.index * 2];

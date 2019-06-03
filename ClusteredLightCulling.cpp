@@ -19,7 +19,7 @@ void ClusteredLightCulling::render(Renderer::Texture2D::Ptr rt)
 	std::array<UINT, 4> clear = {0,0,0,0};
 	mCurIndex.lock()->clear( clear);
 
-	mComputer->setInputs({ getShaderResource("pointlights") });
+	mComputer->setInputs({ getShaderResource("pointlights") , getShaderResource("spotlights") });
 	mComputer->setOuputs({ mCurIndex ,getUnorderedAccess("lightindices"), getUnorderedAccess("lighttable") });
 	
 	Constants constants;
@@ -27,7 +27,9 @@ void ClusteredLightCulling::render(Renderer::Texture2D::Ptr rt)
 	constants.invertProj = cam->getProjectionMatrix().Invert().Transpose();
 	constants.farZ = cam->getFar();
 	constants.nearZ = cam->getNear();
-	constants.numLights = getValue<int>("numLights");
+	constants.numPointLights = getValue<int>("numpoints");
+	constants.numSpotLights = getValue<int>("numspots");;
+
 	constants.slicesSize = mSlices;
 
 	mConstants.lock()->blit(constants);

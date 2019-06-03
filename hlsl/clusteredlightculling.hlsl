@@ -1,5 +1,6 @@
 #include "math.hlsl"
-Buffer<float4> lights:register(t0);
+Buffer<float4> pointlights:register(t0);
+Buffer<float4> spotlights:register(t1);
 
 RWBuffer<uint> curIndex:register(u0);
 RWBuffer<uint> lightIndices:register(u1);
@@ -10,7 +11,8 @@ cbuffer Constants: register(c0)
 {
 	matrix invertProj;
 	float3 slicesSize;
-	int numLights;
+	int numPointLights;
+	int numSpotLights;
 	float nearZ;
 	float farZ;
 };
@@ -48,8 +50,10 @@ void genLTRB(in float radio, in float4 flt, in float4 frb, in float z, out float
 
 groupshared float3 aabbCenter;
 groupshared float3 aabbHalf;
-groupshared uint groupCurIndex;
-groupshared uint grouplights[MAX_LIGHTS_PER_CLUSTER];
+groupshared uint groupPointCount;
+groupshared uint groupSpotCount;
+groupshared uint groupPointlights[MAX_LIGHTS_PER_CLUSTER];
+groupshared uint groupSpotlights[MAX_LIGHTS_PER_CLUSTER];
 
 [numthreads(LIGHT_THREAD, 1, 1)]
 void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadID, uint3 groupIdx : SV_GroupID)
@@ -57,7 +61,8 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 	uint threadindex = localIdx.x + localIdx.y;
 	if (threadindex == 0)
 	{
-		groupCurIndex = 0;
+		groupPointCount = 0;
+		groupSpotCount = 0;
 		float texelwidth = 1.0f / slicesSize.x;
 		float texelheight = 1.0f / slicesSize.y;
 
@@ -81,9 +86,9 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 
 	GroupMemoryBarrierWithGroupSync();
 
-	for (int i = 0; i < numLights; i += LIGHT_THREAD)
+	for (int i = 0; i < numPointLights; i += LIGHT_THREAD)
 	{
-		float4 light = lights[i * 2];
+		float4 light = pointlights[i * 2];
 		float3 pos = light.xyz;
 		float range = light.w;
 
@@ -91,9 +96,26 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 			continue;
 
 		uint index;
-		InterlockedAdd(groupCurIndex, 1, index);
+		InterlockedAdd(groupPointCount, 1, index);
 		if (index < MAX_LIGHTS_PER_CLUSTER)
-			grouplights[index] = i;
+			groupPointlights[index] = i;
+		else
+			break;
+	}
+
+	for (int i = 0; i < numSpotLights; i += LIGHT_THREAD)
+	{
+		float4 light = spotlights[i * 3];
+		float3 pos = light.xyz;
+		float range = light.w;
+
+		//if (!TestSphereVsAABB(pos, range, aabbCenter, aabbHalf))
+		//	continue;
+
+		uint index;
+		InterlockedAdd(groupSpotCount, 1, index);
+		if (index < MAX_LIGHTS_PER_CLUSTER)
+			groupSpotlights[index] = i;
 		else
 			break;
 	}
@@ -101,11 +123,16 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 	if (threadindex != 0)
 		return;
 
-	groupCurIndex = min(groupCurIndex, MAX_LIGHTS_PER_CLUSTER);
+	groupPointCount = min(groupPointCount, MAX_LIGHTS_PER_CLUSTER);
+	groupSpotCount = min(groupSpotCount, MAX_LIGHTS_PER_CLUSTER);
+
 	uint offset;
-	InterlockedAdd(curIndex[0], groupCurIndex, offset);
-	clusters[groupIdx] = uint4(offset, groupCurIndex, 0, 0);
-	for (uint i = 0; i < groupCurIndex; ++i)
-		lightIndices[offset + i] = grouplights[i];
+	InterlockedAdd(curIndex[0], (groupPointCount + groupSpotCount), offset);
+	clusters[groupIdx] = uint4(offset, groupPointCount, groupSpotCount, 0);
+	for (uint i = 0; i < groupPointCount; ++i)
+		lightIndices[offset + i] = groupPointlights[i];
+
+	for (uint i = 0; i < groupSpotCount; ++i)
+		lightIndices[offset + i + groupPointCount] = groupSpotlights[i];
 }
 

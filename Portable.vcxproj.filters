@@ -250,5 +250,8 @@
       <Filter>shader</Filter>
     </None>
     <None Include="cpp.hint" />
+    <None Include="hlsl\lighting.hlsl">
+      <Filter>shader</Filter>
+    </None>
   </ItemGroup>
 </Project>

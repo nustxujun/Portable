@@ -21,7 +21,6 @@ protected:
 	virtual void initInput();
 
 	virtual void onChanged(const std::string& key, const nlohmann::json::value_type& value) {};
-private:
 	void showFPS();
 	void calFPS();
 protected:

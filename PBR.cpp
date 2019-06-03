@@ -82,7 +82,6 @@ PBR::~PBR()
 
 void PBR::render(Renderer::Texture2D::Ptr rt) 
 {
-	updateLights();
 	if (has("tiled") || has("clustered"))
 		renderNormal(rt);
 	else
@@ -91,36 +90,6 @@ void PBR::render(Renderer::Texture2D::Ptr rt)
 
 }
 
-void PBR::updateLights()
-{
-	auto cam = getScene()->createOrGetCamera("main");
-	Matrix view = cam->getViewMatrix();
-	D3D11_MAP map = D3D11_MAP_WRITE_DISCARD;
-	D3D11_MAPPED_SUBRESOURCE subresource;
-	auto context = getRenderer()->getContext();
-	auto buffer = mLightsBuffer.lock();
-	context->Map(*buffer, 0, map, 0,&subresource);
-	char* data = (char*)subresource.pData;
-	float range = 1000.0f;
-	if (has("lightRange"))
-		range = getValue<float>("lightRange");
-	float radiance = 1.0f;
-	if (has("radiance"))
-		radiance = getValue<float>("radiance");
-	getScene()->visitLights([view, range, &data, radiance](Scene::Light::Ptr light)
-	{
-		Vector3 pos = light->getNode()->getRealPosition();
-		Vector4 vpos = Vector4::Transform({ pos.x, pos.y, pos.z, 1 }, view);
-		vpos.w = range;
-		memcpy(data, &vpos, sizeof(vpos));
-		data += sizeof(vpos);
-		Vector3 color = light->getColor();
-		color *= radiance;
-		memcpy(data, &Vector4(color.x, color.y, color.z,1.0f),sizeof(Vector4));
-		data += sizeof(Vector4);
-	});
-	context->Unmap(*buffer, 0);
-}
 
 void PBR::renderNormal(Renderer::Texture2D::Ptr rt)
 {
@@ -148,7 +117,12 @@ void PBR::renderNormal(Renderer::Texture2D::Ptr rt)
 
 	auto quad = getQuad();
 	quad->setRenderTarget(rt);
-	quad->setTextures({ mAlbedo, mNormal, mDepthLinear , mLightsBuffer, getShaderResource("lightindices"), getShaderResource("lighttable") });
+	quad->setTextures({ 
+		mAlbedo, mNormal, mDepthLinear , 
+		getShaderResource("pointlights"), 
+		getShaderResource("spotlights"),
+		getShaderResource("lightindices"), 
+		getShaderResource("lighttable") });
 	quad->setPixelShader(mPSs[Scene::Light::LT_POINT]);
 	quad->setSamplers({ mLinear, mPoint });
 	quad->setConstant(mConstants);

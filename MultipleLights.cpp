@@ -39,35 +39,41 @@ void MultipleLights::initPipeline()
 	auto pointlights = mRenderer->createRWBuffer(sizeof(Vector4) * 2 * MAX_NUM_LIGHTS, sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 	mPipeline->addShaderResource("pointlights", pointlights);
 	mPipeline->addBuffer("pointlights", pointlights);
+	auto spotlights = mRenderer->createRWBuffer(sizeof(Vector4) * 3 * MAX_NUM_LIGHTS, sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+	mPipeline->addShaderResource("spotlights", spotlights);
+	mPipeline->addBuffer("spotlights", spotlights);
 
 	//initDRPipeline();
-	initTBDRPipeline();
-	//initCDRPipeline();
+	//initTBDRPipeline();
+	initCDRPipeline();
 }
 
 void MultipleLights::initScene()
 {
-	int numlights = 100;
+	int numpoints = 100;
+	int numspots = 1;
 
 
-	set("numLights", { {"value", 100}, {"min", 1}, {"max", numlights}, {"interval", 1}, {"type","set"} });
+	set("numpoints", { {"value", numpoints}, {"min", 1}, {"max", numpoints}, {"interval", 1}, {"type","set"} });
+	set("numspots", { {"value", numspots}, {"min", 1}, {"max", numspots}, {"interval", 1}, {"type","set"} });
+
 	set("lightRange", { {"value", 100}, {"min", 1}, {"max", 1000}, {"interval", 1}, {"type","set"} });
 	set("fovy", { {"value", "0.7"}, {"min", "0.1"}, {"max", "2"}, {"interval", "0.01"}, {"type","set"} });
 
 	auto root = mScene->getRoot();
 
-	{
-		Parameters params;
-		params["geom"] = "room";
-		params["size"] = "100";
-		auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
-		{
-			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		});
-		model->setCastShadow(false);
-		model->attach(root);
-		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-	}
+	//{
+	//	Parameters params;
+	//	params["geom"] = "room";
+	//	params["size"] = "100";
+	//	auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
+	//	{
+	//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+	//	});
+	//	model->setCastShadow(false);
+	//	model->attach(root);
+	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+	//}
 	//{
 	//	Parameters params;
 	//	params["geom"] = "cube";
@@ -84,7 +90,7 @@ void MultipleLights::initScene()
 	//{
 	//	Parameters params;
 	//	params["geom"] = "plane";
-	//	params["size"] = "1000";
+	//	params["size"] = "100";
 	//	//params["resolution"] = "500";
 	//	auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
 	//	{
@@ -96,33 +102,33 @@ void MultipleLights::initScene()
 
 	//}
 
-	{
-		Parameters params;
-		params["geom"] = "sphere";
-		params["radius"] = "10";
-		params["resolution"] = "500";
-		auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
-		{
-			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		});
-		model->setCastShadow(false);
-		model->attach(root);
-		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-	
-	}
-
 	//{
 	//	Parameters params;
-	//	//params["file"] = "tiny.x";
-	//	params["file"] = "sponza/sponza.obj";
-	//	auto model = mScene->createModel("test", params, [this](const Parameters& p) {
-	//		return Mesh::Ptr(new Mesh(p, mRenderer));
+	//	params["geom"] = "sphere";
+	//	params["radius"] = "10";
+	//	params["resolution"] = "500";
+	//	auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
+	//	{
+	//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
 	//	});
-
-	//	model->attach(mScene->getRoot());
+	//	model->setCastShadow(false);
+	//	model->attach(root);
 	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
 	//
 	//}
+
+	{
+		Parameters params;
+		//params["file"] = "tiny.x";
+		params["file"] = "media/sponza/sponza.obj";
+		auto model = mScene->createModel("test", params, [this](const Parameters& p) {
+			return Mesh::Ptr(new Mesh(p, mRenderer));
+		});
+
+		model->attach(mScene->getRoot());
+		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+	
+	}
 
 	auto cam = mScene->createOrGetCamera("main");
 	cam->setViewport(0, 0, mRenderer->getWidth(), mRenderer->getHeight());
@@ -146,10 +152,13 @@ void MultipleLights::initScene()
 		Scene::Light::Ptr light;
 		Vector3 vel;
 	};
-	std::shared_ptr<std::vector<State>> lights = std::shared_ptr<std::vector<State>>(new std::vector<State>());
-	for (int i = 0; i < numlights; ++i)
+	std::shared_ptr<std::vector<State>> pointlights = std::shared_ptr<std::vector<State>>(new std::vector<State>());
+	std::shared_ptr<std::vector<State>> spotlights = std::shared_ptr<std::vector<State>>(new std::vector<State>());
+
+	for (int i = 0; i < numpoints; ++i)
 	{
 		std::stringstream ss;
+		ss << "point_";
 		ss << i;
 		auto light = mScene->createOrGetLight(ss.str());
 		Vector3 color = { rand(gen),rand(gen),rand(gen) };
@@ -158,7 +167,7 @@ void MultipleLights::initScene()
 		light->setColor(color);
 		light->setType(Scene::Light::LT_POINT);
 		light->attach(mScene->getRoot());
-		float step = 3.14159265358f * 2.0f / (float)numlights;
+		float step = 3.14159265358f * 2.0f / (float)numpoints;
 		float t = i * step;
 		float z = sin(t) * 30;
 		float x = cos(t) * 30;
@@ -166,40 +175,123 @@ void MultipleLights::initScene()
 		//light->getNode()->setPosition( 0.0f, len.y  * 0.5f - 0.1f,0.0f );
 		//light->getNode()->setPosition(x, 49.0f, z);
 		//light->getNode()->setPosition(0.0f, 49.0f, ((i % 2) * 2.0f - 1) * 30.0f);
-		//light->getNode()->setPosition((float)i, 10.0f, 0.0f);
+		//light->getNode()->setPosition((float)i * 10.0f, 20.0f, 0.0f);
 
 		light->attach(root);
 		Vector3 vel = { rand(gen),rand(gen),rand(gen) };
 		vel.Normalize();
 		vel *= 1.0f;
-		lights->push_back({light,vel });
+		pointlights->push_back({ light,vel });
 	}
 
-	//mUpdater = [lights,len]() {
-	//	for(auto&i: *lights)
-	//	{ 
-	//		auto node = i.light->getNode();
-	//		auto pos = node->getPosition() + i.vel;
+	for (int i = 0; i < numspots; ++i)
+	{
+		std::stringstream ss;
+		ss << "spot_";
+ 		ss << i;
+		auto light = mScene->createOrGetLight(ss.str());
+		Vector3 color = { rand(gen),rand(gen),rand(gen) };
+		color.Normalize();
+		//color *= 1;
+		light->setColor(color);
+		light->setType(Scene::Light::LT_SPOT);
+		light->setSpotAngle(0.1f);
+		light->setDirection({ 0.0f, 0.0f, 1.0f });
+		light->attach(mScene->getRoot());
+		light->getNode()->setPosition(0.0f, -1.0f, 10.0f);
+		light->attach(cam->getNode());
+		//light->attach(root);
 
-	//		if (pos.x > len.x || pos.x < -len.x)
-	//			i.vel.x = -i.vel.x;
-	//		if (pos.y > len.y || pos.y < -len.y)
-	//			i.vel.y = -i.vel.y;
-	//		if (pos.z > len.z || pos.z < -len.z)
-	//			i.vel.z = -i.vel.z;
+		spotlights->push_back({ light,{0.0f,0.0f,0.0f} });
+	}
 
-	//		node->setPosition(pos);
-	//	}
-	//};
+	auto updateLights = [this](auto lights, const std::string& buffername) {
+		auto cam = mScene->createOrGetCamera("main");
+		Matrix view = cam->getViewMatrix();
+		D3D11_MAP map = D3D11_MAP_WRITE_DISCARD;
+		D3D11_MAPPED_SUBRESOURCE subresource;
+		auto context = mRenderer->getContext();
+		auto buffer = mPipeline->getBuffer(buffername).lock();
+		context->Map(*buffer, 0, map, 0, &subresource);
+		char* data = (char*)subresource.pData;
+		float range = 1000.0f;
+		if (has("lightRange"))
+			range = getValue<float>("lightRange");
+		float radiance = 1.0f;
+		if (has("radiance"))
+			radiance = getValue<float>("radiance");
+		
+		for (auto& l : *lights)
+		{
+			auto light = l.light;
+			if (light->getType() == Scene::Light::LT_POINT)
+			{
+				Vector3 pos = light->getNode()->getRealPosition();
+				Vector4 vpos = Vector4::Transform({ pos.x, pos.y, pos.z, 1 }, view);
+				vpos.w = range;
+				memcpy(data, &vpos, sizeof(vpos));
+				data += sizeof(vpos);
+				Vector3 color = light->getColor();
+				color *= radiance;
+				memcpy(data, &Vector4(color.x, color.y, color.z, 1.0f), sizeof(Vector4));
+				data += sizeof(Vector4);
+			}
+			else if (light->getType() == Scene::Light::LT_SPOT)
+			{
+				Vector3 pos = light->getNode()->getRealPosition();
+				Vector4 vpos = Vector4::Transform({ pos.x, pos.y, pos.z, 1 }, view);
+				vpos.w = range;
+				memcpy(data, &vpos, sizeof(vpos));
+				data += sizeof(vpos);
+
+				Vector3 dir = light->getDirection();
+				Vector4 vdir = Vector4::Transform({ dir.x, dir.y,dir.z,0 }, view);
+				vdir.w = std::cos(light->getSpotAngle());
+				memcpy(data, &vdir, sizeof(vdir));
+				data += sizeof(vdir);
+
+				Vector3 color = light->getColor();
+				color *= radiance;
+				memcpy(data, &Vector4(color.x, color.y, color.z, 1.0f), sizeof(Vector4));
+				data += sizeof(Vector4);
+			}
+		}
+
+		context->Unmap(*buffer, 0);
+	};
+	
+
+	mUpdater = [=]() {
+		updateLights(pointlights, "pointlights");
+		updateLights(spotlights, "spotlights");
+		//for(auto&i: *pointlights)
+		//{ 
+		//	auto node = i.light->getNode();
+		//	auto pos = node->getPosition() + i.vel;
+
+		//	if (pos.x > len.x || pos.x < -len.x)
+		//		i.vel.x = -i.vel.x;
+		//	if (pos.y > len.y || pos.y < -len.y)
+		//		i.vel.y = -i.vel.y;
+		//	if (pos.z > len.z || pos.z < -len.z)
+		//		i.vel.z = -i.vel.z;
+
+		//	node->setPosition(pos);
+		//}
+	};
 
 
 }
 
 void MultipleLights::update()
 {
+	showFPS();
+	//Framework::update();
+	mInput->update();
 	if (mUpdater)
 		mUpdater();
-	Framework::update();
+	mPipeline->render();
+	mRenderer->present();
 }
 
 void MultipleLights::initDRPipeline()
@@ -354,7 +446,7 @@ void MultipleLights::initCDRPipeline()
 	mPipeline->pushStage<ClusteredLightCulling>(Vector3(SLICED_LEN, SLICED_LEN, SLICED_Z), Vector3(bw, bh,0));
 
 	mPipeline->pushStage<PBR>(Vector3(bw, bh,0));
-	//mPipeline->pushStage<HDR>();
+	mPipeline->pushStage<HDR>();
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
 	mPipeline->pushStage("draw to backbuffer", [bb, quad](Renderer::Texture2D::Ptr rt)

@@ -9,7 +9,8 @@ class ClusteredLightCulling: public Pipeline::Stage
 	{
 		Matrix invertProj;
 		Vector3 slicesSize;
-		int numLights;
+		int numPointLights;
+		int numSpotLights;
 		float nearZ;
 		float farZ;
 	};

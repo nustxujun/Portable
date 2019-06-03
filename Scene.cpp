@@ -129,7 +129,7 @@ Vector3 Scene::Entity::getDirection()
 {
 	Vector3 dir(0, 0, 1);
 	auto node = getNode();
-	const auto& rot = node->getOrientation();
+	const auto& rot = node->getRealOrientation();
 	Vector3::Transform(dir, rot, dir);
 	dir.Normalize();
 	return dir;
@@ -230,6 +230,7 @@ const Vector3 & Scene::Node::getRealPosition()
 		mRealPosition = mPosition;
 		if (mParent)
 		{
+			mRealPosition = Vector3::Transform(mPosition, mParent->getRealOrientation());
 			mRealPosition += mParent->getRealPosition();
 		}
 		mDirty &= ~DT_POSITION;
