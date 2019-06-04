@@ -133,7 +133,7 @@ void MultipleLights::initScene()
 	{
 		Parameters params;
 		//params["file"] = "tiny.x";
-		params["file"] = "sponza/sponza.obj";
+		params["file"] = "media/sponza/sponza.obj";
 		auto model = mScene->createModel("test", params, [this](const Parameters& p) {
 			return Mesh::Ptr(new Mesh(p, mRenderer));
 		});
@@ -290,7 +290,7 @@ void MultipleLights::initScene()
 		context->Unmap(*buffer, 0);
 	};
 	
-
+	set("time", { {"value", 0.0f}, {"min", "1.57"}, {"max", "4.71"}, {"interval", "0.001"}, {"type","set"} });
 	mUpdater = [=]() {
 		updateLights(pointlights, "pointlights");
 		updateLights(spotlights, "spotlights");
@@ -311,6 +311,12 @@ void MultipleLights::initScene()
 		//	node->setPosition(pos);
 		//}
 
+		auto mainlight = mScene->createOrGetLight("main");
+		float rad = getValue<float>("time");
+		float sin = std::sin(rad);
+		float cos = std::cos(rad);
+
+		mainlight->setDirection({ 0.0f,cos, sin });
 	
 	};
 
@@ -482,8 +488,8 @@ void MultipleLights::initCDRPipeline()
 	mPipeline->pushStage<PBR>(Vector3(bw, bh,0));
 	//mPipeline->pushStage<HDR>();
 
-	mPipeline->pushStage<AO>(10);
-	mPipeline->pushStage<ShadowMap>(1024, 5);
+	mPipeline->pushStage<AO>(20.0f);
+	//mPipeline->pushStage<ShadowMap>(2048, 8, 10);
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
 	mPipeline->pushStage("draw to backbuffer", [bb, quad](Renderer::Texture2D::Ptr rt)

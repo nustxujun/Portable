@@ -6,7 +6,7 @@ cbuffer ConstantBuffer: register(b0)
 	matrix invertViewProj;
 	matrix lightView;
 	matrix lightProjs[8];
-	float4 cascadeDepths[8];
+	float cascadeDepths[8];
 	int numcascades;
 	float scale;
 	float shadowcolor;
@@ -64,7 +64,7 @@ float4 ps(PS_INPUT input) : SV_TARGET
 				percentlit += shadowmapTex.SampleCmpLevelZero(sampshadow, uv, cmpdepth, int2(x, y));
 			}
 		}
-		return  percentlit * 0.04f * shadowcolor;
+		return  percentlit * 0.04f * (1 - shadowcolor) + shadowcolor;
 	}
 
 	return 1;

@@ -176,12 +176,14 @@ public:
 		LightType getType()const { return mType; }
 		void setSpotAngle(float ang) { mAngle = ang; }
 		float getSpotAngle()const { return mAngle; }
-
+		void setCastingShadow(bool v) { mIsCastingShadow = v; }
+		bool isCastingShadow()const { return mIsCastingShadow; }
 	private:
 		Vector3 mColor = {1,1,1};
 		float mRange = 1000.0f;
 		LightType mType = LT_DIR;
 		float mAngle = 0.7854f;
+		bool mIsCastingShadow = false;
 	};
 public:
 	Scene();

@@ -1,6 +1,6 @@
 #include "ShadowMap.h"
 #include "MathUtilities.h"
-
+#include <sstream>
 ShadowMap::ShadowMap(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr st, Pipeline* p) :
 	Pipeline::Stage(r, s,q,st, p), mQuad(r)
 {
@@ -13,7 +13,7 @@ ShadowMap::~ShadowMap()
 {
 }
 
-void ShadowMap::init(int mapsize, int numlevels)
+void ShadowMap::init(int mapsize, int numlevels, int nummaps)
 {
 	this->set("shadowcolor", { {"type","set"}, {"value",0.01f},{"min","0"},{"max",1.0f},{"interval", "0.001"} });
 	this->set("depthbias", { {"type","set"}, {"value",0.001f},{"min","0"},{"max","0.01"},{"interval", "0.0001"} });
@@ -23,21 +23,32 @@ void ShadowMap::init(int mapsize, int numlevels)
 	mShadowMapSize = mapsize;
 	mNumLevels = std::min(numlevels, 8);
 
-	mProjections.resize(mNumLevels);
-	mCascadeDepths.resize(mNumLevels);
 
 	auto r = getRenderer();
-
-	auto blob = getRenderer()->compileFile("hlsl/receiveshadow.hlsl", "ps", "ps_5_0");
+	std::stringstream ss;
+	ss << nummaps;
+	D3D10_SHADER_MACRO macros[] = { {"NUM_SHADOWMAPS", ss.str().c_str()} ,{ NULL,NULL} };
+	auto blob = getRenderer()->compileFile("hlsl/receiveshadow.hlsl", "ps", "ps_5_0", macros);
 	mReceiveShadowPS = getRenderer()->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
-
-	blob = r->compileFile("hlsl/castshadow.hlsl", "vs", "vs_5_0");
+	blob = r->compileFile("hlsl/castshadow.hlsl", "vs", "vs_5_0", macros);
 	mShadowVS = r->createVertexShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
 
 	size_t w = getRenderer()->getWidth();
 	size_t h = getRenderer()->getHeight();
 
-	mShadowMap = r->createDepthStencil(mShadowMapSize * mNumLevels, mShadowMapSize, DXGI_FORMAT_R32_TYPELESS, true);
+	D3D11_TEXTURE2D_DESC desc;
+	desc.Width = mShadowMapSize * mNumLevels;
+	desc.Height = mShadowMapSize;
+	desc.MipLevels = 1;
+	desc.ArraySize = nummaps;
+	desc.Format = DXGI_FORMAT_R32_TYPELESS;
+	desc.SampleDesc.Count = 1;
+	desc.SampleDesc.Quality = 0;
+	desc.Usage = D3D11_USAGE_DEFAULT;
+	desc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+	desc.CPUAccessFlags = 0;
+	desc.MiscFlags = 0;
+	mShadowMap = r->createTexture(desc);
 
 	D3D11_INPUT_ELEMENT_DESC depthlayout[] =
 	{
@@ -76,10 +87,9 @@ void ShadowMap::init(int mapsize, int numlevels)
 }
 
 
-void ShadowMap::fitToScene()
+void ShadowMap::fitToScene(int index, Scene::Light::Ptr light)
 {
 
-	auto light = getScene()->createOrGetLight("main");
 	auto dir = light->getDirection();
 
 	Vector3 up(0, 1, 0);
@@ -171,17 +181,17 @@ void ShadowMap::fitToScene()
 		}
 
 
-		mProjections[i] = DirectX::XMMatrixOrthographicOffCenterLH(min.x, max.x, min.y, max.y, scenemin.z, scenemax.z);
+		mMapParams[index].projs[i] = DirectX::XMMatrixOrthographicOffCenterLH(min.x, max.x, min.y, max.y, scenemin.z, scenemax.z);
 
 		Vector4 range = { 0,0,f ,1};
 		range = Vector4::Transform(range, camproj);
 		range /= range.w;
-		mCascadeDepths[i] = range;
+		mMapParams[index].depths[i] = range.z;
 	}
 
 }
 
-void ShadowMap::renderToShadowMap()
+void ShadowMap::renderToShadowMap(int index)
 {
 	mShadowMap.lock()->clearDepth(1.0f);
 
@@ -212,7 +222,7 @@ void ShadowMap::renderToShadowMap()
 		vp.MaxDepth = 1.0f;
 		getRenderer()->setViewport(vp);
 
-		constant.proj = mProjections[i].Transpose();
+		constant.proj = mMapParams[index].projs[i].Transpose();
 
 
 		
@@ -235,38 +245,38 @@ void ShadowMap::renderToShadowMap()
 
 void ShadowMap::renderShadow(Renderer::RenderTarget::Ptr rt)
 {
-	ReceiveConstants constants;
-	memcpy(constants.cascadeDepths, mCascadeDepths.data(), mCascadeDepths.size() * sizeof(Vector4));
-	constants.lightView = mLightView.Transpose();
-	for (int i = 0; i < mNumLevels; ++i)
-	{
-		constants.lightProjs[i] = mProjections[i].Transpose();
-	}
+	//ReceiveConstants constants;
+	//memcpy(constants.cascadeDepths, mCascadeDepths.data(), mCascadeDepths.size() * sizeof(Vector4));
+	//constants.lightView = mLightView.Transpose();
+	//for (int i = 0; i < mNumLevels; ++i)
+	//{
+	//	constants.lightProjs[i] = mProjections[i].Transpose();
+	//}
 
 
-	auto cam = getScene()->createOrGetCamera("main");
-	constants.invertViewProj = (cam->getViewMatrix() * cam->getProjectionMatrix()).Invert().Transpose();
-	constants.numcascades = mNumLevels;
-	constants.scale = 1.0f / mNumLevels;
-	constants.shadowcolor = getValue<float>("shadowcolor");
-	constants.depthbias = getValue<float>("depthbias");
-	mReceiveConstants.lock()->blit(&constants, sizeof(constants));
+	//auto cam = getScene()->createOrGetCamera("main");
+	//constants.invertViewProj = (cam->getViewMatrix() * cam->getProjectionMatrix()).Invert().Transpose();
+	//constants.numcascades = mNumLevels;
+	//constants.scale = 1.0f / mNumLevels;
+	//constants.shadowcolor = getValue<float>("shadowcolor");
+	//constants.depthbias = getValue<float>("depthbias");
+	//mReceiveConstants.lock()->blit(&constants, sizeof(constants));
 
-	mQuad.setRenderTarget(rt);
-	mQuad.setConstant(mReceiveConstants);
-	mQuad.setSamplers({ mLinear, mPoint,mShadowSampler });
-	mQuad.setDefaultBlend();
-	mQuad.setTextures({ getShaderResource("depth"),mShadowMap });
-	mQuad.setPixelShader(mReceiveShadowPS);
-	mQuad.setDefaultViewport();
-	mQuad.draw();
+	//mQuad.setRenderTarget(rt);
+	//mQuad.setConstant(mReceiveConstants);
+	//mQuad.setSamplers({ mLinear, mPoint,mShadowSampler });
+	//mQuad.setDefaultBlend();
+	//mQuad.setTextures({ getShaderResource("depth"),mShadowMap });
+	//mQuad.setPixelShader(mReceiveShadowPS);
+	//mQuad.setDefaultViewport();
+	//mQuad.draw();
 
 }
 
 void ShadowMap::render(Renderer::Texture2D::Ptr rt) 
 {
-	fitToScene();
-	renderToShadowMap();
+	//fitToScene();
+	//renderToShadowMap();
 
 	renderShadow(rt);
 

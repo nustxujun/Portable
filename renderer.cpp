@@ -431,7 +431,6 @@ void Renderer::uninit()
 {
 	mProfiles.clear();
 	mDisjoint->Release();
-	mDepthStencils.clear();
 	mBlendStates.clear();
 	mDepthStencilStates.clear();
 	mRasterizers.clear();
@@ -663,7 +662,7 @@ Renderer::Rasterizer::Ptr Renderer::createOrGetRasterizer(const D3D11_RASTERIZER
 	return Rasterizer::Ptr(shared);
 }
 
-Renderer::DepthStencil::Ptr Renderer::createDepthStencil(int width, int height, DXGI_FORMAT format, bool access )
+Renderer::Texture2D::Ptr Renderer::createDepthStencil(int width, int height, DXGI_FORMAT format, bool access )
 {
 	D3D11_TEXTURE2D_DESC descDepth;
 	ZeroMemory(&descDepth, sizeof(descDepth));
@@ -679,10 +678,9 @@ Renderer::DepthStencil::Ptr Renderer::createDepthStencil(int width, int height, 
 	descDepth.CPUAccessFlags = 0;
 	descDepth.MiscFlags = 0;
 
-	auto ptr = std::shared_ptr<DepthStencil>(new DepthStencil(this, descDepth));
-	mDepthStencils.emplace_back(ptr);
+
 	
-	return ptr;
+	return createTexture(descDepth);
 }
 
 Renderer::Profile::Ptr Renderer::createProfile()
@@ -1000,70 +998,10 @@ Renderer::Rasterizer::~Rasterizer()
 	mRasterizer->Release();
 }
 
-Renderer::DepthStencil::DepthStencil(Renderer* renderer, const D3D11_TEXTURE2D_DESC & desc):D3DObject(renderer)
-{
-	bool access = (desc.BindFlags & D3D11_BIND_SHADER_RESOURCE) != 0;
-
-	DXGI_FORMAT SRVfmt = DXGI_FORMAT_R32_FLOAT;
-	DXGI_FORMAT DSVfmt = DXGI_FORMAT_D32_FLOAT;
-
-	if (access)
-	{
-		switch (desc.Format)
-		{
-		case DXGI_FORMAT_R32_TYPELESS:
-			SRVfmt = DXGI_FORMAT_R32_FLOAT;
-			DSVfmt = DXGI_FORMAT_D32_FLOAT;
-			break;
-		case DXGI_FORMAT_R24G8_TYPELESS:
-			SRVfmt = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-			DSVfmt = DXGI_FORMAT_D24_UNORM_S8_UINT;
-			break;
-		case DXGI_FORMAT_R16_TYPELESS:
-			SRVfmt = DXGI_FORMAT_R16_UNORM;
-			DSVfmt = DXGI_FORMAT_D16_UNORM;
-			break;
-		case DXGI_FORMAT_R8_TYPELESS:
-			SRVfmt = DXGI_FORMAT_R8_UNORM;
-			DSVfmt = DXGI_FORMAT_R8_UNORM;
-			break;
-		default:
-			{
-				MessageBoxA(NULL, "unknown readable depthstencil format ", NULL, NULL);
-				abort();
-			}
-		}
-	}
-	else
-	{
-		DSVfmt = desc.Format;
-	}
-
-	mDesc = desc;
-	checkResult(getDevice()->CreateTexture2D(&desc, NULL, &mTexture));
-	
-	D3D11_DEPTH_STENCIL_VIEW_DESC descDSV;
-	ZeroMemory(&descDSV, sizeof(descDSV));
-	descDSV.Format = DSVfmt;
-	descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-	descDSV.Texture2D.MipSlice = 0;
-	checkResult(getDevice()->CreateDepthStencilView(mTexture, &descDSV, &mDSView));
-
-	if (access)
-	{
-		D3D11_SHADER_RESOURCE_VIEW_DESC srvd;
-		srvd.Format = SRVfmt;
-		srvd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-		srvd.Texture2D.MostDetailedMip = 0;
-		srvd.Texture2D.MipLevels = 1;
-
-		checkResult(getDevice()->CreateShaderResourceView(mTexture, &srvd, &mSRView));
-	}
-}
 
 Renderer::DepthStencil::~DepthStencil()
 {
-	mTexture->Release();
+	if (mDSView)
 	mDSView->Release();
 }
 

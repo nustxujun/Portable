@@ -95,6 +95,23 @@ public:
 		ID3D11UnorderedAccessView* mUAV = NULL;
 	};
 
+	class DepthStencil : public NODefault, virtual public D3DObject
+	{
+	public:
+		using Ptr = std::weak_ptr<DepthStencil>;
+	public:
+		DepthStencil() {};
+		~DepthStencil();
+
+		operator ID3D11DepthStencilView* () const { return mDSView; }
+		void clearDepth(float d);
+		void clearStencil(int s);
+		void clearDepthAndStencil(float d, int s);
+	protected:
+		ID3D11DepthStencilView* mDSView = nullptr;
+	};
+
+
 
 
 	class RenderTarget : public NODefault, virtual public D3DObject
@@ -164,7 +181,7 @@ public:
 		std::unordered_map<std::string, ID3DX11EffectTechnique*> mTechs;
 	};
 
-	class Texture : public RenderTarget,public ShaderResource, public UnorderedAccess
+	class Texture : public RenderTarget,public ShaderResource, public UnorderedAccess, public DepthStencil
 	{
 	public:
 		using Ptr = std::weak_ptr<Texture>;
@@ -220,18 +237,71 @@ public:
 			bool unorderedAccess = ((mDesc.BindFlags & D3D11_BIND_UNORDERED_ACCESS) != 0);
 			bool shaderRecource = ((mDesc.BindFlags & D3D11_BIND_SHADER_RESOURCE) != 0);
 			bool rendertarget = ((mDesc.BindFlags & D3D11_BIND_RENDER_TARGET) != 0);
+			bool depthstencil = ((mDesc.BindFlags & D3D11_BIND_DEPTH_STENCIL) != 0);
+
+			if (rendertarget && depthstencil)
+				error("cannot support a texture with rtview and dsview");
+
 
 			if (rendertarget)
 				checkResult(getDevice()->CreateRenderTargetView(mTexture, nullptr, &mRTView));
 
-			if (shaderRecource)
-			{
-				checkResult(getDevice()->CreateShaderResourceView(mTexture, nullptr, &mSRView));
-			}
-
 			if (unorderedAccess)
 			{
 				checkResult(getDevice()->CreateUnorderedAccessView(mTexture, nullptr, &mUAV));
+			}
+
+			if (depthstencil && shaderRecource)
+			{
+				DXGI_FORMAT SRVfmt = DXGI_FORMAT_R32_FLOAT;
+				DXGI_FORMAT DSVfmt = DXGI_FORMAT_D32_FLOAT;
+
+				switch (mDesc.Format)
+				{
+				case DXGI_FORMAT_R32_TYPELESS:
+					SRVfmt = DXGI_FORMAT_R32_FLOAT;
+					DSVfmt = DXGI_FORMAT_D32_FLOAT;
+					break;
+				case DXGI_FORMAT_R24G8_TYPELESS:
+					SRVfmt = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+					DSVfmt = DXGI_FORMAT_D24_UNORM_S8_UINT;
+					break;
+				case DXGI_FORMAT_R16_TYPELESS:
+					SRVfmt = DXGI_FORMAT_R16_UNORM;
+					DSVfmt = DXGI_FORMAT_D16_UNORM;
+					break;
+				case DXGI_FORMAT_R8_TYPELESS:
+					SRVfmt = DXGI_FORMAT_R8_UNORM;
+					DSVfmt = DXGI_FORMAT_R8_UNORM;
+					break;
+				default:
+					{
+						error("unknown readable depthstencil format , it must be XXXX_TYPELESS");
+					}
+				}
+
+				D3D11_DEPTH_STENCIL_VIEW_DESC descDSV;
+				ZeroMemory(&descDSV, sizeof(descDSV));
+				descDSV.Format = DSVfmt;
+				descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+				descDSV.Texture2D.MipSlice = 0;
+				checkResult(getDevice()->CreateDepthStencilView(mTexture, &descDSV, &mDSView));
+
+				D3D11_SHADER_RESOURCE_VIEW_DESC srvd;
+				srvd.Format = SRVfmt;
+				srvd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+				srvd.Texture2D.MostDetailedMip = 0;
+				srvd.Texture2D.MipLevels = 1;
+
+				checkResult(getDevice()->CreateShaderResourceView(mTexture, &srvd, &mSRView));
+			}
+			else
+			{
+				if (depthstencil)
+					checkResult(getDevice()->CreateDepthStencilView(mTexture, nullptr, &mDSView));
+
+				if (shaderRecource)
+					checkResult(getDevice()->CreateShaderResourceView(mTexture, nullptr, &mSRView));
 			}
 		}
 	protected:
@@ -336,22 +406,6 @@ public:
 		ID3D11RasterizerState* mRasterizer;
 	};
 
-	class DepthStencil:  public ShaderResource
-	{
-	public:
-		using Ptr = std::weak_ptr<DepthStencil>;
-	public:
-		DepthStencil(Renderer* renderer, const D3D11_TEXTURE2D_DESC& desc);
-		~DepthStencil();
-
-		operator ID3D11DepthStencilView* () const { return mDSView; }
-		void clearDepth(float d);
-		void clearStencil(int s);
-	private:
-		ID3D11Texture2D* mTexture;
-		ID3D11DepthStencilView* mDSView;
-		D3D11_TEXTURE2D_DESC mDesc;
-	};
 
 	class Profile :public NODefault, public D3DObject
 	{
@@ -484,7 +538,8 @@ public:
 	Layout::Ptr createLayout(const D3D11_INPUT_ELEMENT_DESC* descarray, size_t count);
 	Font::Ptr createOrGetFont(const std::wstring& font);
 	Rasterizer::Ptr createOrGetRasterizer(  const D3D11_RASTERIZER_DESC& desc);
-	DepthStencil::Ptr createDepthStencil(int width, int height, DXGI_FORMAT format, bool access = false);
+	Texture2D::Ptr createDepthStencil(int width, int height, DXGI_FORMAT format, bool access = false);
+
 	Profile::Ptr createProfile();
 
  private:
@@ -514,7 +569,6 @@ private:
 	std::vector<std::shared_ptr<Buffer>> mBuffers;
 	std::vector<std::shared_ptr<Effect>> mEffects;
 	std::vector<std::shared_ptr<Layout>> mLayouts;
-	std::vector<std::shared_ptr<DepthStencil>> mDepthStencils;
 
 	std::vector<std::shared_ptr<Texture>> mTextures;
 	std::unordered_map<std::string,std::shared_ptr<Sampler>> mSamplers;

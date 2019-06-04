@@ -20,7 +20,7 @@ class ShadowMap: public Pipeline::Stage
 		Matrix invertViewProj;
 		Matrix lightView;
 		Matrix lightProjs[8];
-		Vector4 cascadeDepths[8];
+		float cascadeDepths[8];
 		int numcascades;
 		float scale;
 		float shadowcolor;
@@ -31,18 +31,24 @@ public:
 	~ShadowMap();
 
 
-	void init(int mapsize, int numlevels);
+	void init(int mapsize, int numlevels, int nummaps);
 	void render(Renderer::Texture2D::Ptr rt) ;
 private:
-	void fitToScene();
-	void renderToShadowMap();
+	void fitToScene(int index, Scene::Light::Ptr l);
+	void renderToShadowMap(int index);
 	void renderShadow(Renderer::RenderTarget::Ptr rt);
 
 
 private:
 	int mNumLevels;
-	std::vector<DirectX::SimpleMath::Matrix> mProjections;
-	std::vector<Vector4> mCascadeDepths;
+	int mNumMaps;
+	struct MapParams
+	{
+		std::vector<DirectX::SimpleMath::Matrix> projs;
+		std::vector<float> depths;
+	};
+	std::vector<MapParams> mMapParams;
+
 	Renderer::DepthStencil::Ptr mShadowMap;
 
 	int mShadowMapSize = 2048;
