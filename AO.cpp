@@ -3,10 +3,16 @@
 #include <random>
 #include "MathUtilities.h"
 
-AO::AO(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr st, Pipeline* p, Renderer::ShaderResource::Ptr normal, Renderer::ShaderResource::Ptr depth, float radius):
-	Pipeline::Stage(r,s,q,st,p), mNormal(normal), mDepth(depth)
+AO::AO(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr st, Pipeline* p):
+	Pipeline::Stage(r,s,q,st,p)
 {
 	mName = "AO";
+
+}
+
+void AO::init(float radius)
+{
+	auto r = getRenderer();
 	auto blob = r->compileFile("hlsl/ssao.hlsl", "main", "ps_5_0");
 	mPS = r->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
 
@@ -14,8 +20,8 @@ AO::AO(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr st, Pipeline* p,
 	mKernel = r->createBuffer(sizeof(Kernel), D3D11_BIND_CONSTANT_BUFFER);
 	mMatrix = r->createBuffer(sizeof(ConstantMatrix), D3D11_BIND_CONSTANT_BUFFER);
 
-	std::uniform_real_distribution<float> rand1(-1.0, 1.0); 
-	std::uniform_real_distribution<float> rand2(0.0 , 1.0);
+	std::uniform_real_distribution<float> rand1(-1.0, 1.0);
+	std::uniform_real_distribution<float> rand2(0.0, 1.0);
 	std::uniform_real_distribution<float> rand3(0.0, 1.0);
 
 	std::default_random_engine gen;
@@ -57,20 +63,16 @@ AO::AO(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr st, Pipeline* p,
 		//DirectX::SimpleMath::Vector3 d = { -1,1, 0.0f };
 
 		d.Normalize();
-		noise[i] = {d.x, d.y, d.z,0};
+		noise[i] = { d.x, d.y, d.z,0 };
 	}
 
-	mNoise = r->createTexture( noiseTexDesc, noise.data(), noiseSize * sizeof(DirectX::SimpleMath::Vector4));
+	mNoise = r->createTexture(noiseTexDesc, noise.data(), noiseSize * sizeof(DirectX::SimpleMath::Vector4));
 
 	mLinearWrap = r->createSampler("linear_wrap", D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
 	mPointWrap = r->createSampler("point_wrap", D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
 
-
-
-
-
-
 }
+
 
 void AO::render(Renderer::Texture2D::Ptr rt) 
 {
@@ -92,7 +94,7 @@ void AO::render(Renderer::Texture2D::Ptr rt)
 	quad->setConstants({ mKernel, mMatrix });
 	quad->setPixelShader(mPS);
 	quad->setSamplers({ mLinearWrap ,mPointWrap });
-	quad->setTextures({ mNormal, mDepth, mNoise});
+	quad->setTextures({ getShaderResource("normal"), getShaderResource("depth"), mNoise});
 	
 	quad->setDefaultBlend();
 	quad->setRenderTarget(rt);

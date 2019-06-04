@@ -78,7 +78,7 @@ float4 main(PS_INPUT input) : SV_TARGET
 	}
 
 	float total = (float)kernelSize;
-	occlusion = pow(1.0f - occlusion / total,1);
+	occlusion = pow(1.0f - occlusion / total,4);
 
 	return float4(occlusion, occlusion, occlusion, 1.0f);
 }

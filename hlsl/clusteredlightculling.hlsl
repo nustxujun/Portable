@@ -109,8 +109,8 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 		float3 pos = light.xyz;
 		float range = light.w;
 
-		//if (!TestSphereVsAABB(pos, range, aabbCenter, aabbHalf))
-		//	continue;
+		if (!TestSphereVsAABB(pos, range, aabbCenter, aabbHalf))
+			continue;
 
 		uint index;
 		InterlockedAdd(groupSpotCount, 1, index);

@@ -12,22 +12,17 @@ PBR::PBR(
 	mName = "pbr lighting";
 	this->set("roughness", { {"type","set"}, {"value",0.5f},{"min","0.01"},{"max",1.0f},{"interval", "0.01"} });
 	this->set("metallic", { {"type","set"}, {"value",0.5f},{"min","0"},{"max",1.0f},{"interval", "0.01"} });
-	this->set("radiance", { {"type","set"}, {"value",1},{"min","1"},{"max",1000},{"interval", "1"} });
+	this->set("ambient", { {"type","set"}, {"value",0.01f},{"min","0"},{"max",1.0f},{"interval", "0.001"} });
 
-	const std::array<const char*, 3> definitions = { "POINT", "DIR", "SPOT" };
+
+	const std::vector<const char*> definitions = { "POINT", "DIR", "SPOT", "TILED", "CLUSTERED" };
 	for (int i = 0; i < definitions.size(); ++i)
 	{
 
-		std::vector<D3D10_SHADER_MACRO> macros = { {definitions[i],""} };
-		if (has("tiled") )
-			macros.push_back({ "TILED", "1"});
-		else if (has("clustered"))
-			macros.push_back({ "CLUSTERED", "1" });
-
+		std::vector<D3D10_SHADER_MACRO> macros = { {definitions[i],"1"} };
 		macros.push_back({ NULL, NULL });
-		
 		auto blob = r->compileFile("hlsl/lighting.hlsl", "main", "ps_5_0", macros.data());
-		mPSs[i] = r->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
+		mPSs.push_back( r->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize()) );
 	}
 
 
@@ -71,7 +66,6 @@ PBR::PBR(
 	mNormal = getShaderResource("normal");
 	mDepth = getDepthStencil("depth");
 	mDepthLinear = getShaderResource("depthlinear");
-	mLightsBuffer = getBuffer("pointlights");
 
 
 }
@@ -106,12 +100,12 @@ void PBR::renderNormal(Renderer::Texture2D::Ptr rt)
 	auto desc = rt.lock()->getDesc();
 	constants.width = desc.Width;
 	constants.height = desc.Height;
-	constants.maxLightsPerTile =  getScene()->getNumLights();
-	constants.tilePerline = ((desc.Width + 16 - 1) & ~15) / 16;
 	constants.invertPorj = cam->getProjectionMatrix().Invert().Transpose();
 	constants.nearZ = cam->getNear();
 	constants.farZ = cam->getFar();
 	constants.clustersize = mCluster;
+	constants.numdirs = getValue<int>("numdirs");
+	constants.ambient = getValue<float>("ambient");
 
 	mConstants.lock()->blit(&constants, sizeof(constants));
 
@@ -121,9 +115,18 @@ void PBR::renderNormal(Renderer::Texture2D::Ptr rt)
 		mAlbedo, mNormal, mDepthLinear , 
 		getShaderResource("pointlights"), 
 		getShaderResource("spotlights"),
+		getShaderResource("dirlights"),
 		getShaderResource("lightindices"), 
 		getShaderResource("lighttable") });
-	quad->setPixelShader(mPSs[Scene::Light::LT_POINT]);
+
+
+	Renderer::PixelShader::Weak ps;
+	if (has("tiled"))
+		ps = mPSs[3];
+	else if(has("clustered"))
+		ps = mPSs[4];
+
+	quad->setPixelShader(ps);
 	quad->setSamplers({ mLinear, mPoint });
 	quad->setConstant(mConstants);
 

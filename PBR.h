@@ -10,14 +10,14 @@ class PBR:public Pipeline::Stage
 		Matrix invertPorj;
 		Matrix View;
 		Vector3 clustersize;
+		int numdirs;
 		float roughness;
 		float metallic;
 		float width;
 		float height;
-		int maxLightsPerTile;
-		int tilePerline;
 		float nearZ;
 		float farZ;
+		float ambient;
 	};
 
 	__declspec(align(16))
@@ -47,7 +47,7 @@ private:
 	Renderer::ShaderResource::Ptr mDepthLinear;
 	Renderer::ShaderResource::Ptr mLightsIndex;
 
-	std::array<Renderer::PixelShader::Weak,3> mPSs;
+	std::vector<Renderer::PixelShader::Weak> mPSs;
 	Renderer::Sampler::Ptr mLinear;
 	Renderer::Sampler::Ptr mPoint;
 	Renderer::Buffer::Ptr mConstants;

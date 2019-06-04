@@ -18,7 +18,6 @@ LightCulling::LightCulling(
 	
 	mDepthBounds = getShaderResource("depthbounds");
 	mLightsOutput = getUnorderedAccess("lightindices");
-	mLights = getShaderResource("pointlights");
 	mCurIndex = getRenderer()->createRWBuffer(4, 4, DXGI_FORMAT_R32_UINT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS);
 
 }
@@ -32,17 +31,15 @@ void LightCulling::render(Renderer::Texture2D::Ptr rt)
 	auto cam = getScene()->createOrGetCamera("main");
 	consts.invertProj = cam->getProjectionMatrix().Invert().Transpose();
 	const Matrix& view = cam->getViewMatrix();
-	consts.numLights = 0;
-	consts.numLights = getValue<int>("numLights");
+	consts.numPointLights = getValue<int>("numpoints");
+	consts.numSpotLights = getValue<int>("numspots");
 	consts.texelwidth = 1.0f / (float)mWidth;
 	consts.texelheight = 1.0f/ (float)mHeight;
-	consts.maxLightsPerTile = getScene()->getNumLights();
-	consts.tilePerline = mWidth;
 
 	mConstants.lock()->blit(&consts, sizeof(Constants));
 
 	mComputer.setConstants({ mConstants });
-	mComputer.setInputs({ mDepthBounds ,mLights });
+	mComputer.setInputs({ mDepthBounds ,getShaderResource("pointlights"), getShaderResource("spotlights") });
 	mComputer.setOuputs({ mCurIndex,  mLightsOutput , getUnorderedAccess("lighttable")});
 	mComputer.setShader(mCS);
 	mComputer.compute(mWidth, mHeight, 1);

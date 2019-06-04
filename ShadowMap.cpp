@@ -1,15 +1,32 @@
 #include "ShadowMap.h"
 #include "MathUtilities.h"
 
-ShadowMap::ShadowMap(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr st, Pipeline* p,Renderer::ShaderResource::Ptr worldpos, Renderer::ShaderResource::Ptr depth, int size, int numlevels) :
-	Pipeline::Stage(r, s,q,st, p), mWorldPos(worldpos),mSceneDepth(depth), mShadowMapSize(size), mNumLevels(numlevels), mQuad(r)
+ShadowMap::ShadowMap(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr st, Pipeline* p) :
+	Pipeline::Stage(r, s,q,st, p), mQuad(r)
 {
 	mName = "shadow map";
-	mShadowMapSize = 2048;
-	mNumLevels = std::min(mNumLevels, 8);
+
+
+}
+
+ShadowMap::~ShadowMap()
+{
+}
+
+void ShadowMap::init(int mapsize, int numlevels)
+{
+	this->set("shadowcolor", { {"type","set"}, {"value",0.01f},{"min","0"},{"max",1.0f},{"interval", "0.001"} });
+	this->set("depthbias", { {"type","set"}, {"value",0.001f},{"min","0"},{"max","0.01"},{"interval", "0.0001"} });
+	this->set("lambda", { {"type","set"}, {"value",0.9f},{"min","0"},{"max","1"},{"interval", "0.01"} });
+
+
+	mShadowMapSize = mapsize;
+	mNumLevels = std::min(numlevels, 8);
 
 	mProjections.resize(mNumLevels);
 	mCascadeDepths.resize(mNumLevels);
+
+	auto r = getRenderer();
 
 	auto blob = getRenderer()->compileFile("hlsl/receiveshadow.hlsl", "ps", "ps_5_0");
 	mReceiveShadowPS = getRenderer()->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
@@ -49,11 +66,15 @@ ShadowMap::ShadowMap(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr st
 	mLinear = r->createSampler("liear_wrap", D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
 	mPoint = r->createSampler("point_wrap", D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
 
+	mShadowSampler = r->createSampler("shadow_sampler",
+		D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT,
+		D3D11_TEXTURE_ADDRESS_BORDER,
+		D3D11_TEXTURE_ADDRESS_BORDER,
+		D3D11_TEXTURE_ADDRESS_BORDER,
+		D3D11_COMPARISON_LESS,
+		0, 0);
 }
 
-ShadowMap::~ShadowMap()
-{
-}
 
 void ShadowMap::fitToScene()
 {
@@ -120,7 +141,7 @@ void ShadowMap::fitToScene()
 		float clog = n * std::pow(f / n, k);
 		float cuni = n + (f - n) * k;
 
-		float weight = 1;
+		float weight = getValue<float>("lambda");
 		return clog * weight + (1 - weight) * cuni;
 	};
 
@@ -227,13 +248,15 @@ void ShadowMap::renderShadow(Renderer::RenderTarget::Ptr rt)
 	constants.invertViewProj = (cam->getViewMatrix() * cam->getProjectionMatrix()).Invert().Transpose();
 	constants.numcascades = mNumLevels;
 	constants.scale = 1.0f / mNumLevels;
+	constants.shadowcolor = getValue<float>("shadowcolor");
+	constants.depthbias = getValue<float>("depthbias");
 	mReceiveConstants.lock()->blit(&constants, sizeof(constants));
 
 	mQuad.setRenderTarget(rt);
 	mQuad.setConstant(mReceiveConstants);
-	mQuad.setSamplers({ mLinear, mPoint });
+	mQuad.setSamplers({ mLinear, mPoint,mShadowSampler });
 	mQuad.setDefaultBlend();
-	mQuad.setTextures({ mWorldPos, mSceneDepth,mShadowMap });
+	mQuad.setTextures({ getShaderResource("depth"),mShadowMap });
 	mQuad.setPixelShader(mReceiveShadowPS);
 	mQuad.setDefaultViewport();
 	mQuad.draw();

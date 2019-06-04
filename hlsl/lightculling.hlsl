@@ -1,6 +1,7 @@
 #include "math.hlsl"
 Texture2D depthboundsTex: register(t0);
-Buffer<float4> lights: register(t1);
+Buffer<float4> pointlights: register(t1);
+Buffer<float4> spotlights:register(t2);
 
 RWBuffer<uint> curIndex:register(u0);
 RWBuffer<uint> lightIndices:register(u1);
@@ -10,11 +11,10 @@ RWTexture2D<uint4> tiles: register(u2);
 cbuffer ConstantBuffer: register(b0)
 {
 	matrix invertProj;
-	int numLights;
+	int numPointLights;
+	int numSpotLights;
 	float texelwidth;
 	float texelheight;
-	int maxLightsPerTile;
-	int tilePerline;
 }
 
 #ifndef MAX_LIGHTS_PER_TILE
@@ -24,7 +24,7 @@ cbuffer ConstantBuffer: register(b0)
 [numthreads(1, 1,1)]
 void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadID, uint3 groupIdx: SV_GroupID)
 {
-	float4 indices[MAX_LIGHTS_PER_TILE];
+	uint indices[MAX_LIGHTS_PER_TILE * 2];
 
 	float2 db = depthboundsTex.Load(uint3(globalIdx.x, globalIdx.y, 0)).rg;
 	float depthmin = db.x;
@@ -47,29 +47,43 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 	float3 aabbcenter, aabbhalf;
 	createAABBFromFrustum(front, back, depthmin, depthmax, aabbcenter, aabbhalf);
 
-	//uint startOffset = (globalIdx.x + globalIdx.y * tilePerline) * (maxLightsPerTile + 1);
-	int lightcount = 0;
-	for (int i = 0; i < numLights; ++i)
+	int pointcount = 0;
+	for (int i = 0; i < numPointLights; ++i)
 	{
-		float4 light = lights[i * 2];
+		float4 light = pointlights[i * 2];
 		float3 pos = light.xyz;
 		float range = light.w;
 
 		if (!TestSphereVsAABB(pos, range, aabbcenter, aabbhalf) )
 			continue;
 
-		indices[lightcount] = i;
-		//lightsOutput[startOffset + 1 + lightcount] = i;
+		indices[pointcount++] = i;
 
-		lightcount++;
-		if (lightcount >= MAX_LIGHTS_PER_TILE)
+		if (pointcount >= MAX_LIGHTS_PER_TILE)
+			break;
+	}
+
+	int spotcount = 0;
+	for (int i = 0; i < numSpotLights; ++i)
+	{
+		float4 light = spotlights[i * 3];
+		float3 pos = light.xyz;
+		float range = light.w;
+
+		if (!TestSphereVsAABB(pos, range, aabbcenter, aabbhalf))
+			continue;
+
+		indices[pointcount + spotcount++] = i;
+
+		if (spotcount >= MAX_LIGHTS_PER_TILE)
 			break;
 	}
 
 
 	uint offset;
-	InterlockedAdd(curIndex[0], lightcount, offset);
-	tiles[groupIdx.xy] = uint4(offset, lightcount, 0, 0);
-	for (uint i = 0; i < lightcount; ++i)
+	InterlockedAdd(curIndex[0], (pointcount + spotcount), offset);
+	tiles[groupIdx.xy] = uint4(offset, pointcount, spotcount, 0);
+	for (uint i = 0; i < (pointcount + spotcount); ++i)
 		lightIndices[offset + i] = indices[i];
+
 }

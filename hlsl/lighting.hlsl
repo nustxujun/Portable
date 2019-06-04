@@ -5,14 +5,15 @@ Texture2D normalTexture: register(t1);
 Texture2D depthTexture: register(t2);
 Buffer<float4> pointlights: register(t3);
 Buffer<float4> spotlights: register(t4);
+Buffer<float4> dirlights: register(t5);
 
 
 #if TILED || CLUSTERED
-Buffer<uint> lightsIndices: register(t5);
+Buffer<uint> lightsIndices: register(t6);
 #if TILED
-Texture2D<uint4> tiles:register(t6);
+Texture2D<uint4> tiles:register(t7);
 #else
-Texture3D<uint4> clusters: register(t6);
+Texture3D<uint4> clusters: register(t7);
 #endif
 #endif
 
@@ -25,23 +26,21 @@ cbuffer ConstantBuffer: register(b0)
 	matrix invertProj;
 	matrix View;
 	float3 clustersize;
+	int numdirs;
 	float roughness;
 	float metallic;
 	float width;
 	float height;
-	int maxLightsPerTile;
-	int tilePerline;
 	float near;
 	float far;
+	float ambient;
 }
 
 struct PS_INPUT
 {
 	float4 Pos : SV_POSITION;
-#ifndef TILED
-#ifndef CLUSTERED
+#if !(TILED || CLUSTERED)
 	uint index:TEXCOORD0;
-#endif
 #endif
 };
 
@@ -62,19 +61,19 @@ float3 pointlight(float dist, float range, float3 color)
 	if (dist > range)
 		return 0;
 #endif
-	return color * attenuate(dist, range) / (dist * dist);
+	return color * attenuate(dist, range)  ;
 }
 
 float3 spotlight(float dist, float range,  float theta, float phi, float3 color)
 {
 #if TILED || CLUSTERED
-	//if (dist > range)
-	//	return 0;
+	if (dist > range)
+		return 0;
 #endif
 	if (theta < phi)
 		return 0;
 
-	return color;
+	return color * attenuate(dist, range);
 }
 
 
@@ -111,6 +110,15 @@ float3 travelLights(uint pointoffset, uint pointnum, uint spotoffset, uint spotn
 		Lo += BRDF(roughness, metallic, F0, albedo, N, L, -pos.xyz) * radiance ;
 	}
 
+	for (uint i = 0; i < numdirs; ++i)
+	{
+		float4 lightdir = dirlights[i * 2];
+		float4 lightcolor = dirlights[i * 2 + 1];
+
+		float3 L = normalize(-lightdir.xyz);
+		float3 radiance = lightcolor.xyz;
+		Lo += BRDF(roughness, metallic, F0, albedo, N, L, -pos.xyz) * radiance;
+	}
 	return Lo;
 }
 
@@ -149,7 +157,7 @@ float4 main(PS_INPUT input) : SV_TARGET
 	y /= 16;
 
 	uint4 tile = tiles[uint2(x,y)];
-	Lo += travelLights(tile.x, tile.y, 0, 0, N, viewPos.xyz, albedo);
+	Lo += travelLights(tile.x, tile.y, tile.x + tile.y, tile.z, N, viewPos.xyz, albedo);
 
 #elif CLUSTERED
 	uint x = input.Pos.x / clustersize.x;
@@ -162,6 +170,8 @@ float4 main(PS_INPUT input) : SV_TARGET
 	Lo += travelLights(cluster.x, cluster.y, cluster.x + cluster.y, cluster.z, N, viewPos.xyz, albedo);
 #else
 
+
+#if POINT
 	float4 lightpos = pointlights[input.index * 2];
 	float3 lightcolor = pointlights[input.index * 2 + 1].rgb;
 
@@ -169,9 +179,23 @@ float4 main(PS_INPUT input) : SV_TARGET
 	float distance = length(lightpos.xyz - viewPos.xyz);
 	float3 radiance = pointlight(distance, lightpos.w, lightcolor);
 	Lo += BRDF(roughness, metallic, F0, albedo, N, L, -viewPos.xyz) * radiance;
+
+#elif SPOT
+	float4 lightpos = spotlights[input.index * 3];
+	float4 lightdir = spotlights[input.index * 3 + 1];
+	float3 lightcolor = spotlights[input.index * 3 + 2].rgb;
+
+	float3 L = normalize(lightpos.xyz - viewPos.xyz);
+	float distance = length(lightpos.xyz - viewPos.xyz);
+	float3 radiance = spotlight(distance, lightpos.w, dot(-L, lightdir.xyz), lightdir.w, lightcolor.rgb);
+	Lo += BRDF(roughness, metallic, F0, albedo, N, L, -viewPos.xyz) * radiance;
+
+#elif DIR
+
+#endif
 	
 #endif
-
+	Lo += albedo * ambient;
 
 	return float4(Lo, 1);
 }

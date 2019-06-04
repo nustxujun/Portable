@@ -23,11 +23,15 @@ class ShadowMap: public Pipeline::Stage
 		Vector4 cascadeDepths[8];
 		int numcascades;
 		float scale;
+		float shadowcolor;
+		float depthbias;
 	};
 public:
-	ShadowMap(Renderer::Ptr r, Scene::Ptr s,Quad::Ptr q, Setting::Ptr set, Pipeline* p,Renderer::ShaderResource::Ptr worldpos, Renderer::ShaderResource::Ptr depth, int mapsize, int numlevels);
+	ShadowMap(Renderer::Ptr r, Scene::Ptr s,Quad::Ptr q, Setting::Ptr set, Pipeline* p);
 	~ShadowMap();
 
+
+	void init(int mapsize, int numlevels);
 	void render(Renderer::Texture2D::Ptr rt) ;
 private:
 	void fitToScene();
@@ -51,11 +55,10 @@ private:
 	Renderer::Effect::Ptr mDepthEffect;
 	Renderer::PixelShader::Weak mReceiveShadowPS;
 	D3D11_DEPTH_STENCIL_DESC mDepthStencilDesc;
-	Renderer::Sampler::Ptr mSampler;
+	Renderer::Sampler::Ptr mShadowSampler;
 	Renderer::VertexShader::Weak mShadowVS;
 	Renderer::Rasterizer::Ptr mRasterizer;
 	Renderer::ShaderResource::Ptr mSceneDepth;
-	Renderer::ShaderResource::Ptr mWorldPos;
 
 	Quad mQuad;
 

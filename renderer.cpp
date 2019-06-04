@@ -494,6 +494,7 @@ Renderer::Texture2D::Ptr Renderer::createTexture( const D3D11_TEXTURE2D_DESC& de
 {
 	D3D11_SUBRESOURCE_DATA initdata = {0};
 	initdata.pSysMem = data;
+	initdata.SysMemPitch = desc.Width * D3D11Helper::sizeof_DXGI_FORMAT(desc.Format);
 	ID3D11Texture2D* tex;
 	checkResult(mDevice->CreateTexture2D(&desc, data == nullptr ? nullptr : &initdata, &tex));
 

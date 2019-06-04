@@ -20,9 +20,10 @@ class AO :public Pipeline::Stage
 		DirectX::XMFLOAT4X4A view;
 	};
 public:
-	AO(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr set,Pipeline* p, Renderer::ShaderResource::Ptr normal, Renderer::ShaderResource::Ptr depth, float radius);
+	AO(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr set,Pipeline* p);
 	
 	void render(Renderer::Texture2D::Ptr rt) override;
+	void init(float radius);
 private:
 	Renderer::Texture2D::Ptr mNoise;
 	Renderer::ShaderResource::Ptr mNormal;

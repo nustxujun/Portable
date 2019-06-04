@@ -253,5 +253,8 @@
     <None Include="hlsl\lighting.hlsl">
       <Filter>shader</Filter>
     </None>
+    <None Include="hlsl\lightculling.hlsl">
+      <Filter>shader</Filter>
+    </None>
   </ItemGroup>
 </Project>

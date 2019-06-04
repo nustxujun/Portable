@@ -9,11 +9,10 @@ class LightCulling: public Pipeline::Stage
 	struct Constants
 	{
 		Matrix invertProj;
-		int numLights;
+		int numPointLights;
+		int numSpotLights;
 		float texelwidth;
 		float texelheight;
-		int maxLightsPerTile;
-		int tilePerline;
 	};
 public:
 	LightCulling(
@@ -30,7 +29,6 @@ private:
 	GPUComputer mComputer;
 	Renderer::ComputeShader::Weak mCS;
 	Renderer::Buffer::Ptr mConstants;
-	Renderer::ShaderResource::Ptr mLights;
 	Renderer::UnorderedAccess::Ptr mLightsOutput;
 	Renderer::Buffer::Ptr mCurIndex;
 
