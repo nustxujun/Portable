@@ -15,9 +15,9 @@ ShadowMap::~ShadowMap()
 
 void ShadowMap::init(int mapsize, int numlevels, const std::vector<Renderer::Texture::Ptr>& rts)
 {
-	this->set("shadowcolor", { {"type","set"}, {"value",0.01f},{"min","0"},{"max",1.0f},{"interval", "0.001"} });
+	this->set("shadowcolor", { {"type","set"}, {"value",0.00f},{"min","0"},{"max",1.0f},{"interval", "0.001"} });
 	this->set("depthbias", { {"type","set"}, {"value",0.001f},{"min","0"},{"max","0.01"},{"interval", "0.0001"} });
-	this->set("lambda", { {"type","set"}, {"value",0.9f},{"min","0"},{"max","1"},{"interval", "0.01"} });
+	this->set("lambda", { {"type","set"}, {"value",0.5f},{"min","0"},{"max","1"},{"interval", "0.01"} });
 
 
 	mShadowMapSize = mapsize;

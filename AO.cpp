@@ -35,7 +35,7 @@ void AO::init(float radius)
 		DirectX::SimpleMath::Vector3 v = { rand1(gen) ,rand1(gen) ,rand2(gen) };
 		//DirectX::SimpleMath::Vector3 v = {1,0,1};
 		v.Normalize();
-		v *= pow(rand2(gen), 2);
+		v *= pow(rand2(gen), 4);
 		kernel.kernel[i] = { v.x, v.y,v.z };
 	}
 	kernel.scale = { r->getWidth() / noiseSize, r->getHeight() / noiseSize };

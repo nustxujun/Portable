@@ -60,6 +60,7 @@ GBufferPixelShaderOutput ps(GBufferVertexShaderOutput input) : SV_TARGET
 {
 	GBufferPixelShaderOutput output;
 	output.Color = diffuseTex.Sample(sampLinear, input.TexCoord);
+	output.Color.rgb = pow(output.Color.rgb, 2.2f);
 	output.Color.a = 1.0f;
 	output.Normal.xyz = input.Normal;
 	return output;

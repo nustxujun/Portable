@@ -56,7 +56,7 @@ void MultipleLights::initPipeline()
 
 void MultipleLights::initScene()
 {
-	int numpoints = 100;
+	int numpoints = 1000;
 	int numspots = 1;
 	int numdirs = 1;
 
@@ -65,13 +65,13 @@ void MultipleLights::initScene()
 	set("numspots", { {"value", numspots}, {"min", 1}, {"max", numspots}, {"interval", 1}, {"type","set"} });
 	set("numdirs", { {"value", numdirs}, {"min", 0}, {"max", numdirs}, {"interval", 1}, {"type","set"} });
 
-	set("pointradiance", { {"type","set"}, {"value",1},{"min","1"},{"max",1000},{"interval", "1"} });
+	set("pointradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
 	set("spotradiance", { {"type","set"}, {"value",1},{"min","1"},{"max",1000},{"interval", "1"} });
-	set("dirradiance", { {"type","set"}, {"value",1},{"min","0.01"},{"max",10},{"interval", "0.01"} });
+	set("dirradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
 
 
 	set("lightRange", { {"value", 100}, {"min", 1}, {"max", 1000}, {"interval", 1}, {"type","set"} });
-	set("fovy", { {"value", "0.7"}, {"min", "0.1"}, {"max", "2"}, {"interval", "0.01"}, {"type","set"} });
+	set("fovy", { {"value", 0.785398185f}, {"min", "0.1"}, {"max", "2"}, {"interval", "0.01"}, {"type","set"} });
 
 	auto root = mScene->getRoot();
 
@@ -134,7 +134,7 @@ void MultipleLights::initScene()
 	{
 		Parameters params;
 		//params["file"] = "tiny.x";
-		params["file"] = "sponza/sponza.obj";
+		params["file"] = "media/sponza/sponza.obj";
 		auto model = mScene->createModel("test", params, [this](const Parameters& p) {
 			return Mesh::Ptr(new Mesh(p, mRenderer));
 		});
@@ -146,7 +146,7 @@ void MultipleLights::initScene()
 
 	auto cam = mScene->createOrGetCamera("main");
 	cam->setViewport(0, 0, mRenderer->getWidth(), mRenderer->getHeight());
-	cam->setFOVy(0.785398185);
+	cam->setFOVy(0.785398185f);
 	auto aabb = root->getWorldAABB();
 	auto len = aabb.second - aabb.first;
 	cam->setNearFar(1.0f, (len).Length());
@@ -156,7 +156,7 @@ void MultipleLights::initScene()
 	//cam->getNode()->setPosition(0.0f, 100.0f, 0.0f);
 	//cam->setDirection({ 0,0,1 });
 	//cam->lookat(aabb.second, aabb.first);
-	std::uniform_real_distribution<float> rand(0.0f, 0.1f);
+	std::uniform_real_distribution<float> rand(0.0f, 1.0f);
 	std::uniform_real_distribution<float> rand2(-1.0f, 1.0f);
 
 	std::default_random_engine gen;
@@ -171,6 +171,7 @@ void MultipleLights::initScene()
 	std::shared_ptr<std::vector<State>> dirlights = std::shared_ptr<std::vector<State>>(new std::vector<State>());
 	{
 		auto mainlight = mScene->createOrGetLight("main");
+		//mainlight->setColor({ 0.9f, 0.7f, 0.4f });
 		mainlight->setDirection({ 0,-1,0.1f });
 		mainlight->setType(Scene::Light::LT_DIR);
 		mainlight->setCastingShadow(true);
@@ -184,7 +185,6 @@ void MultipleLights::initScene()
 		ss << i;
 		auto light = mScene->createOrGetLight(ss.str());
 		Vector3 color = { rand(gen),rand(gen),rand(gen) };
-		color.Normalize();
 		//color *= 1;
 		light->setColor(color);
 		light->setType(Scene::Light::LT_POINT);
@@ -197,10 +197,10 @@ void MultipleLights::initScene()
 		//light->getNode()->setPosition( 0.0f, len.y  * 0.5f - 0.1f,0.0f );
 		//light->getNode()->setPosition(x, 49.0f, z);
 		//light->getNode()->setPosition(0.0f, 49.0f, ((i % 2) * 2.0f - 1) * 30.0f);
-		//light->getNode()->setPosition((float)i * 10.0f, 20.0f, 0.0f);
+		//light->getNode()->setPosition((float)i * (len.x / (float)numpoints) - len.x * 0.5f, 0.0f, 120.0f);
 
 		light->attach(root);
-		Vector3 vel = { rand(gen),rand(gen),rand(gen) };
+		Vector3 vel = { rand2(gen),rand2(gen),rand2(gen) };
 		vel.Normalize();
 		vel *= 1.0f;
 		pointlights->push_back({ light,vel });
@@ -307,7 +307,7 @@ void MultipleLights::initScene()
 		context->Unmap(*buffer, 0);
 	};
 	
-	set("time", { {"value", 0.0f}, {"min", "1.57"}, {"max", "4.71"}, {"interval", "0.001"}, {"type","set"} });
+	set("time", { {"value", 3.14f}, {"min", "1.57"}, {"max", "4.71"}, {"interval", "0.001"}, {"type","set"} });
 	mUpdater = [=]() {
 		updateLights(pointlights, "pointlights");
 		updateLights(spotlights, "spotlights");
@@ -503,12 +503,12 @@ void MultipleLights::initCDRPipeline()
 
 	mPipeline->pushStage<GBuffer>();
 	mPipeline->pushStage<DepthLinearing>();
-	mPipeline->pushStage<ShadowMap>(2048, 4, shadowmaps);
+	mPipeline->pushStage<ShadowMap>(4096, 2, shadowmaps);
 
 	mPipeline->pushStage<ClusteredLightCulling>(Vector3(SLICED_LEN, SLICED_LEN, SLICED_Z), Vector3(bw, bh,0));
 	
 	mPipeline->pushStage<PBR>(Vector3(bw, bh,0), shadowmaps);
-	mPipeline->pushStage<HDR>();
+	//mPipeline->pushStage<HDR>();
 
 	mPipeline->pushStage<AO>(10.0f);
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");

@@ -19,7 +19,7 @@ cbuffer Constants: register(c0)
 
 
 #ifndef LIGHT_THREAD
-#define LIGHT_THREAD 1
+#define LIGHT_THREAD 2
 #endif
 
 #ifndef MAX_LIGHTS_PER_CLUSTER
