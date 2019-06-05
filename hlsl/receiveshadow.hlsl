@@ -3,10 +3,11 @@ Texture2D shadowmapTex: register(t1);
 
 cbuffer ConstantBuffer: register(b0)
 {
-	matrix invertViewProj;
+	matrix invertView;
+	matrix invertProj;
 	matrix lightView;
 	matrix lightProjs[8];
-	float cascadeDepths[8];
+	float4 cascadeDepths[8];
 	int numcascades;
 	float scale;
 	float shadowcolor;
@@ -33,21 +34,25 @@ float4 ps(PS_INPUT input) : SV_TARGET
 	worldPos.y = -(input.Tex.y * 2.0f - 1.0f);
 	worldPos.z = depth;
 	worldPos.w = 1.0f;
-	worldPos = mul(worldPos, invertViewProj);
+	worldPos = mul(worldPos, invertProj);
 	worldPos /= worldPos.w;
+	float depthlinear = worldPos.z;
+	worldPos = mul(worldPos, invertView);
+
+
 	for (int i = 0; i < numcascades; ++i)
 	{
-		if (depth > cascadeDepths[i].z)
+		if (depthlinear > cascadeDepths[i].r)
 			continue;
 
 
-		float4 pos = mul(mul(worldPos, lightView), lightProjs[i]);
+		float4 pos = mul(worldPos, lightView);
+		pos = mul(pos, lightProjs[i]);
 		pos /= pos.w;
+		float cmpdepth = pos.z - depthbias;
 
 		pos.x = (pos.x + 1) * 0.5;
 		pos.y = (1 - pos.y) * 0.5;
-		//if (pos.x > 1 || pos.x < -1 || pos.y > 1 || pos.y < -1)
-		//	continue;
 
 		float2 uv = (pos.xy + float2(i, 0)) * float2(scale, 1);
 		//float sampledepth = shadowmapTex.Sample(sampLinear, uv).r;
@@ -55,7 +60,6 @@ float4 ps(PS_INPUT input) : SV_TARGET
 		//	return shadowcolor;
 		//else
 		//	return 1;
-		float cmpdepth = pos.z - depthbias;
 		float percentlit = 0.0f;
 		for (int x = -2; x <= 2; ++x)
 		{

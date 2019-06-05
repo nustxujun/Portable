@@ -3,6 +3,11 @@
 
 class HDR :public Pipeline::Stage
 {
+	__declspec(align(16))
+	struct Constants
+	{
+		float keyvalue;
+	};
 public:
 	HDR(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr set, Pipeline* p);
 	~HDR();
@@ -18,4 +23,5 @@ private:
 	Renderer::Sampler::Ptr mPoint;
 
 	std::vector<Renderer::Texture2D::Ptr> mLuminance;
+	Renderer::Buffer::Ptr mConstants;
 };

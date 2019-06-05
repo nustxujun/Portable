@@ -7,6 +7,10 @@
 
 class ShadowMap: public Pipeline::Stage
 {
+	static constexpr auto MAX_LEVELS = 8;
+	static constexpr auto MAX_LIGHTS = 8;
+
+	__declspec(align(16))
 	struct CastConstants
 	{
 		Matrix world;
@@ -17,10 +21,11 @@ class ShadowMap: public Pipeline::Stage
 	__declspec(align(16))
 	struct ReceiveConstants
 	{
-		Matrix invertViewProj;
+		Matrix invertView;
+		Matrix invertProj;
 		Matrix lightView;
 		Matrix lightProjs[8];
-		float cascadeDepths[8];
+		Vector4 cascadeDepths[8];
 		int numcascades;
 		float scale;
 		float shadowcolor;
@@ -31,12 +36,12 @@ public:
 	~ShadowMap();
 
 
-	void init(int mapsize, int numlevels, int nummaps);
+	void init(int mapsize, int numlevels, const std::vector<Renderer::Texture::Ptr>& rts);
 	void render(Renderer::Texture2D::Ptr rt) ;
 private:
 	void fitToScene(int index, Scene::Light::Ptr l);
 	void renderToShadowMap(int index);
-	void renderShadow(Renderer::RenderTarget::Ptr rt);
+	void renderShadow(int index, Renderer::RenderTarget::Ptr rt);
 
 
 private:
@@ -44,13 +49,13 @@ private:
 	int mNumMaps;
 	struct MapParams
 	{
-		std::vector<DirectX::SimpleMath::Matrix> projs;
-		std::vector<float> depths;
+		std::array<DirectX::SimpleMath::Matrix, MAX_LEVELS> projs;
+		std::array<float, MAX_LEVELS> depths;
 	};
 	std::vector<MapParams> mMapParams;
 
-	Renderer::DepthStencil::Ptr mShadowMap;
-
+	std::vector<Renderer::Texture::Ptr> mShadowMaps;
+	std::vector<Renderer::Texture::Ptr> mShadowTextures;
 	int mShadowMapSize = 2048;
 	Matrix mLightView;
 	Renderer::Buffer::Ptr mCastConstants;
@@ -63,6 +68,7 @@ private:
 	D3D11_DEPTH_STENCIL_DESC mDepthStencilDesc;
 	Renderer::Sampler::Ptr mShadowSampler;
 	Renderer::VertexShader::Weak mShadowVS;
+	Renderer::PixelShader::Weak mShadowPS;
 	Renderer::Rasterizer::Ptr mRasterizer;
 	Renderer::ShaderResource::Ptr mSceneDepth;
 

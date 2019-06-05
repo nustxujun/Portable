@@ -12,7 +12,7 @@ PBR::PBR(
 	mName = "pbr lighting";
 	this->set("roughness", { {"type","set"}, {"value",0.5f},{"min","0.01"},{"max",1.0f},{"interval", "0.01"} });
 	this->set("metallic", { {"type","set"}, {"value",0.5f},{"min","0"},{"max",1.0f},{"interval", "0.01"} });
-	this->set("ambient", { {"type","set"}, {"value",0.01f},{"min","0"},{"max",1.0f},{"interval", "0.001"} });
+	this->set("ambient", { {"type","set"}, {"value",0.01f},{"min","0"},{"max","0.5"},{"interval", "0.001"} });
 
 
 	const std::vector<const char*> definitions = { "POINT", "DIR", "SPOT", "TILED", "CLUSTERED" };
@@ -84,6 +84,29 @@ void PBR::render(Renderer::Texture2D::Ptr rt)
 
 }
 
+void PBR::init(const Vector3 & cluster, const std::vector<Renderer::Texture::Ptr>& shadows)
+{ 
+	mCluster = cluster; 
+	mShadowTextures = shadows; 
+
+
+	D3D11_TEXTURE2D_DESC desc;
+	desc.Width = 1;
+	desc.Height = 1;
+	desc.MipLevels = 1;
+	desc.ArraySize = 1;
+	desc.Format = DXGI_FORMAT_R32_FLOAT;
+	desc.SampleDesc.Count = 1;
+	desc.SampleDesc.Quality = 0;
+	desc.Usage = D3D11_USAGE_DEFAULT;
+	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	desc.CPUAccessFlags = 0;
+	desc.MiscFlags = 0;
+
+	float content = 1.0f;
+	mDefaultShadowTex = getRenderer()->createTexture(desc, &content, sizeof(float));
+}
+
 
 void PBR::renderNormal(Renderer::Texture2D::Ptr rt)
 {
@@ -111,13 +134,25 @@ void PBR::renderNormal(Renderer::Texture2D::Ptr rt)
 
 	auto quad = getQuad();
 	quad->setRenderTarget(rt);
-	quad->setTextures({ 
-		mAlbedo, mNormal, mDepthLinear , 
-		getShaderResource("pointlights"), 
+	std::vector<Renderer::ShaderResource::Ptr> srvs = {
+		mAlbedo, mNormal, mDepthLinear ,
+		getShaderResource("pointlights"),
 		getShaderResource("spotlights"),
 		getShaderResource("dirlights"),
-		getShaderResource("lightindices"), 
-		getShaderResource("lighttable") });
+	};
+
+	srvs.resize(20);
+	if (has("tiled") || has("clustered"))
+	{
+		srvs[6] = getShaderResource("lightindices");
+		srvs[7] = getShaderResource("lighttable");
+	}
+
+	srvs[10] = mDefaultShadowTex;
+	for (int i = 0; i < mShadowTextures.size(); ++i)
+		srvs[i + 11] = mShadowTextures[i];
+
+	quad->setTextures(srvs);
 
 
 	Renderer::PixelShader::Weak ps;
@@ -127,6 +162,7 @@ void PBR::renderNormal(Renderer::Texture2D::Ptr rt)
 		ps = mPSs[4];
 
 	quad->setPixelShader(ps);
+
 	quad->setSamplers({ mLinear, mPoint });
 	quad->setConstant(mConstants);
 

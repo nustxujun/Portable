@@ -124,16 +124,17 @@ void MultipleLights::initScene()
 	//	{
 	//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
 	//	});
-	//	model->setCastShadow(false);
+	//	model->setCastShadow(true);
 	//	model->attach(root);
 	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+
 	//
 	//}
 
 	{
 		Parameters params;
 		//params["file"] = "tiny.x";
-		params["file"] = "media/sponza/sponza.obj";
+		params["file"] = "sponza/sponza.obj";
 		auto model = mScene->createModel("test", params, [this](const Parameters& p) {
 			return Mesh::Ptr(new Mesh(p, mRenderer));
 		});
@@ -172,6 +173,7 @@ void MultipleLights::initScene()
 		auto mainlight = mScene->createOrGetLight("main");
 		mainlight->setDirection({ 0,-1,0.1f });
 		mainlight->setType(Scene::Light::LT_DIR);
+		mainlight->setCastingShadow(true);
 		dirlights->push_back({ mainlight ,{0.0f,0.f,0.f} });
 	}
 
@@ -226,7 +228,16 @@ void MultipleLights::initScene()
 		spotlights->push_back({ light,{0.0f,0.0f,0.0f} });
 	}
 
-	auto updateLights = [this](auto lights, const std::string& buffername) {
+	std::map<Scene::Light::Ptr, int> lightCastingShadow;
+	int numCastingShadow = 1;
+
+	mScene->visitLights([&numCastingShadow, &lightCastingShadow](auto light)
+	{
+		if (light->isCastingShadow())
+			lightCastingShadow[light] = numCastingShadow++;
+	});
+
+	auto updateLights = [this, lightCastingShadow](auto lights, const std::string& buffername) {
 		auto cam = mScene->createOrGetCamera("main");
 		Matrix view = cam->getViewMatrix();
 		D3D11_MAP map = D3D11_MAP_WRITE_DISCARD;
@@ -239,9 +250,15 @@ void MultipleLights::initScene()
 		if (has("lightRange"))
 			range = getValue<float>("lightRange");
 		
+		auto endi = lightCastingShadow.end();
 		for (auto& l : *lights)
 		{
 			auto light = l.light;
+			auto iter = lightCastingShadow.find(light);
+			float shadowindex = 0.0f;
+			if (iter != endi)
+				shadowindex = (float)iter->second;
+
 			if (light->getType() == Scene::Light::LT_POINT)
 			{
 				Vector3 pos = light->getNode()->getRealPosition();
@@ -251,7 +268,7 @@ void MultipleLights::initScene()
 				data += sizeof(vpos);
 				Vector3 color = light->getColor();
 				color *= getValue<float>("pointradiance");
-				memcpy(data, &Vector4(color.x, color.y, color.z, 1.0f), sizeof(Vector4));
+				memcpy(data, &Vector4(color.x, color.y, color.z, shadowindex), sizeof(Vector4));
 				data += sizeof(Vector4);
 			}
 			else if (light->getType() == Scene::Light::LT_SPOT)
@@ -270,7 +287,7 @@ void MultipleLights::initScene()
 
 				Vector3 color = light->getColor();
 				color *= getValue<float>("spotradiance");
-				memcpy(data, &Vector4(color.x, color.y, color.z, 1.0f), sizeof(Vector4));
+				memcpy(data, &Vector4(color.x, color.y, color.z, shadowindex), sizeof(Vector4));
 				data += sizeof(Vector4);
 			}
 			else if (light->getType() == Scene::Light::LT_DIR)
@@ -282,7 +299,7 @@ void MultipleLights::initScene()
 
 				Vector3 color = light->getColor();
 				color *= getValue<float>("dirradiance");
-				memcpy(data, &Vector4(color.x, color.y, color.z, 1.0f), sizeof(Vector4));
+				memcpy(data, &Vector4(color.x, color.y, color.z, shadowindex), sizeof(Vector4));
 				data += sizeof(Vector4);
 			}
 		}
@@ -371,6 +388,7 @@ void MultipleLights::initTBDRPipeline()
 	auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 
 
+
 	int bw = SLICE16(w);
 	int bh = SLICE16(h);
 	D3D11_TEXTURE2D_DESC desc = { 0 };
@@ -447,7 +465,10 @@ void MultipleLights::initCDRPipeline()
 
 	auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 
-
+	constexpr auto MAX_SHADOWMAPS = 8;
+	std::vector<Renderer::Texture::Ptr> shadowmaps;
+	for (int i = 0; i < MAX_SHADOWMAPS; ++i)
+		shadowmaps.push_back(mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32_FLOAT));
 
 	constexpr auto SLICED_Z = 16;
 	constexpr auto SLICED_LEN = 16;
@@ -482,14 +503,14 @@ void MultipleLights::initCDRPipeline()
 
 	mPipeline->pushStage<GBuffer>();
 	mPipeline->pushStage<DepthLinearing>();
+	mPipeline->pushStage<ShadowMap>(2048, 4, shadowmaps);
 
 	mPipeline->pushStage<ClusteredLightCulling>(Vector3(SLICED_LEN, SLICED_LEN, SLICED_Z), Vector3(bw, bh,0));
 	
-	mPipeline->pushStage<PBR>(Vector3(bw, bh,0));
-	//mPipeline->pushStage<HDR>();
+	mPipeline->pushStage<PBR>(Vector3(bw, bh,0), shadowmaps);
+	mPipeline->pushStage<HDR>();
 
-	mPipeline->pushStage<AO>(20.0f);
-	//mPipeline->pushStage<ShadowMap>(2048, 8, 10);
+	mPipeline->pushStage<AO>(10.0f);
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
 	mPipeline->pushStage("draw to backbuffer", [bb, quad](Renderer::Texture2D::Ptr rt)

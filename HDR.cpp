@@ -26,6 +26,12 @@ HDR::HDR(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr st, Pipeline *
 	}
 
 	mPoint = r->createSampler("point_wrap", D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
+
+
+
+	this->set("keyvalue", { {"type","set"}, {"value",0.18f},{"min","0.01"},{"max","1"},{"interval", "0.01"} });
+
+	mConstants = r->createBuffer(sizeof(Constants), D3D11_BIND_CONSTANT_BUFFER, 0, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 }
 
 HDR::~HDR()
@@ -34,6 +40,7 @@ HDR::~HDR()
 
 void HDR::render(Renderer::Texture2D::Ptr rt) 
 {
+
 	renderLuminance(rt);
 	renderHDR(rt);
 	auto quad = getQuad();
@@ -92,9 +99,13 @@ void HDR::renderLuminance(Renderer::Texture2D::Ptr rt)
 void HDR::renderHDR(Renderer::Texture2D::Ptr frame)
 {
 	auto quad = getQuad();
+
+	Constants c;
+	c.keyvalue = getValue<float>("keyvalue");
+	mConstants.lock()->blit(c);
+	quad->setConstant(mConstants);
 	quad->setDefaultViewport();
 	quad->setDefaultBlend(false);
-
 	quad->setSamplers({ mPoint });
 	quad->setPixelShader(mPS);
 	quad->setTextures({ frame,mLuminance[0] });

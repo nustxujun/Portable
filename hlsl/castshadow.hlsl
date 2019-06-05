@@ -23,9 +23,8 @@ PS_INPUT vs(VS_INPUT input)
 {
 	PS_INPUT output = (PS_INPUT)0;
 	output.Pos = float4(input.Pos.xyz, 1.0f);
-	output.Pos = mul(mul(mul(output.Pos, World), View), Projection);
+	output.Pos = mul(mul(output.Pos, World), View);
+	output.Pos = mul(output.Pos, Projection);
 
 	return output;
 }
-
-

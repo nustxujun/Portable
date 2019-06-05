@@ -18,6 +18,12 @@ Texture3D<uint4> clusters: register(t7);
 #endif
 
 
+#ifndef NUM_SHADOWMAPS
+#define NUM_SHADOWMAPS 8
+#endif
+Texture2D shadows[NUM_SHADOWMAPS]:register(t10);
+
+
 SamplerState sampLinear: register(s0);
 SamplerState sampPoint: register(s1);
 
@@ -26,7 +32,7 @@ cbuffer ConstantBuffer: register(b0)
 	matrix invertProj;
 	matrix View;
 	float3 clustersize;
-	int numdirs;
+	uint numdirs;
 	float roughness;
 	float metallic;
 	float width;
@@ -78,22 +84,32 @@ float3 spotlight(float dist, float range,  float theta, float phi, float3 color)
 
 
 #if TILED || CLUSTERED
-float3 travelLights(uint pointoffset, uint pointnum, uint spotoffset, uint spotnum, float3 N, float3 pos, float3 albedo)
+float3 travelLights(uint pointoffset, uint pointnum, uint spotoffset, uint spotnum, float3 N, float3 pos, float3 albedo, float2 uv)
 {
 	float3 F0 = F0_DEFAULT;
 	float3 Lo = 0;
+
+	float shadowlist[NUM_SHADOWMAPS];
+	for (uint i = 0; i < NUM_SHADOWMAPS; ++i)
+	{
+		shadowlist[i] = shadows[i].SampleLevel(sampPoint, uv, 0).r;
+	}
+
 	for (uint i = 0; i < pointnum; ++i)
 	{
 		uint index = lightsIndices[pointoffset + i];
 
 		float4 lightpos = pointlights[index * 2]; // pos and range
-		float4 lightcolor = pointlights[index * 2 + 1];
+		float4 lightcolor = pointlights[index * 2 + 1]; // color and shadow index
+
+		uint shadowindex = lightcolor.w;
+		float shadow = shadowlist[shadowindex];
 
 		float3 L = normalize(lightpos.xyz - pos);
 
 		float dist = length(pos - lightpos.xyz);
-		float3 radiance = pointlight(dist, lightpos.w, lightcolor.rgb);
-		Lo += BRDF(roughness, metallic, F0, albedo, N, L, -pos.xyz) * radiance;
+		float3 radiance = pointlight(dist, lightpos.w, lightcolor.rgb) / (dist * dist);
+		Lo += BRDF(roughness, metallic, F0, albedo, N, L, -pos.xyz) * radiance * shadow;
 	}
 
 	for (uint i = 0; i < spotnum; ++i)
@@ -103,11 +119,14 @@ float3 travelLights(uint pointoffset, uint pointnum, uint spotoffset, uint spotn
 		float4 lightdir = spotlights[index * 3 + 1]; // dir and phi
 		float4 lightcolor = spotlights[index * 3 + 2];
 
+		uint shadowindex = lightcolor.w;
+		float shadow = shadowlist[shadowindex];
+
 		float3 L = normalize(lightpos.xyz - pos);
 
 		float dist = length(pos - lightpos.xyz);
-		float3 radiance = spotlight(dist, lightpos.w, dot(-L, lightdir.xyz), lightdir.w, lightcolor.rgb);
-		Lo += BRDF(roughness, metallic, F0, albedo, N, L, -pos.xyz) * radiance ;
+		float3 radiance = spotlight(dist, lightpos.w, dot(-L, lightdir.xyz), lightdir.w, lightcolor.rgb) / (dist * dist);
+		Lo += BRDF(roughness, metallic, F0, albedo, N, L, -pos.xyz) * radiance * shadow;
 	}
 
 	for (uint i = 0; i < numdirs; ++i)
@@ -115,9 +134,12 @@ float3 travelLights(uint pointoffset, uint pointnum, uint spotoffset, uint spotn
 		float4 lightdir = dirlights[i * 2];
 		float4 lightcolor = dirlights[i * 2 + 1];
 
+		uint shadowindex = lightcolor.w;
+		float shadow = shadowlist[shadowindex];
+
 		float3 L = normalize(-lightdir.xyz);
 		float3 radiance = lightcolor.xyz;
-		Lo += BRDF(roughness, metallic, F0, albedo, N, L, -pos.xyz) * radiance;
+		Lo += BRDF(roughness, metallic, F0, albedo, N, L, -pos.xyz) * radiance * shadow;
 	}
 	return Lo;
 }
@@ -128,8 +150,7 @@ float3 travelLights(uint pointoffset, uint pointnum, uint spotoffset, uint spotn
 float4 main(PS_INPUT input) : SV_TARGET
 {
 	float2 texcoord = float2(input.Pos.x / width, input.Pos.y / height);
-	float4 texcolor = albedoTexture.Sample(sampLinear, texcoord);
-	float3 albedo = pow(texcolor.rgb, 2.2);
+	float3 albedo = albedoTexture.Sample(sampLinear, texcoord).rgb;
 
 	float4 normalData = normalTexture.Sample(sampPoint, texcoord);
 	normalData = mul(normalData, View);
@@ -151,13 +172,13 @@ float4 main(PS_INPUT input) : SV_TARGET
 
 #if TILED
 
-	int x = input.Pos.x;
-	int y = input.Pos.y;
+	uint x = input.Pos.x;
+	uint y = input.Pos.y;
 	x /= 16;
 	y /= 16;
 
 	uint4 tile = tiles[uint2(x,y)];
-	Lo += travelLights(tile.x, tile.y, tile.x + tile.y, tile.z, N, viewPos.xyz, albedo);
+	Lo += travelLights(tile.x, tile.y, tile.x + tile.y, tile.z, N, viewPos.xyz, albedo, texcoord);
 
 #elif CLUSTERED
 	uint x = input.Pos.x / clustersize.x;
@@ -167,7 +188,7 @@ float4 main(PS_INPUT input) : SV_TARGET
 
 	uint4 cluster = clusters[coord];
 
-	Lo += travelLights(cluster.x, cluster.y, cluster.x + cluster.y, cluster.z, N, viewPos.xyz, albedo);
+	Lo += travelLights(cluster.x, cluster.y, cluster.x + cluster.y, cluster.z, N, viewPos.xyz, albedo, texcoord);
 #else
 
 

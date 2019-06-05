@@ -154,6 +154,8 @@ void Renderer::setTextures(const std::vector<ShaderResource::Ptr>& srvs)
 	{
 		if (i.lock())
 			list.push_back(*i.lock());
+		else
+			list.push_back(nullptr);
 	}
 	
 	mSRVState = list.size();

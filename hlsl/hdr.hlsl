@@ -2,6 +2,12 @@ Texture2D frameTex: register(t0);
 Texture2D lumTex: register(t1);
 SamplerState PointWrap : register(s0);
 
+cbuffer ConstantBuffer: register(b0)
+{
+	float keyvalue;
+};
+
+
 struct PS_INPUT
 {
 	float4 Pos : SV_POSITION;
@@ -9,14 +15,13 @@ struct PS_INPUT
 };
 
 
-static const float KeyValue = 0.5f;
 
 float Log2Exposure(in float avgLuminance)
 {
 	float exposure = 0.0f;
 
 	avgLuminance = max(avgLuminance, 0.00001f);
-	float linearExposure = (KeyValue / avgLuminance);
+	float linearExposure = (keyvalue / avgLuminance);
 	exposure = log2(max(linearExposure, 0.00001f));
 	return exposure;
 }
@@ -82,8 +87,8 @@ float3 tonemappnig(float3 color, float avglum)
 {
 	float exposure = 0;
 	color = CalcExposedColor(color, avglum, 0, exposure);
-	//return ACESFitted(color);
-	return ACESToneMapping(color);
+	return ACESFitted(color);
+	//return ACESToneMapping(color);
 }
 
 float4 main(PS_INPUT Input) : SV_TARGET
