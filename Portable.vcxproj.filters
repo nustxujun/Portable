@@ -135,6 +135,9 @@
     <ClInclude Include="ClusteredLightCulling.h">
       <Filter>Pipeline\Stage</Filter>
     </ClInclude>
+    <ClInclude Include="SkyBox.h">
+      <Filter>Pipeline\Stage</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -216,6 +219,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="ClusteredLightCulling.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="SkyBox.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

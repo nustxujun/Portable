@@ -516,6 +516,18 @@ Renderer::Texture3D::Ptr Renderer::createTexture3D(const D3D11_TEXTURE3D_DESC & 
 	return ptr;
 }
 
+Renderer::TextureCube::Ptr Renderer::createTextureCube(const std::string& file)
+{
+	ID3D11Texture2D* tex;
+	D3DX11_IMAGE_LOAD_INFO info;
+	info.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+	checkResult(D3DX11CreateTextureFromFileA(mDevice, file.c_str(), &info, NULL, (ID3D11Resource**)&tex, NULL));
+
+	auto ptr = std::shared_ptr<TextureCube>(new TextureCube(this, tex));
+	mTextures.emplace_back(ptr);
+	return ptr;
+}
+
 
 Renderer::Texture2D::Ptr Renderer::createRenderTarget(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage)
 {
@@ -692,10 +704,6 @@ Renderer::Profile::Ptr Renderer::createProfile()
 }
 
 
-Renderer::ShaderResource::ShaderResource(Renderer* r, ID3D11ShaderResourceView* srv):D3DObject(r), mSRView(srv)
-{
-
-}
 
 Renderer::ShaderResource::~ShaderResource()
 {
@@ -703,6 +711,7 @@ Renderer::ShaderResource::~ShaderResource()
 		mSRView->Release();
 	mSRView = nullptr;
 }
+
 
 Renderer::RenderTarget::RenderTarget(Renderer* r, ID3D11RenderTargetView* rt):D3DObject(r)
 {

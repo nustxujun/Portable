@@ -188,6 +188,7 @@ std::pair<Vector3, Vector3> Scene::Node::getWorldAABB() const
 void Scene::Node::dirty(size_t s)
 {
 	mDirty |= s;
+	mDirty |= DT_TRANS;
 	for (auto c : mChildren)
 	{
 		c->dirty(s);
@@ -216,9 +217,8 @@ const Matrix & Scene::Node::getTransformation()
 		}
 
 		XMStoreFloat4x4(&mTranformation, mat);
-		getRealPosition();
-		getRealOrientation();
-		mDirty = 0;
+
+		mDirty = mDirty & ~(DT_TRANS);
 	}
 	return mTranformation;
 }

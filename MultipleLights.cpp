@@ -11,6 +11,7 @@
 #include "DepthLinearing.h"
 #include "ClusteredLightCulling.h"
 #include "ShadowMap.h"
+#include "SkyBox.h"
 
 #include <random>
 
@@ -56,7 +57,7 @@ void MultipleLights::initPipeline()
 
 void MultipleLights::initScene()
 {
-	int numpoints = 1000;
+	int numpoints = 100;
 	int numspots = 1;
 	int numdirs = 1;
 
@@ -503,14 +504,17 @@ void MultipleLights::initCDRPipeline()
 
 	mPipeline->pushStage<GBuffer>();
 	mPipeline->pushStage<DepthLinearing>();
-	mPipeline->pushStage<ShadowMap>(4096, 2, shadowmaps);
+
+	//mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
 
 	mPipeline->pushStage<ClusteredLightCulling>(Vector3(SLICED_LEN, SLICED_LEN, SLICED_Z), Vector3(bw, bh,0));
 	
 	mPipeline->pushStage<PBR>(Vector3(bw, bh,0), shadowmaps);
 	//mPipeline->pushStage<HDR>();
 
-	mPipeline->pushStage<AO>(10.0f);
+	//mPipeline->pushStage<AO>(10.0f);
+
+	mPipeline->pushStage<SkyBox>("media/uffizi_cross.dds");
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
 	mPipeline->pushStage("draw to backbuffer", [bb, quad](Renderer::Texture2D::Ptr rt)

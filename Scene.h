@@ -18,7 +18,7 @@ public:
 			DT_POSITION			= 1,
 			DT_ORIENTATION		= 2,
 			DT_PARENT			= 4,
-
+			DT_TRANS			= 5,
 
 			DT_ALL				= DT_POSITION | DT_ORIENTATION | DT_PARENT,
 		};

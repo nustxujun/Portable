@@ -75,7 +75,6 @@ void GBuffer::render(Renderer::Texture2D::Ptr rt)
 	//rasterDesc.ScissorEnable = false;
 	//rasterDesc.SlopeScaledDepthBias = 0.0f;
 	//renderer->setRasterizer(renderer->createOrGetRasterizer(rasterDesc));
-
 	getScene()->visitRenderables([world, this, e](const Renderable& r)
 	{
 		world->SetMatrix((const float*)&r.tranformation);

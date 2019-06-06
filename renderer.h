@@ -64,11 +64,11 @@ public:
 		using Ptr = std::weak_ptr<ShaderResource>;
 	public:
 		ShaderResource() {}
-		ShaderResource(Renderer* r, ID3D11ShaderResourceView* srv );
 		~ShaderResource();
 
 		ID3D11ShaderResourceView* getShaderResourceView()const { return mSRView; }
 		operator ID3D11ShaderResourceView* ()const { return mSRView; }
+
 	protected:
 		ID3D11ShaderResourceView* mSRView = NULL;
 	};
@@ -197,11 +197,10 @@ public:
 	public:
 		using Ptr = std::weak_ptr<TextureUnknown>;
 	public:
-		TextureUnknown(Renderer* r,T* tex ):D3DObject(r)
+		TextureUnknown(T* tex )
 		{
 			mTexture = tex;
 			tex->GetDesc(&mDesc);
-			initTexture();
 		}
 
 		virtual ~TextureUnknown()
@@ -230,10 +229,9 @@ public:
 			std::swap(mDesc, ptr->mDesc);
 		}
 
-	private:
-		void initTexture()
+	protected:
+		virtual void initTexture()
 		{
-			mTexture->GetDesc(&mDesc);
 			bool unorderedAccess = ((mDesc.BindFlags & D3D11_BIND_UNORDERED_ACCESS) != 0);
 			bool shaderRecource = ((mDesc.BindFlags & D3D11_BIND_SHADER_RESOURCE) != 0);
 			bool rendertarget = ((mDesc.BindFlags & D3D11_BIND_RENDER_TARGET) != 0);
@@ -309,8 +307,47 @@ public:
 		D mDesc;
 	};
 
-	using Texture2D = TextureUnknown<ID3D11Texture2D, D3D11_TEXTURE2D_DESC>;
-	using Texture3D = TextureUnknown<ID3D11Texture3D, D3D11_TEXTURE3D_DESC>;
+	class Texture2D :public TextureUnknown<ID3D11Texture2D, D3D11_TEXTURE2D_DESC>
+	{
+		using Parent = TextureUnknown<ID3D11Texture2D, D3D11_TEXTURE2D_DESC>;
+	public:
+		Texture2D(Renderer* r, ID3D11Texture2D* tex) :D3DObject(r), Parent(tex)
+		{
+			initTexture();
+		}
+	};
+
+	class Texture3D :public TextureUnknown<ID3D11Texture3D, D3D11_TEXTURE3D_DESC>
+	{
+		using Parent = TextureUnknown<ID3D11Texture3D, D3D11_TEXTURE3D_DESC>;
+	public:
+		Texture3D(Renderer* r, ID3D11Texture3D* tex) :D3DObject(r), Parent(tex)
+		{
+			initTexture();
+		}
+	};
+
+	class TextureCube :public TextureUnknown<ID3D11Texture2D, D3D11_TEXTURE2D_DESC>
+	{
+		using Parent = TextureUnknown<ID3D11Texture2D, D3D11_TEXTURE2D_DESC>;
+	public:
+		TextureCube(Renderer* r, ID3D11Texture2D* tex) :D3DObject(r), Parent(tex)
+		{
+			initTexture();
+		}
+
+	private:
+		void initTexture()
+		{
+			D3D11_SHADER_RESOURCE_VIEW_DESC desc;
+			desc.Format = mDesc.Format;
+			desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+			desc.TextureCube.MipLevels = mDesc.MipLevels;
+			desc.TextureCube.MostDetailedMip = 0;
+
+			checkResult(getDevice()->CreateShaderResourceView(mTexture, &desc, &mSRView));
+		}
+	};
 
 	class Sampler final : public NODefault
 	{
@@ -521,6 +558,7 @@ public:
 	Texture2D::Ptr createTexture(const std::string& filename);
 	Texture2D::Ptr createTexture( const D3D11_TEXTURE2D_DESC& desc, const void* data = 0, size_t size = 0);
 	Texture3D::Ptr createTexture3D(const D3D11_TEXTURE3D_DESC& desc, const void* data = 0, size_t size = 0);
+	TextureCube::Ptr createTextureCube(const std::string& file);
 
 	Texture2D::Ptr createRenderTarget(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage = D3D11_USAGE_DEFAULT);
 	Buffer::Ptr createBuffer(int size, D3D11_BIND_FLAG bindflag, const D3D11_SUBRESOURCE_DATA* initialdata = NULL,D3D11_USAGE usage = D3D11_USAGE_DEFAULT, size_t CPUaccess = 0);
