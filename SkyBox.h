@@ -7,7 +7,7 @@ class SkyBox :public Pipeline::Stage
 public :
 	using Pipeline::Stage::Stage;
 
-	void init(const std::string& tex);
+	void init(const std::vector<std::string>& texs);
 	void render(Renderer::Texture2D::Ptr rt) override;
 private:
 	Renderer::Texture::Ptr mSkyTex;

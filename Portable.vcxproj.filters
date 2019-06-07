@@ -263,4 +263,9 @@
       <Filter>shader</Filter>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="hlsl\skybox.fx">
+      <Filter>shader</Filter>
+    </FxCompile>
+  </ItemGroup>
 </Project>

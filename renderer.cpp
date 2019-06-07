@@ -528,6 +528,41 @@ Renderer::TextureCube::Ptr Renderer::createTextureCube(const std::string& file)
 	return ptr;
 }
 
+Renderer::TextureCube::Ptr Renderer::createTextureCube(const std::array<std::string, 6>& files)
+{
+
+	ID3D11Texture2D* faces[6];
+	for (size_t i = 0; i < 6; ++i)
+	{
+		D3DX11_IMAGE_LOAD_INFO info;
+		info.MipLevels = 1;
+		checkResult(D3DX11CreateTextureFromFileA(mDevice, files[i].c_str(), &info, NULL, (ID3D11Resource**)(faces + i), NULL));
+	}
+	D3D11_TEXTURE2D_DESC facedesc;
+	faces[0]->GetDesc(&facedesc);
+
+	D3D11_TEXTURE2D_DESC texdesc = facedesc;
+	texdesc.MipLevels = 1;
+	texdesc.ArraySize = 6;
+	texdesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	texdesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+
+	ID3D11Texture2D* cube;
+	checkResult(mDevice->CreateTexture2D(&texdesc, NULL, &cube));
+
+	for (size_t i = 0; i < 6; ++i)
+	{
+		mContext->CopySubresourceRegion(cube, i,0, 0, 0, faces[i], 0, NULL);
+		faces[i]->Release();
+	}
+
+
+	auto ptr = std::shared_ptr<TextureCube>(new TextureCube(this, cube));
+	mTextures.emplace_back(ptr);
+	return ptr;
+}
+
+
 
 Renderer::Texture2D::Ptr Renderer::createRenderTarget(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage)
 {

@@ -559,6 +559,8 @@ public:
 	Texture2D::Ptr createTexture( const D3D11_TEXTURE2D_DESC& desc, const void* data = 0, size_t size = 0);
 	Texture3D::Ptr createTexture3D(const D3D11_TEXTURE3D_DESC& desc, const void* data = 0, size_t size = 0);
 	TextureCube::Ptr createTextureCube(const std::string& file);
+	TextureCube::Ptr createTextureCube(const std::array<std::string,6>& file);
+
 
 	Texture2D::Ptr createRenderTarget(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage = D3D11_USAGE_DEFAULT);
 	Buffer::Ptr createBuffer(int size, D3D11_BIND_FLAG bindflag, const D3D11_SUBRESOURCE_DATA* initialdata = NULL,D3D11_USAGE usage = D3D11_USAGE_DEFAULT, size_t CPUaccess = 0);

@@ -16,41 +16,36 @@ SamplerState sampLinear
 	AddressW = Wrap;
 };
 
-struct GBufferVertexShaderInput
+struct VertexShaderInput
 {
 	float3 Position : POSITION0;
 };
 
-struct GBufferVertexShaderOutput
+struct VertexShaderOutput
 {
 	float4 Position : SV_POSITION;
 	float3 TexCoord : TEXCOORD0;
 };
 
-GBufferVertexShaderOutput vs(GBufferVertexShaderInput input)
+VertexShaderOutput vs(VertexShaderInput input)
 {
-	GBufferVertexShaderOutput output = (GBufferVertexShaderOutput)0;
+	VertexShaderOutput output = (VertexShaderOutput)0;
 
-	float4 worldPosition = mul(float4(input.Position.xyz, 0.0f), World);
-	float4 viewPosition = mul(worldPosition, View);
-	output.Position = mul(viewPosition, Projection);
-	
-	output.TexCoord = normalize( worldPosition.xyz);
-
-	output.Position.z = output.Position.w;
-
-
+	float4 localPos =float4(input.Position.xyz, 0.0f);
+	float4 viewPosition = mul(localPos, View);
+	output.Position = mul(viewPosition, Projection).xyww;
+	output.TexCoord = normalize(localPos.xyz);
 	return output;
 }
 
-struct GBufferPixelShaderOutput
+struct PixelShaderOutput
 {
 	float4 Color : COLOR0;
 };
 
-GBufferPixelShaderOutput ps(GBufferVertexShaderOutput input) : SV_TARGET
+PixelShaderOutput ps(VertexShaderOutput input) : SV_TARGET
 {
-	GBufferPixelShaderOutput output;
+	PixelShaderOutput output;
 	output.Color = diffuseTex.Sample(sampLinear, input.TexCoord);
 	output.Color.rgb = pow(output.Color.rgb, 2.2f);
 	output.Color.a = 1.0f;

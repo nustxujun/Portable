@@ -1,14 +1,18 @@
 #include "SkyBox.h"
 #include "GeometryMesh.h"
-void SkyBox::init(const std::string & tex)
+void SkyBox::init(const std::vector<std::string> & tex)
 {
-	mSkyTex = getRenderer()->createTextureCube(tex);
-
+	if (tex.size() == 1)
+		mSkyTex = getRenderer()->createTextureCube(tex[0]);
+	else
+	{
+		mSkyTex = getRenderer()->createTextureCube({tex[0],tex[1] ,tex[2] ,tex[3] ,tex[4] ,tex[5] });
+	}
 	{
 		auto cam = getScene()->createOrGetCamera("main");
 		Parameters params;
 		params["geom"] = "room";
-		params["size"] = "50";
+		params["size"] = "1";
 		mSkyMesh = GeometryMesh::Ptr(new GeometryMesh(params, getRenderer()));
 	}
 
@@ -47,6 +51,7 @@ void SkyBox::render(Renderer::Texture2D::Ptr rt)
 	auto proj = e->getVariable("Projection")->AsMatrix();
 
 	auto cam = getScene()->createOrGetCamera("main");
+
 	world->SetMatrix((const float*)&cam->getNode()->getTransformation());
 	view->SetMatrix((const float*)&cam->getViewMatrix());
 	proj->SetMatrix((const float*)&cam->getProjectionMatrix());

@@ -128,8 +128,6 @@ void MultipleLights::initScene()
 	//	model->setCastShadow(true);
 	//	model->attach(root);
 	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-
-	//
 	//}
 
 	{
@@ -513,8 +511,16 @@ void MultipleLights::initCDRPipeline()
 	//mPipeline->pushStage<HDR>();
 
 	//mPipeline->pushStage<AO>(10.0f);
-
-	mPipeline->pushStage<SkyBox>("media/uffizi_cross.dds");
+	std::vector<std::string> files = { 
+		"media/skybox/right.jpg",
+		"media/skybox/left.jpg", 
+		"media/skybox/top.jpg", 
+		"media/skybox/bottom.jpg", 
+		"media/skybox/front.jpg",
+		"media/skybox/back.jpg",
+	};
+	//std::vector<std::string> files = { "media/uffizi_cross.dds" };
+	mPipeline->pushStage<SkyBox>(files);
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
 	mPipeline->pushStage("draw to backbuffer", [bb, quad](Renderer::Texture2D::Ptr rt)
