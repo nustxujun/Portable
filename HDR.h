@@ -7,14 +7,19 @@ class HDR :public Pipeline::Stage
 	struct Constants
 	{
 		float keyvalue;
+		float lumMin;
+		float lumMax;
 	};
 public:
 	HDR(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr set, Pipeline* p);
 	~HDR();
 	void render(Renderer::Texture2D::Ptr rt) override;
+	void init();
 private:
 	void renderLuminance(Renderer::Texture2D::Ptr rt);
 	void renderHDR(Renderer::Texture2D::Ptr frame);
+	void renderBrightness(Renderer::Texture2D::Ptr rt);
+	void renderBloom(Renderer::Texture2D::Ptr rt);
 private:
 	Renderer::Texture2D::Ptr mTarget;
 	Renderer::PixelShader::Weak mPS;
@@ -24,4 +29,9 @@ private:
 
 	std::vector<Renderer::Texture2D::Ptr> mLuminance;
 	Renderer::Buffer::Ptr mConstants;
+
+	Renderer::Texture2D::Ptr mBloomRT[2];
+	Renderer::PixelShader::Weak mBrightPass;
+	Renderer::PixelShader::Weak mGaussianBlur[2];
+	Renderer::Buffer::Ptr mBloomConstants;
 };

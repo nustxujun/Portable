@@ -16,8 +16,6 @@ public :
 		Matrix view = rotT;
 		view.Translation(trans);
 
-		//using namespace DirectX;
-		//Matrix mat = XMMatrixLookToLH(pos, getDirection(), Vector3(0, 1, 0));
 		return view;
 	}
 

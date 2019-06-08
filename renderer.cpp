@@ -248,7 +248,8 @@ void Renderer::setRenderTargets(const std::vector<RenderTarget::Ptr>& rts, Depth
 
 void Renderer::removeRenderTargets()
 {
-	mContext->OMSetRenderTargets(0, 0, 0);
+	ID3D11RenderTargetView* clears[8] = { 0 };
+	mContext->OMSetRenderTargets(8, clears, 0);
 }
 
 
@@ -647,9 +648,9 @@ Renderer::PixelShader::Weak Renderer::createPixelShader(const void * data, size_
 	return mPSs.back();
 }
 
-Renderer::PixelShader::Weak Renderer::createPixelShader(const std::string& file, const std::string& entry)
+Renderer::PixelShader::Weak Renderer::createPixelShader(const std::string& file, const std::string& entry, const D3D10_SHADER_MACRO* macro)
 {
-	auto blob = compileFile(file, entry, "ps_5_0");
+	auto blob = compileFile(file, entry, "ps_5_0", macro);
 	return createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
 }
 

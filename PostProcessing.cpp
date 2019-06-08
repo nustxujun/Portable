@@ -5,10 +5,13 @@ PostProcessing::PostProcessing(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setti
 {
 }
 
-void PostProcessing::init(const std::string& file)
+void PostProcessing::init(const std::string& file, Renderer::Texture2D::Ptr res, Renderer::Texture2D::Ptr target)
 {
 	mName = file;
 	mPS = getRenderer()->createPixelShader(file, "main");
+	mSrc = res;
+	mTarget = target;
+
 }
 
 
@@ -19,20 +22,28 @@ PostProcessing::~PostProcessing()
 void PostProcessing::render(Renderer::Texture2D::Ptr rt) 
 {
 	if (mTarget.lock() == nullptr)
-	{
-		mTarget = getRenderer()->createTexture(rt.lock()->getDesc());
-	}
+		mTarget = rt;
+	if (mSrc.lock() == nullptr)
+		mSrc = rt;
+
+	if (mMid.lock() == nullptr)
+		mMid = getRenderer()->createTexture(mTarget.lock()->getDesc());
+
+
 	mQuad.setDefaultSampler();
 	mQuad.setDefaultViewport();
 	mQuad.setDefaultBlend(false);
 	mQuad.setPixelShader(mPS);
-	mQuad.setTextures({ rt });
-	mQuad.setRenderTarget(mTarget);
+	mQuad.setTextures({ mSrc });
+	mQuad.setRenderTarget(mMid);
 	mQuad.draw();
 
-	rt.lock()->swap(mTarget);
 
+	mTarget.lock()->swap(mMid);
 
-	//mQuad.setRenderTarget(rt);
-	//mQuad.drawTexture(mTarget, false);
+	//if (sametex)
+	//{
+	//	mQuad.setRenderTarget(mTarget);
+	//	mQuad.drawTexture(mMid, false);
+	//}
 }

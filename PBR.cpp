@@ -89,22 +89,6 @@ void PBR::init(const Vector3 & cluster, const std::vector<Renderer::Texture::Ptr
 	mCluster = cluster; 
 	mShadowTextures = shadows; 
 
-
-	D3D11_TEXTURE2D_DESC desc;
-	desc.Width = 1;
-	desc.Height = 1;
-	desc.MipLevels = 1;
-	desc.ArraySize = 1;
-	desc.Format = DXGI_FORMAT_R32_FLOAT;
-	desc.SampleDesc.Count = 1;
-	desc.SampleDesc.Quality = 0;
-	desc.Usage = D3D11_USAGE_DEFAULT;
-	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-	desc.CPUAccessFlags = 0;
-	desc.MiscFlags = 0;
-
-	float content = 1.0f;
-	mDefaultShadowTex = getRenderer()->createTexture(desc, &content, sizeof(float));
 }
 
 
@@ -148,9 +132,9 @@ void PBR::renderNormal(Renderer::Texture2D::Ptr rt)
 		srvs[7] = getShaderResource("lighttable");
 	}
 
-	srvs[10] = mDefaultShadowTex;
+	//srvs[10] = mDefaultShadowTex;
 	for (int i = 0; i < mShadowTextures.size(); ++i)
-		srvs[i + 11] = mShadowTextures[i];
+		srvs[i + 10] = mShadowTextures[i];
 
 	quad->setTextures(srvs);
 

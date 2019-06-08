@@ -90,9 +90,10 @@ float3 travelLights(uint pointoffset, uint pointnum, uint spotoffset, uint spotn
 	float3 Lo = 0;
 
 	float shadowlist[NUM_SHADOWMAPS];
-	for (uint i = 0; i < NUM_SHADOWMAPS; ++i)
+	shadowlist[0] = 1.0f;
+	for (uint i = 1; i < NUM_SHADOWMAPS; ++i)
 	{
-		shadowlist[i] = shadows[i].SampleLevel(sampPoint, uv, 0).r;
+		shadowlist[i ] = shadows[i - 1].SampleLevel(sampPoint, uv, 0).r;
 	}
 
 	for (uint i = 0; i < pointnum; ++i)

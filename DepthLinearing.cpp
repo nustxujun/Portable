@@ -19,6 +19,7 @@ void DepthLinearing::render(Renderer::Texture2D::Ptr rt)
 	mConstants.lock()->blit(&proj, sizeof(proj));
 
 	auto quad = getQuad();
+	quad->setConstant(mConstants);
 	quad->setTextures({ mDepth });
 	quad->setRenderTarget(mDepthLinear);
 	quad->setDefaultSampler();

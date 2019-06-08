@@ -50,7 +50,7 @@ Quad::Quad(Renderer::Ptr r):mRenderer(r)
 	auto blob = mRenderer->compileFile("drawTexture_ps.hlsl", "main", "ps_5_0");
 	mDrawTexturePS = mRenderer->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
 
-	mDefaultSampler = r->createSampler("point", D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
+	mDefaultSampler = r->createSampler("point", D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
 
 }
 

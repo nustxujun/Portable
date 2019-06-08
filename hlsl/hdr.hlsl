@@ -5,6 +5,9 @@ SamplerState PointWrap : register(s0);
 cbuffer ConstantBuffer: register(b0)
 {
 	float keyvalue;
+	float lumminclamp;
+	float lummaxclamp;
+
 };
 
 
@@ -14,23 +17,27 @@ struct PS_INPUT
 	float2 Tex: TEXCOORD0;
 };
 
+#define EPSILON         1.0e-4
 
-
-float Log2Exposure(in float avgLuminance)
+float Exposure(in float avgLuminance)
 {
 	float exposure = 0.0f;
+	avgLuminance = min(avgLuminance, lummaxclamp);
+	avgLuminance = max(avgLuminance, lumminclamp);
 
-	avgLuminance = max(avgLuminance, 0.00001f);
+
+	avgLuminance = max(avgLuminance, EPSILON);
 	float linearExposure = (keyvalue / avgLuminance);
-	exposure = log2(max(linearExposure, 0.00001f));
+	exposure = (max(linearExposure, EPSILON));
 	return exposure;
 }
 
+
 float3 CalcExposedColor(in float3 color, in float avgLuminance, in float offset, out float exposure)
 {
-	exposure = Log2Exposure(avgLuminance);
+	exposure = Exposure(avgLuminance);
 	exposure += offset;
-	return exp2(exposure) * color;
+	return (exposure) * color;
 }
 
 float3 ACESToneMapping(float3 color)

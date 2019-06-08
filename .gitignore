@@ -349,3 +349,6 @@ ASALocalRun/
 /media/cup
 /media/sponza
 /asio
+/controlPanel/test.dll
+/controlPanel/dll/MyDLL.dll
+/controlPanel/build/config.gypi

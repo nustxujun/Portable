@@ -47,7 +47,6 @@ private:
 	Renderer::ShaderResource::Ptr mDepthLinear;
 	Renderer::ShaderResource::Ptr mLightsIndex;
 	std::vector<Renderer::Texture::Ptr> mShadowTextures;
-	Renderer::Texture::Ptr mDefaultShadowTex;
 
 	std::vector<Renderer::PixelShader::Weak> mPSs;
 	Renderer::Sampler::Ptr mLinear;

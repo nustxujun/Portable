@@ -570,7 +570,7 @@ public:
 	Effect::Ptr createEffect(void* data, size_t size);
 	VertexShader::Weak createVertexShader(const void* data, size_t size);
 	PixelShader::Weak createPixelShader(const void* data, size_t size);
-	PixelShader::Weak createPixelShader(const std::string& file, const std::string& entry);
+	PixelShader::Weak createPixelShader(const std::string& file, const std::string& entry = "main", const D3D10_SHADER_MACRO* macro = NULL);
 
 	ComputeShader::Weak createComputeShader(const void* data, size_t size);
 	ComputeShader::Weak createComputeShader(const std::string& name, const std::string& entry);

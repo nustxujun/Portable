@@ -2,6 +2,7 @@
 #include "GeometryMesh.h"
 void SkyBox::init(const std::vector<std::string> & tex)
 {
+	mName = "skybox";
 	if (tex.size() == 1)
 		mSkyTex = getRenderer()->createTextureCube(tex[0]);
 	else

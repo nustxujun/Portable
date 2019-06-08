@@ -4,6 +4,20 @@ HDR::HDR(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr st, Pipeline *
 	Pipeline::Stage(r,s,q,st,p)
 {
 	mName = "HDR";
+
+}
+
+HDR::~HDR()
+{
+}
+
+void HDR::init()
+{
+	this->set("brightness", { {"type","set"}, {"value",1.0f},{"min","0.01"},{"max","1"},{"interval", "0.01"} });
+	this->set("blurcount", { {"type","set"}, {"value",5},{"min","1"},{"max","100"},{"interval", "1"} });
+
+
+	auto r = getRenderer();
 	auto blob = r->compileFile("hlsl/hdr.hlsl", "main", "ps_5_0");
 	mPS = r->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
 
@@ -28,43 +42,32 @@ HDR::HDR(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr st, Pipeline *
 	mPoint = r->createSampler("point_wrap", D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
 
 
-
 	this->set("keyvalue", { {"type","set"}, {"value",0.18f},{"min","0.01"},{"max","1"},{"interval", "0.01"} });
+	this->set("lumMin", { {"type","set"}, {"value",0},{"min","0"},{"max","2"},{"interval", "0.01"} });
+	this->set("lumMax", { {"type","set"}, {"value",10.0f},{"min","0"},{"max","2"},{"interval", "0.01"} });
 
 	mConstants = r->createBuffer(sizeof(Constants), D3D11_BIND_CONSTANT_BUFFER, 0, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+
+	mBrightPass = r->createPixelShader("hlsl/brightness.hlsl", "main");
+
+	D3D10_SHADER_MACRO macros[] = { { "HORIZONTAL", "1"}, {NULL,NULL} };
+	mGaussianBlur[0] = r->createPixelShader("hlsl/gaussianblur.hlsl", "main");
+	mGaussianBlur[1] = r->createPixelShader("hlsl/gaussianblur.hlsl", "main", macros);
+	mBloomConstants = r->createBuffer(sizeof(Vector4), D3D11_BIND_CONSTANT_BUFFER);
+
 }
 
-HDR::~HDR()
-{
-}
 
 void HDR::render(Renderer::Texture2D::Ptr rt) 
 {
 
 	renderLuminance(rt);
+	renderBrightness(rt);
+	renderBloom(rt);
 	renderHDR(rt);
-	auto quad = getQuad();
-	quad->setRenderTarget(rt);
-	quad->drawTexture(mTarget, false);
 
-	//auto w = getRenderer()->getWidth();
-	//auto h = getRenderer()->getHeight();
-	//size_t count = mLuminance.size();
-	//float width = (float)w / (float)count;
 
-	//for (size_t i = 0; i < count; ++i)
-	//{
-	//	D3D11_VIEWPORT vp = {
-	//		width * i, 0,
-	//		width, width,
-	//		0,1.0f,
-	//	};
 
-	//	quad->setViewport(vp);
-	//	quad->setTextures({ mLuminance[i] });
-	//	quad->draw();
-	//}
-	//
 	
 }
 
@@ -100,8 +103,14 @@ void HDR::renderHDR(Renderer::Texture2D::Ptr frame)
 {
 	auto quad = getQuad();
 
+	if (mTarget.expired())
+		mTarget = getRenderer()->createTexture(frame.lock()->getDesc());
+
 	Constants c;
 	c.keyvalue = getValue<float>("keyvalue");
+	c.lumMin = getValue<float>("lumMin");
+	c.lumMax= getValue<float>("lumMax");
+
 	mConstants.lock()->blit(c);
 	quad->setConstant(mConstants);
 	quad->setDefaultViewport();
@@ -110,5 +119,68 @@ void HDR::renderHDR(Renderer::Texture2D::Ptr frame)
 	quad->setPixelShader(mPS);
 	quad->setTextures({ frame,mLuminance[0] });
 	quad->setRenderTarget(mTarget);
+	quad->draw();
+	frame.lock()->swap(mTarget);
+}
+
+void HDR::renderBrightness(Renderer::Texture2D::Ptr rt)
+{
+	if (mBloomRT[0].expired())
+	{
+		mBloomRT[0] = getRenderer()->createTexture(rt.lock()->getDesc());
+		mBloomRT[1] = getRenderer()->createTexture(rt.lock()->getDesc());
+	}
+	auto quad = getQuad();
+	quad->setTextures({ rt });
+	quad->setRenderTarget(mBloomRT[0]);
+	quad->setDefaultBlend(false);
+	quad->setDefaultSampler();
+	quad->setDefaultViewport();
+
+	Vector4 brightness = { getValue<float>("brightness"),0,0,0 };
+	mBloomConstants.lock()->blit(brightness);
+	quad->setConstant(mBloomConstants);
+	quad->setPixelShader(mBrightPass);
+	quad->draw();
+}
+
+
+void HDR::renderBloom(Renderer::Texture2D::Ptr rt)
+{
+	auto quad = getQuad();
+	int count = getValue<int>("blurcount");
+	for (int i = 0; i < count; ++i)
+	{
+		quad->setTextures({ mBloomRT[i % 2] });
+		quad->setRenderTarget(mBloomRT[1 - i % 2]);
+		quad->setDefaultSampler();
+		quad->setDefaultViewport();
+		quad->setPixelShader(mGaussianBlur[i %2]);
+
+		quad->setDefaultBlend(false);
+		quad->draw();
+	}
+
+
+
+	quad->setDefaultSampler();
+	quad->setDefaultViewport();
+	quad->setDefaultPixelShader();
+	
+
+	D3D11_BLEND_DESC desc = { 0 };
+	desc.RenderTarget[0] = {
+		TRUE,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_OP_ADD,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_OP_ADD,
+		D3D11_COLOR_WRITE_ENABLE_ALL
+	};
+	quad->setBlend(desc);
+	quad->setRenderTarget(rt);
+	quad->setTextures({ mBloomRT[0] });
 	quad->draw();
 }
