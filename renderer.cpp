@@ -1124,3 +1124,27 @@ void Renderer::Profile::getData(UINT64 frq)
 	//mCachedTime = 0;
 	//mNumCached = 0;
 }
+
+void Renderer::Texture2D::blit(const void * data, size_t size)
+{
+	if ((mDesc.CPUAccessFlags & D3D11_CPU_ACCESS_WRITE))
+	{
+		auto pitch = D3D11Helper::sizeof_DXGI_FORMAT(mDesc.Format)  * mDesc.Width;
+		D3D11_MAP map;
+		D3D11_MAPPED_SUBRESOURCE subresource;
+		map = (mDesc.Usage & D3D11_USAGE_DYNAMIC) ? D3D11_MAP_WRITE_DISCARD : D3D11_MAP_WRITE;
+		getContext()->Map(mTexture, 0, map, 0, &subresource);
+
+		//the pitch of mapped memory may be different than the pitch of the texture
+		for (int i = 0; i < mDesc.Height; ++i)
+		{
+			memcpy(( char*)subresource.pData + subresource.RowPitch * i, (const char*)data + pitch * i, pitch);
+		}
+		
+		getContext()->Unmap(mTexture, 0);
+	}
+	else
+	{
+		getContext()->UpdateSubresource(mTexture, 0, NULL, data, 0, 0);
+	}
+}

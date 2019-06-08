@@ -19,6 +19,7 @@ Framework::Framework(HWND win)
 	mPipeline = std::make_unique<Pipeline>(mRenderer, mScene);
 	setSetting(mPipeline->getSetting());
 	mInput = std::make_shared<Input>();
+
 }
 
 Framework::~Framework()
@@ -39,9 +40,23 @@ void Framework::update()
 	mInput->update();
 	mPipeline->render();
 	showFPS();
+
+	renderOverlay();
 	mRenderer->present();
 }
 
+//void Framework::initOverlay(int width, int height)
+//{
+
+//}
+
+
+void Framework::setOverlay(Overlay::Ptr overlay)
+{
+	mOverlay = overlay;
+	overlay->setInput(mInput);
+	overlay->setRenderer(mRenderer);
+}
 
 void Framework::initPipeline()
 {
@@ -169,6 +184,7 @@ void Framework::initInput()
 		}
 
 		node->setPosition(pos);
+		return false;
 	});
 
 
@@ -212,3 +228,11 @@ void Framework::calFPS()
 	mCachedNumFrames = 0;
 }
 
+void Framework::renderOverlay()
+{
+	if (!mOverlay)
+		return;
+
+	mOverlay->render();
+
+}

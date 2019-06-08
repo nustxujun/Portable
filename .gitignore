@@ -352,3 +352,8 @@ ASALocalRun/
 /controlPanel/test.dll
 /controlPanel/dll/MyDLL.dll
 /controlPanel/build/config.gypi
+/controlPanel/zlibd1.dll
+/controlPanel/zlib1.dll
+/controlPanel/Portable.dll
+/controlPanel/assimp-vc140-mtd.dll
+/controlPanel/assimp-vc140-mt.dll

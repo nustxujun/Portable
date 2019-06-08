@@ -311,10 +311,14 @@ public:
 	{
 		using Parent = TextureUnknown<ID3D11Texture2D, D3D11_TEXTURE2D_DESC>;
 	public:
+		using Ptr = std::weak_ptr<Texture2D>;
+
 		Texture2D(Renderer* r, ID3D11Texture2D* tex) :D3DObject(r), Parent(tex)
 		{
 			initTexture();
 		}
+
+		void blit(const void* data, size_t size);
 	};
 
 	class Texture3D :public TextureUnknown<ID3D11Texture3D, D3D11_TEXTURE3D_DESC>

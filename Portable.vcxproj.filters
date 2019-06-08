@@ -138,6 +138,9 @@
     <ClInclude Include="SkyBox.h">
       <Filter>Pipeline\Stage</Filter>
     </ClInclude>
+    <ClInclude Include="Overlay.h">
+      <Filter>Framework</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -209,19 +212,25 @@
     <ClCompile Include="DepthBounding.cpp">
       <Filter>Pipeline\Stage</Filter>
     </ClCompile>
-    <ClCompile Include="Network.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="LightCulling.cpp">
       <Filter>Pipeline\Stage</Filter>
     </ClCompile>
-    <ClCompile Include="DepthLinearing.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="ClusteredLightCulling.cpp">
-      <Filter>源文件</Filter>
+      <Filter>Pipeline\Stage</Filter>
+    </ClCompile>
+    <ClCompile Include="DepthLinearing.cpp">
+      <Filter>Pipeline\Stage</Filter>
     </ClCompile>
     <ClCompile Include="SkyBox.cpp">
+      <Filter>Pipeline\Stage</Filter>
+    </ClCompile>
+    <ClCompile Include="Network.cpp">
+      <Filter>Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="dll.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Overlay.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -262,10 +271,6 @@
     <None Include="hlsl\lightculling.hlsl">
       <Filter>shader</Filter>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="hlsl\skybox.fx">
-      <Filter>shader</Filter>
-    </FxCompile>
+    <None Include="hlsl\skybox.fx" />
   </ItemGroup>
 </Project>

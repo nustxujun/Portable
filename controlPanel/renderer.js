@@ -6,7 +6,7 @@
 
 var slider = window['vue-slider-component'];
 var context = {
-    message: "",
+    message: "等待连接...",
     stages:{},
     properties: {}
 };
