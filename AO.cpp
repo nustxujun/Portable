@@ -96,7 +96,7 @@ void AO::render(Renderer::Texture2D::Ptr rt)
 	quad->setSamplers({ mLinearWrap ,mPointWrap });
 	quad->setTextures({ getShaderResource("normal"), getShaderResource("depth"), mNoise});
 	
-	quad->setDefaultBlend();
+	quad->setBlendColorMul();
 	quad->setRenderTarget(rt);
 	quad->draw();
 }

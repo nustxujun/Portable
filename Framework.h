@@ -18,6 +18,7 @@ public:
 	Setting::Ptr getSetting()const { return mPipeline->getSetting(); }
 
 	void setOverlay(Overlay::Ptr overlay);
+	float getFPS()const { return mFPS; }
 protected:
 	virtual void initPipeline();
 	virtual void initScene();
@@ -33,6 +34,7 @@ protected:
 	Renderer::Ptr mRenderer;
 	Scene::Ptr mScene;
 	Overlay::Ptr mOverlay;
+	Renderer::Profile::Ptr mOverlayProfile;
 	
 
 	size_t mCachedNumFrames = 0;

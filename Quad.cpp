@@ -117,11 +117,11 @@ void Quad::setDefaultBlend(bool blend)
 
 	desc.RenderTarget[0] = {
 		blend,
-		D3D11_BLEND_DEST_COLOR,
-		D3D11_BLEND_ZERO,
+		D3D11_BLEND_SRC_ALPHA,
+		D3D11_BLEND_INV_SRC_ALPHA,
 		D3D11_BLEND_OP_ADD,
 		D3D11_BLEND_ONE,
-		D3D11_BLEND_ZERO,
+		D3D11_BLEND_ONE,
 		D3D11_BLEND_OP_ADD,
 		D3D11_COLOR_WRITE_ENABLE_ALL
 	};
@@ -131,3 +131,25 @@ void Quad::setDefaultBlend(bool blend)
 		0xffffffff,
 	};
 }
+
+void Quad::setBlendColorMul()
+{
+	D3D11_BLEND_DESC desc = { 0 };
+
+	desc.RenderTarget[0] = {
+		TRUE,
+		D3D11_BLEND_DEST_COLOR,
+		D3D11_BLEND_ZERO,
+		D3D11_BLEND_OP_ADD,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_OP_ADD,
+		D3D11_COLOR_WRITE_ENABLE_ALL
+	};
+	mBlendState = {
+		desc,
+		{1,1,1,1},
+		0xffffffff,
+	};
+}
+

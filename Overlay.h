@@ -16,6 +16,8 @@ public:
 	void setRenderer(Renderer::Ptr input);
 	virtual bool handleEvent(const Input::Mouse& m, const Input::Keyboard& k) = 0;
 	virtual void render() = 0;
+
+	void update();
 protected:
 	Renderer::Ptr mRenderer;
 };

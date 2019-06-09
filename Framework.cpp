@@ -19,7 +19,7 @@ Framework::Framework(HWND win)
 	mPipeline = std::make_unique<Pipeline>(mRenderer, mScene);
 	setSetting(mPipeline->getSetting());
 	mInput = std::make_shared<Input>();
-
+	mOverlayProfile = mRenderer->createProfile();
 }
 
 Framework::~Framework()
@@ -233,6 +233,10 @@ void Framework::renderOverlay()
 	if (!mOverlay)
 		return;
 
-	mOverlay->render();
-
+	PROFILE(mOverlayProfile);
+	mOverlay->update();
+	std::stringstream ss;
+	ss.precision(4);
+	ss << mOverlayProfile.lock()->getElapsedTime();
+	set("overlay", { {"cost",ss.str().c_str()}, {"type", "stage"} });
 }

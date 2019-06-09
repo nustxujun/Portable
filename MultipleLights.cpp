@@ -504,7 +504,7 @@ void MultipleLights::initCDRPipeline()
 	mPipeline->pushStage<GBuffer>();
 	mPipeline->pushStage<DepthLinearing>();
 
-	mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
+	//mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
 
 	mPipeline->pushStage<ClusteredLightCulling>(Vector3(SLICED_LEN, SLICED_LEN, SLICED_Z), Vector3(bw, bh,0));
 	

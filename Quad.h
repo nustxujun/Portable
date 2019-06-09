@@ -34,6 +34,8 @@ public:
 	void setViewport(const D3D11_VIEWPORT& vp) { mViewport = vp; }
 	void setDefaultViewport() { mViewport = { 0.0f,0.0f, (float) mRenderer->getWidth(),(float) mRenderer->getHeight(), 0.0f, 1.0f }; }
 	void setDefaultBlend(bool blend = true) ;
+	void setBlendColorMul();
+
 private:
 	template<class T>
 	void setTexturesImpl(const std::vector<T>& c)

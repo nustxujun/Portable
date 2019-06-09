@@ -2,6 +2,7 @@
 // be executed in the renderer process for that window.
 // All of the Node.js APIs are available in this process.
 
+// Call *.dll with ffi
 
 
 var slider = window['vue-slider-component'];
@@ -24,12 +25,21 @@ var app = new Vue({
 var network = require("./Network.js");
 network.init(8888);
 network.receive(function (data) {
+    
+})
+
+
+const { ipcRenderer } = require('electron')
+ipcRenderer.on('renderer',function(event, msg)
+{
+    var data = msg;
     if (data.type == "init") {
         context.properties ={};
         context.stages ={};
 
     }
     else if (data.type == "set") {
+        console.log(data.key)
         context.properties[data.key] = {
             value: +data.value, 
             min: +data.min, 
@@ -37,7 +47,8 @@ network.receive(function (data) {
             interval : +data.interval,
             change(value){
 
-                network.send({type:"set", key:data.key, value:value})
+                ipcRenderer.send("main", {type:"set", key:data.key, value:value});
+                // network.send({type:"set", key:data.key, value:value})
             }
         }
     }
@@ -55,3 +66,6 @@ network.receive(function (data) {
         context.message = data.msg;
     }
 })
+
+ipcRenderer.send("renderer-loaded",{});
+

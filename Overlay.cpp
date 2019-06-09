@@ -15,3 +15,8 @@ void Overlay::setRenderer(Renderer::Ptr r)
 	mRenderer = r;
 }
 
+void Overlay::update()
+{
+	render();
+}
+

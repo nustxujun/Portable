@@ -1,5 +1,5 @@
 // Modules to control application life and create native browser window
-const { app, BrowserWindow } = require('electron')
+const { app, BrowserWindow,ipcMain } = require('electron')
 const url = require('url')
 const path = require('path')
 var ref = require("ref");
@@ -7,14 +7,20 @@ var ref = require("ref");
 // Call *.dll with ffi
 let ffi = require('ffi');
 let dll = ffi.Library('Portable.dll', {
-	'init': ['void', ['uint32']],
-	'paint': ['void', ['string', 'int']],
-
+	'init': ['void', ['int','int','uint32']],
+	'paint': ['void', ['string', 'uint64']],
+	'setCallback':['void',['pointer']],
+	'handleEvent':['void',['string', 'uint64']],
+	'close':['void',[]]
 })
+
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
-let mainWindow
+let mainWindow;
+let callback
+
+var height = 800;
 
 app.disableHardwareAcceleration();
 
@@ -22,8 +28,9 @@ function createWindow() {
 	// Create the browser window.
 	mainWindow = new BrowserWindow({
 		show: false,
+		// transparent: true,
 		width: 400, 
-		height: 800,
+		height: height,
 		webPreferences: {
 			nodeIntegration: true,
 			offscreen: true,
@@ -39,11 +46,30 @@ function createWindow() {
 	// Open the DevTools.
 	// mainWindow.webContents.openDevTools()
 
-	var handle = mainWindow.getNativeWindowHandle();
-	dll.init(handle.readUInt32LE());
+
+	
+	callback = ffi.Callback('void', ['string', 'uint64'],
+	function(msg, size) {
+		var data = JSON.parse(msg)
+
+		if (data.mouse)
+		{
+			mainWindow.webContents.sendInputEvent(data.mouse);
+		}
+		else
+		{			
+			mainWindow.webContents.send('renderer', data);
+		}
+	});
+	dll.setCallback(callback)
+
+
+
 
 	// Emitted when the window is closed.
 	mainWindow.on('closed', function () {
+		dll.setCallback(null);
+		dll.close();
 		// Dereference the window object, usually you would store windows
 		// in an array if your app supports multi windows, this is the time
 		// when you should delete the corresponding element.
@@ -57,6 +83,17 @@ function createWindow() {
 
 	
 	mainWindow.webContents.setFrameRate(60);
+
+	ipcMain.on('main',function(event, msg)
+	{
+		var data = JSON.stringify(msg);
+		dll.handleEvent(data, data.length);
+	});
+
+	ipcMain.once('renderer-loaded', () => {
+		var handle = mainWindow.getNativeWindowHandle();
+		dll.init(1600, height,handle.readUInt32LE());
+	})
 
 
 }

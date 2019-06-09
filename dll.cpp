@@ -2,7 +2,10 @@
 #include <Windows.h>
 #include "MultipleLights.h"
 #include <thread>
+#include "json.hpp"
+#include <sstream>
 
+using namespace nlohmann;
 
 #ifdef _WINDLL
 #define EXPORT __declspec(dllexport)
@@ -13,11 +16,32 @@
 using Ptr = std::shared_ptr<MultipleLights>;
 Ptr framework;
 std::shared_ptr<std::thread> loop;
-int state = 0;
-std::vector<char> overlaydata(400 * 800 * 4);
+HWND parentWnd;
+
+using Callback = void(*)(const char*, size_t );
+Callback electronCallback;
+
+void callElectron(const json& j)
+{
+	if (electronCallback)
+	{
+		auto str = j.dump();
+		electronCallback(str.c_str(), str.size());
+	}
+}
 
 LRESULT CALLBACK process(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+	switch (message)
+	{
+	case WM_CLOSE:
+	case WM_DESTROY:
+		{	
+			electronCallback = nullptr;
+			PostMessage(parentWnd, WM_CLOSE, 0, 0);
+		}
+		return 0;
+	}
 	DirectX::Mouse::ProcessMessage(message, wParam, lParam);
 	DirectX::Keyboard::ProcessMessage(message, wParam, lParam);
 	return DefWindowProc(hWnd, message, wParam, lParam);
@@ -45,25 +69,43 @@ void registerWindow()
 	RegisterClassExW(&wcex);
 }
 
-HWND createWindow()
+HWND createWindow(int width, int height)
 {
 	HWND hWnd = CreateWindowW(windowClass, L"", WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, instance, nullptr);
+		CW_USEDEFAULT, 0, width, height, nullptr, nullptr, instance, nullptr);
+
+
+
+	RECT win, client;
+	::GetClientRect(hWnd, &client);
+	::GetWindowRect(hWnd, &win);
+
+	auto w = win.right - win.left - client.right;
+	auto h = win.bottom  - win.top - client.bottom;
+
+	::MoveWindow(hWnd, win.left, win.top, w + width, h + height, FALSE);
 
 	ShowWindow(hWnd, true);
 	UpdateWindow(hWnd);
+
+
 	return hWnd;
 }
 
-class ElectronOverlay :public Overlay
+class ElectronOverlay :public Overlay, public Setting::Modifier
 {
 public:
 	using Ptr = std::shared_ptr<ElectronOverlay>;
-
+	int state = 0;
+	std::vector<char> overlaydata;
 	Renderer::Texture2D::Ptr mTarget;
 	Quad::Ptr mQuad;
+	HWND window;
+	bool visible = true;
+
 	void init(int width, int height)
 	{
+		overlaydata.resize(width * height * 4);
 		D3D11_TEXTURE2D_DESC desc = {0};
 		desc.Width = width;
 		desc.Height = height;
@@ -80,23 +122,81 @@ public:
 		mQuad = Quad::Ptr(new Quad(mRenderer));
 	}
 
+	bool isKeyUp(const Input::Keyboard& k, DirectX::Keyboard::Keys key)
+	{
+		static Input::Keyboard lastState = k;
+		if (lastState.IsKeyDown(key) && k.IsKeyUp(key))
+		{
+			lastState = k;
+			return true;
+		}
+
+		lastState = k;
+		return false;
+	}
+
 	bool handleEvent(const Input::Mouse& m, const Input::Keyboard& k)
 	{
+		if (isKeyUp(k, DirectX::Keyboard::Tab))
+			visible = !visible;
+
 		auto desc = mTarget.lock()->getDesc();
-
+		
 		if (m.x >= 0 && m.x <= desc.Width &&
-			m.y >= 0 && m.y <= desc.Height)
+			m.y >= 0 && m.y <= desc.Height && visible)
 		{
+			static Input::Mouse lastState = m;
+			if (lastState.leftButton != m.leftButton)
+			{
+				json e;
+				e["mouse"]["x"] = m.x;
+				e["mouse"]["y"] = m.y;
+				e["mouse"]["modifiers"] = { "left" };
+				e["mouse"]["type"] = m.leftButton?"mouseDown": "mouseUp";
+				callElectron(e);
+			}
 
+			if (lastState.rightButton != m.rightButton)
+			{
+				json e;
+				e["mouse"]["x"] = m.x;
+				e["mouse"]["y"] = m.y;
+				e["mouse"]["modifiers"] = { "left" };
+				e["mouse"]["type"] = m.rightButton ? "mouseDown" : "mouseUp";
+				callElectron(e);
+			}
+
+			if (lastState.x != m.x || lastState.y != m.y)
+			{
+				json e;
+				e["mouse"]["x"] = m.x;
+				e["mouse"]["y"] = m.y;
+				e["mouse"]["type"] = "mouseMove";
+				callElectron(e);
+			}
+
+
+			lastState = m;
 			return true;
 		}
 		else
+		{
+			json e;
+			e["mouse"]["x"] = m.x;
+			e["mouse"]["y"] = m.y;
+			e["mouse"]["modifiers"] = { "left","right" };
+			e["mouse"]["type"] = "mouseUp";
+			callElectron(e);
+
 			return false;
-		
+		}
 	}
 	void render()
 	{
-		mQuad->setDefaultBlend(false);
+		if (!visible)
+			return;
+		refresh();
+		mQuad->setDefaultBlend(true);
 		mQuad->setDefaultPixelShader();
 		mQuad->setDefaultSampler();
 
@@ -113,11 +213,37 @@ public:
 		mQuad->setTextures({ mTarget });
 		mQuad->setRenderTarget(mRenderer->getBackbuffer());
 		mQuad->draw();
+
 	}
 
-	void refresh(const char* data, size_t size)
+	void refresh()
 	{
-		mTarget.lock()->blit(data, size);
+		if (state == 1)
+		{
+			state = 0;
+			mTarget.lock()->blit(overlaydata.data(), overlaydata.size());
+		}
+	}
+
+	void onChanged(const std::string& key, const nlohmann::json::value_type& value)
+	{
+		json j = value;
+
+		if (j["type"] == "set" || j["type"] == "stage")
+			j["key"] = key;
+		callElectron(j);
+	}
+
+	void receive(const char* s, size_t size)
+	{
+		std::string str(s, size);
+		json j = json::parse(str);
+
+		std::string type = j["type"];
+		if (type == "set")
+		{
+			setValue(j["key"], j["value"]);
+		}
 	}
 };
 
@@ -125,26 +251,28 @@ ElectronOverlay::Ptr overlay;
 
 extern "C"
 {
-	EXPORT void init(HWND overlayhandle)
+	EXPORT void init(int width, int height ,HWND overlayhandle)
 	{
+		parentWnd = overlayhandle;
 		::MessageBoxA(NULL, "start", NULL, NULL);
-		::SetCurrentDirectoryA("D:/workspace/Portable");
+		::SetCurrentDirectoryA("../");
 
 		RECT rect;
 		GetClientRect(overlayhandle, &rect);
-		overlaydata.resize(rect.right * rect.bottom * 4);
 
-		loop = std::shared_ptr<std::thread>(new std::thread([rect]()
+		loop = std::shared_ptr<std::thread>(new std::thread([rect,width, height]()
 		{
 			registerWindow();
-			auto win = createWindow();
+			auto win = createWindow(width, height);
 			framework = Ptr(new MultipleLights(win));
-			framework->init();
 			overlay = ElectronOverlay::Ptr(new ElectronOverlay());
+			overlay->setSetting(framework->getSetting());
+			overlay->window = win;
+			framework->init();
 			framework->setOverlay(overlay);
 			overlay->init(rect.right, rect.bottom);
 			MSG msg = {};
-			while (WM_QUIT != msg.message)
+			while (WM_QUIT != msg.message && electronCallback)
 			{
 				if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 				{
@@ -153,23 +281,44 @@ extern "C"
 				}
 				else
 				{
-
-					if (state == 1)
-					{
-						state = 0;
-						overlay->refresh(overlaydata.data(), overlaydata.size());
-					}
+					overlay->refresh();
 					framework->update();
+					std::stringstream ss;
+					ss.precision(4);
+					ss << framework->getFPS();
+					SetWindowTextA(overlay->window, ss.str().c_str());
 				}
 			}
+
+
+			framework = nullptr;
+			overlay = nullptr;
 		}));
 	}
 
 	EXPORT void paint(char* data, size_t size)
 	{
-		memcpy(overlaydata.data(), data, std::min(size,overlaydata.size()));
-		state = 1;
+		if (!overlay) return;
+		memcpy(overlay->overlaydata.data(), data, std::min(size, overlay->overlaydata.size()));
+		overlay->state = 1;
 	}
+
+	EXPORT void setCallback(Callback cb)
+	{
+		electronCallback = cb;
+	}
+
+	EXPORT void handleEvent(char* data, size_t size)
+	{
+		overlay->receive(data, size);
+	}
+
+	EXPORT void close()
+	{
+		electronCallback = nullptr;
+		loop->join();
+	}
+
 
 }
 
