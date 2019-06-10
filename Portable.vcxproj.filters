@@ -144,6 +144,9 @@
     <ClInclude Include="Sampling.h">
       <Filter>Pipeline</Filter>
     </ClInclude>
+    <ClInclude Include="ImageProcessing.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -233,7 +236,7 @@
     <ClCompile Include="Overlay.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Sampling.cpp">
+    <ClCompile Include="ImageProcessing.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

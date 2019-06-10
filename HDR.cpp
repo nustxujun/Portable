@@ -14,7 +14,8 @@ HDR::~HDR()
 void HDR::init()
 {
 	this->set("brightness", { {"type","set"}, {"value",1.0f},{"min","0.01"},{"max","1"},{"interval", "0.01"} });
-	this->set("blurcount", { {"type","set"}, {"value",5},{"min","1"},{"max","100"},{"interval", "1"} });
+	this->set("blurcount", { {"type","set"}, {"value",5},{"min","1"},{"max","5"},{"interval", "1"} });
+	this->set("samplescale", { {"type","set"}, {"value",1},{"min","0.1"},{"max","2"},{"interval", "0.1"} });
 
 
 	auto r = getRenderer();
@@ -55,8 +56,8 @@ void HDR::init()
 	mGaussianBlur[1] = r->createPixelShader("hlsl/gaussianblur.hlsl", "main", macros);
 	mBloomConstants = r->createBuffer(sizeof(Vector4), D3D11_BIND_CONSTANT_BUFFER);
 
-	mDownsample = DownSamplingBox::create(getRenderer());
-	mUpsample = UpSamplingBox::create(getRenderer());
+	mDownsample = ImageProcessing::create<SamplingBox>(getRenderer());
+	mGaussian = ImageProcessing::create<Gaussian>(getRenderer());
 }
 
 
@@ -127,14 +128,13 @@ void HDR::renderHDR(Renderer::Texture2D::Ptr frame)
 
 void HDR::renderBrightness(Renderer::Texture2D::Ptr rt)
 {
-	if (mBloomRT[0].expired())
+	if (mBloomRT.expired())
 	{
-		mBloomRT[0] = getRenderer()->createTexture(rt.lock()->getDesc());
-		mBloomRT[1] = getRenderer()->createTexture(rt.lock()->getDesc());
+		mBloomRT = getRenderer()->createTexture(rt.lock()->getDesc());
 	}
 	auto quad = getQuad();
 	quad->setTextures({ rt });
-	quad->setRenderTarget(mBloomRT[0]);
+	quad->setRenderTarget(mBloomRT);
 	quad->setDefaultBlend(false);
 	quad->setDefaultSampler();
 	quad->setDefaultViewport();
@@ -149,14 +149,16 @@ void HDR::renderBrightness(Renderer::Texture2D::Ptr rt)
 
 void HDR::renderBloom(Renderer::Texture2D::Ptr rt)
 {
-	Renderer::Texture2D::Ptr ret = mBloomRT[0];
+	Renderer::Texture2D::Ptr ret = mBloomRT;
+	mDownsample->setScale(getValue<float>("samplescale"), getValue<float>("samplescale"));
 	for (int i = 0; i < getValue<int>("blurcount"); ++i)
 	{
-		ret = mDownsample->sample(ret);
+		ret = mDownsample->process(ret, ImageProcessing::DOWN);
+		ret = mGaussian->process(ret);
 	}
 	for (int i = 0; i < getValue<int>("blurcount"); ++i)
 	{
-		ret = mUpsample->sample(ret);
+		ret = mDownsample->process(ret, ImageProcessing::UP);
 	}
 	auto quad = getQuad();
 	//int count = getValue<int>("blurcount");

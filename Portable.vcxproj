@@ -176,6 +176,7 @@
     <ClInclude Include="GeometryMesh.h" />
     <ClInclude Include="GPUComputer.h" />
     <ClInclude Include="HDR.h" />
+    <ClInclude Include="ImageProcessing.h" />
     <ClInclude Include="Input.h" />
     <ClInclude Include="LightCulling.h" />
     <ClInclude Include="LightVolumeCulling.h" />
@@ -213,6 +214,7 @@
     <ClCompile Include="GeometryMesh.cpp" />
     <ClCompile Include="GPUComputer.cpp" />
     <ClCompile Include="HDR.cpp" />
+    <ClCompile Include="ImageProcessing.cpp" />
     <ClCompile Include="LightCulling.cpp" />
     <None Include="main.cpp" />
     <ClCompile Include="Framework.cpp" />
@@ -228,7 +230,6 @@
     <ClCompile Include="PostProcessing.cpp" />
     <ClCompile Include="Quad.cpp" />
     <ClCompile Include="renderer.cpp" />
-    <ClCompile Include="Sampling.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="ShadowMap.cpp" />
     <ClCompile Include="SkyBox.cpp" />

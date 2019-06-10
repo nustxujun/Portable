@@ -1,7 +1,6 @@
 #pragma once
 #include "Pipeline.h"
-#include "Sampling.h"
-
+#include "ImageProcessing.h"
 class HDR :public Pipeline::Stage
 {
 	__declspec(align(16))
@@ -31,11 +30,11 @@ private:
 	std::vector<Renderer::Texture2D::Ptr> mLuminance;
 	Renderer::Buffer::Ptr mConstants;
 
-	Renderer::Texture2D::Ptr mBloomRT[2];
+	Renderer::Texture2D::Ptr mBloomRT;
 	Renderer::PixelShader::Weak mBrightPass;
 	Renderer::PixelShader::Weak mGaussianBlur[2];
 	Renderer::Buffer::Ptr mBloomConstants;
-	DownSamplingBox::Ptr mDownsample;
-	UpSamplingBox::Ptr mUpsample;
+	SamplingBox::Ptr mDownsample;
+	Gaussian::Ptr mGaussian;
 
 };
