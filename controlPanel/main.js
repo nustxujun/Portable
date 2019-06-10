@@ -7,7 +7,7 @@ var ref = require("ref");
 // Call *.dll with ffi
 let ffi = require('ffi');
 let dll = ffi.Library('Portable.dll', {
-	'init': ['void', ['int','int','uint32']],
+	'init': ['void', ['int','int','int','int','uint32']],
 	'paint': ['void', ['string', 'uint64']],
 	'setCallback':['void',['pointer']],
 	'handleEvent':['void',['string', 'uint64']],
@@ -27,7 +27,7 @@ app.disableHardwareAcceleration();
 function createWindow() {
 	// Create the browser window.
 	mainWindow = new BrowserWindow({
-		show: false,
+		// show: false,
 		// transparent: true,
 		width: 400, 
 		height: height,
@@ -92,7 +92,7 @@ function createWindow() {
 
 	ipcMain.once('renderer-loaded', () => {
 		var handle = mainWindow.getNativeWindowHandle();
-		dll.init(1600, height,handle.readUInt32LE());
+		dll.init(1600, height,400, height,handle.readUInt32LE());
 	})
 
 

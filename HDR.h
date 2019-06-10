@@ -1,5 +1,6 @@
 #pragma once
 #include "Pipeline.h"
+#include "Sampling.h"
 
 class HDR :public Pipeline::Stage
 {
@@ -34,4 +35,7 @@ private:
 	Renderer::PixelShader::Weak mBrightPass;
 	Renderer::PixelShader::Weak mGaussianBlur[2];
 	Renderer::Buffer::Ptr mBloomConstants;
+	DownSamplingBox::Ptr mDownsample;
+	UpSamplingBox::Ptr mUpsample;
+
 };

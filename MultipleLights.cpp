@@ -101,47 +101,47 @@ void MultipleLights::initScene()
 	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
 	//}
 
-	{
-		Parameters params;
-		params["geom"] = "plane";
-		params["size"] = "100";
-		//params["resolution"] = "500";
-		auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
-		{
-			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		});
-		model->setCastShadow(false);
-		model->attach(root);
-		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+	//{
+	//	Parameters params;
+	//	params["geom"] = "plane";
+	//	params["size"] = "100";
+	//	//params["resolution"] = "500";
+	//	auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
+	//	{
+	//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+	//	});
+	//	model->setCastShadow(false);
+	//	model->attach(root);
+	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
 
-	}
-
-	{
-		Parameters params;
-		params["geom"] = "sphere";
-		params["radius"] = "10";
-		params["resolution"] = "500";
-		auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
-		{
-			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		});
-		model->setCastShadow(true);
-		model->attach(root);
-		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-	}
+	//}
 
 	//{
 	//	Parameters params;
-	//	//params["file"] = "tiny.x";
-	//	params["file"] = "media/sponza/sponza.obj";
-	//	auto model = mScene->createModel("test", params, [this](const Parameters& p) {
-	//		return Mesh::Ptr(new Mesh(p, mRenderer));
+	//	params["geom"] = "sphere";
+	//	params["radius"] = "10";
+	//	params["resolution"] = "500";
+	//	auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
+	//	{
+	//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
 	//	});
-
-	//	model->attach(mScene->getRoot());
+	//	model->setCastShadow(true);
+	//	model->attach(root);
 	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-	//
 	//}
+
+	{
+		Parameters params;
+		//params["file"] = "tiny.x";
+		params["file"] = "media/sponza/sponza.obj";
+		auto model = mScene->createModel("test", params, [this](const Parameters& p) {
+			return Mesh::Ptr(new Mesh(p, mRenderer));
+		});
+
+		model->attach(mScene->getRoot());
+		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+	
+	}
 
 	auto cam = mScene->createOrGetCamera("main");
 	cam->setViewport(0, 0, mRenderer->getWidth(), mRenderer->getHeight());
@@ -504,7 +504,7 @@ void MultipleLights::initCDRPipeline()
 	mPipeline->pushStage<GBuffer>();
 	mPipeline->pushStage<DepthLinearing>();
 
-	//mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
+	mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
 
 	mPipeline->pushStage<ClusteredLightCulling>(Vector3(SLICED_LEN, SLICED_LEN, SLICED_Z), Vector3(bw, bh,0));
 	

@@ -55,6 +55,8 @@ void HDR::init()
 	mGaussianBlur[1] = r->createPixelShader("hlsl/gaussianblur.hlsl", "main", macros);
 	mBloomConstants = r->createBuffer(sizeof(Vector4), D3D11_BIND_CONSTANT_BUFFER);
 
+	mDownsample = DownSamplingBox::create(getRenderer());
+	mUpsample = UpSamplingBox::create(getRenderer());
 }
 
 
@@ -147,19 +149,28 @@ void HDR::renderBrightness(Renderer::Texture2D::Ptr rt)
 
 void HDR::renderBloom(Renderer::Texture2D::Ptr rt)
 {
-	auto quad = getQuad();
-	int count = getValue<int>("blurcount");
-	for (int i = 0; i < count; ++i)
+	Renderer::Texture2D::Ptr ret = mBloomRT[0];
+	for (int i = 0; i < getValue<int>("blurcount"); ++i)
 	{
-		quad->setTextures({ mBloomRT[i % 2] });
-		quad->setRenderTarget(mBloomRT[1 - i % 2]);
-		quad->setDefaultSampler();
-		quad->setDefaultViewport();
-		quad->setPixelShader(mGaussianBlur[i %2]);
-
-		quad->setDefaultBlend(false);
-		quad->draw();
+		ret = mDownsample->sample(ret);
 	}
+	for (int i = 0; i < getValue<int>("blurcount"); ++i)
+	{
+		ret = mUpsample->sample(ret);
+	}
+	auto quad = getQuad();
+	//int count = getValue<int>("blurcount");
+	//for (int i = 0; i < count; ++i)
+	//{
+	//	quad->setTextures({ mBloomRT[i % 2] });
+	//	quad->setRenderTarget(mBloomRT[1 - i % 2]);
+	//	quad->setDefaultSampler();
+	//	quad->setDefaultViewport();
+	//	quad->setPixelShader(mGaussianBlur[i %2]);
+
+	//	quad->setDefaultBlend(false);
+	//	quad->draw();
+	//}
 
 
 
@@ -181,6 +192,6 @@ void HDR::renderBloom(Renderer::Texture2D::Ptr rt)
 	};
 	quad->setBlend(desc);
 	quad->setRenderTarget(rt);
-	quad->setTextures({ mBloomRT[0] });
+	quad->setTextures({ ret });
 	quad->draw();
 }

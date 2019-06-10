@@ -141,6 +141,9 @@
     <ClInclude Include="Overlay.h">
       <Filter>Framework</Filter>
     </ClInclude>
+    <ClInclude Include="Sampling.h">
+      <Filter>Pipeline</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -148,9 +151,6 @@
     </ClCompile>
     <ClCompile Include="Framework.cpp">
       <Filter>Framework</Filter>
-    </ClCompile>
-    <ClCompile Include="main.cpp">
-      <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Pipeline.cpp">
       <Filter>Pipeline</Filter>
@@ -233,6 +233,9 @@
     <ClCompile Include="Overlay.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Sampling.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="deferredRendering.rc">
@@ -272,5 +275,8 @@
       <Filter>shader</Filter>
     </None>
     <None Include="hlsl\skybox.fx" />
+    <None Include="main.cpp">
+      <Filter>源文件</Filter>
+    </None>
   </ItemGroup>
 </Project>

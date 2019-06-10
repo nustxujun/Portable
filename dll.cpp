@@ -251,16 +251,15 @@ ElectronOverlay::Ptr overlay;
 
 extern "C"
 {
-	EXPORT void init(int width, int height ,HWND overlayhandle)
+	EXPORT void init(int width, int height ,   int overlayWidth, int overlayHeight, HWND overlayhandle)
 	{
 		parentWnd = overlayhandle;
+#ifdef _WINDLL
 		::MessageBoxA(NULL, "start", NULL, NULL);
 		::SetCurrentDirectoryA("../");
+#endif
 
-		RECT rect;
-		GetClientRect(overlayhandle, &rect);
-
-		loop = std::shared_ptr<std::thread>(new std::thread([rect,width, height]()
+		loop = std::shared_ptr<std::thread>(new std::thread([width, height, overlayWidth, overlayHeight]()
 		{
 			registerWindow();
 			auto win = createWindow(width, height);
@@ -270,9 +269,13 @@ extern "C"
 			overlay->window = win;
 			framework->init();
 			framework->setOverlay(overlay);
-			overlay->init(rect.right, rect.bottom);
+			overlay->init(overlayWidth, overlayHeight);
 			MSG msg = {};
-			while (WM_QUIT != msg.message && electronCallback)
+			while (WM_QUIT != msg.message
+#ifdef _WINDLL
+				&& electronCallback
+#endif
+				)
 			{
 				if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 				{
@@ -325,7 +328,7 @@ extern "C"
 #ifndef _WINDLL
 int main()
 {
-	init();
+	init(1600,800,1,1,0);
 	loop->join();
 	return 0;
 }

@@ -193,6 +193,7 @@
     <ClInclude Include="Quad.h" />
     <ClInclude Include="renderer.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="Sampling.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="Setting.h" />
     <ClInclude Include="ShadowMap.h" />
@@ -227,6 +228,7 @@
     <ClCompile Include="PostProcessing.cpp" />
     <ClCompile Include="Quad.cpp" />
     <ClCompile Include="renderer.cpp" />
+    <ClCompile Include="Sampling.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="ShadowMap.cpp" />
     <ClCompile Include="SkyBox.cpp" />
