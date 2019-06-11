@@ -482,10 +482,10 @@ Renderer::Sampler::Ptr Renderer::createSampler(const std::string& name, D3D11_FI
 	return Sampler::Ptr(ret.first->second);
 }
 
-Renderer::Texture2D::Ptr Renderer::createTexture(const std::string & filename)
+Renderer::Texture2D::Ptr Renderer::createTexture(const std::string & filename,  D3DX11_IMAGE_LOAD_INFO* loadinfo)
 {
 	ID3D11Texture2D* tex;
-	checkResult(D3DX11CreateTextureFromFileA(mDevice, filename.c_str(), NULL, NULL, (ID3D11Resource**)&tex, NULL));
+	checkResult(D3DX11CreateTextureFromFileA(mDevice, filename.c_str(), loadinfo, NULL, (ID3D11Resource**)&tex, NULL));
 
 	auto ptr = std::shared_ptr<Texture2D>(new Texture2D(this, tex));
 	mTextures.emplace_back(ptr);
@@ -517,31 +517,30 @@ Renderer::Texture3D::Ptr Renderer::createTexture3D(const D3D11_TEXTURE3D_DESC & 
 	return ptr;
 }
 
-Renderer::TextureCube::Ptr Renderer::createTextureCube(const std::string& file)
+Renderer::Texture2D::Ptr Renderer::createTextureCube(const std::string& file)
 {
 	ID3D11Texture2D* tex;
 	D3DX11_IMAGE_LOAD_INFO info;
 	info.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
 	checkResult(D3DX11CreateTextureFromFileA(mDevice, file.c_str(), &info, NULL, (ID3D11Resource**)&tex, NULL));
 
-	auto ptr = std::shared_ptr<TextureCube>(new TextureCube(this, tex));
+	auto ptr = std::shared_ptr<Texture2D>(new Texture2D(this, tex));
 	mTextures.emplace_back(ptr);
 	return ptr;
 }
 
-Renderer::TextureCube::Ptr Renderer::createTextureCube(const std::array<std::string, 6>& files)
+Renderer::Texture2D::Ptr Renderer::createTextureCube(const std::array<std::string, 6>& files, std::function<Texture2D::Ptr(Texture2D::Ptr tex)> preprocess )
 {
 
-	ID3D11Texture2D* faces[6];
+	Texture2D::Ptr faces[6];
 	for (size_t i = 0; i < 6; ++i)
 	{
 		D3DX11_IMAGE_LOAD_INFO info;
 		info.MipLevels = 1;
-		checkResult(D3DX11CreateTextureFromFileA(mDevice, files[i].c_str(), &info, NULL, (ID3D11Resource**)(faces + i), NULL));
+		faces[i] = createTexture(files[i], &info);
 	}
-	D3D11_TEXTURE2D_DESC facedesc;
-	faces[0]->GetDesc(&facedesc);
-
+	D3D11_TEXTURE2D_DESC facedesc = faces[0].lock()->getDesc();
+	
 	D3D11_TEXTURE2D_DESC texdesc = facedesc;
 	texdesc.MipLevels = 1;
 	texdesc.ArraySize = 6;
@@ -553,14 +552,22 @@ Renderer::TextureCube::Ptr Renderer::createTextureCube(const std::array<std::str
 
 	for (size_t i = 0; i < 6; ++i)
 	{
-		mContext->CopySubresourceRegion(cube, i,0, 0, 0, faces[i], 0, NULL);
-		faces[i]->Release();
+		auto tex = faces[i];
+		if (preprocess)
+			tex = preprocess(tex);
+		mContext->CopySubresourceRegion(cube, i,0, 0, 0, tex.lock()->getTexture(), 0, NULL);
+		destroyTexture(faces[i]);
 	}
 
 
-	auto ptr = std::shared_ptr<TextureCube>(new TextureCube(this, cube));
+	auto ptr = std::shared_ptr<Texture2D>(new Texture2D(this, cube));
 	mTextures.emplace_back(ptr);
 	return ptr;
+}
+
+void Renderer::destroyTexture(Texture::Ptr tex)
+{
+	mTextures.erase(std::remove(mTextures.begin(), mTextures.end(), tex.lock()));
 }
 
 
@@ -624,6 +631,12 @@ Renderer::SharedCompiledData Renderer::compileFile(const std::string& filename, 
 			checkResult(hr);
 	}
 	return SharedCompiledData(new CompiledData(blob));
+}
+
+Renderer::Effect::Ptr Renderer::createEffect(const std::string& file)
+{
+	auto blob = compileFile(file, "", "fx_5_0");
+	return createEffect((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
 }
 
 Renderer::Effect::Ptr Renderer::createEffect(void* data, size_t size)

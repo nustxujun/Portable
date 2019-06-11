@@ -1,9 +1,8 @@
 cbuffer ConstantBuffer: register(b0)
 {
-	int kernelSize;
-	float radius;
+	float4 kernel[64];
 	float2 scale;
-	float3 kernel[64];
+	int kernelSize;
 }
 
 cbuffer Matrix:register(b1)
@@ -11,6 +10,8 @@ cbuffer Matrix:register(b1)
 	matrix invertProjection;
 	matrix projection;
 	matrix view;
+	float radius;
+	float intensity;
 }
 
 Texture2D normalTex: register(t0);
@@ -78,7 +79,7 @@ float4 main(PS_INPUT input) : SV_TARGET
 	}
 
 	float total = (float)kernelSize;
-	occlusion = pow(1.0f - occlusion / total,4);
+	occlusion = pow( (1.0f - occlusion / total)  , intensity);
 
 	return float4(occlusion, occlusion, occlusion, 1.0f);
 }

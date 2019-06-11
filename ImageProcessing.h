@@ -2,6 +2,7 @@
 
 #include "renderer.h"
 #include "Quad.h"
+#include "GeometryMesh.h"
 
 class ImageProcessing
 {
@@ -67,4 +68,22 @@ public:
 	virtual Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr tex, SampleType st = DEFAULT);
 private:
 	Renderer::PixelShader::Weak mPS[2];
+};
+
+
+class IBLPreProcessing : public ImageProcessing
+{
+public:
+	using Ptr = std::shared_ptr<IBLPreProcessing>;
+	using ImageProcessing::ImageProcessing;
+
+	void init();
+
+
+	Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr tex, SampleType st = DEFAULT);
+private:
+	Renderer::Effect::Ptr mEffect;
+	GeometryMesh::Ptr mCube;
+	Renderer::Layout::Ptr mLayout;
+
 };

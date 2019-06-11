@@ -1,5 +1,6 @@
 #include "SkyBox.h"
 #include "GeometryMesh.h"
+#include "ImageProcessing.h"
 void SkyBox::init(const std::vector<std::string> & tex)
 {
 	mName = "skybox";
@@ -7,17 +8,20 @@ void SkyBox::init(const std::vector<std::string> & tex)
 		mSkyTex = getRenderer()->createTextureCube(tex[0]);
 	else
 	{
-		mSkyTex = getRenderer()->createTextureCube({tex[0],tex[1] ,tex[2] ,tex[3] ,tex[4] ,tex[5] });
+		mSkyTex = getRenderer()->createTextureCube({ tex[0],tex[1] ,tex[2] ,tex[3] ,tex[4] ,tex[5] });
 	}
+
+
+
+
 	{
-		auto cam = getScene()->createOrGetCamera("main");
 		Parameters params;
-		params["geom"] = "room";
+		params["geom"] = "cube";
 		params["size"] = "1";
 		mSkyMesh = GeometryMesh::Ptr(new GeometryMesh(params, getRenderer()));
 	}
 
-	auto blob = getRenderer()->compileFile("hlsl/skybox.fx", "", "fx_5_0");
+	auto blob = getRenderer()->compileFile("hlsl/cubemap.fx", "", "fx_5_0");
 	mEffect = getRenderer()->createEffect((**blob).GetBufferPointer(), (**blob).GetBufferSize());
 	D3D11_INPUT_ELEMENT_DESC modelLayout[] =
 	{
@@ -33,6 +37,8 @@ void SkyBox::init(const std::vector<std::string> & tex)
 
 void SkyBox::render(Renderer::Texture2D::Ptr rt)
 {
+	auto pre = ImageProcessing::create<IBLPreProcessing>(getRenderer());
+	mSkyTex = pre->process(mSkyTex);
 	auto renderer = getRenderer();
 
 	renderer->setRenderTargets({ rt }, getDepthStencil("depth"));
@@ -42,11 +48,23 @@ void SkyBox::render(Renderer::Texture2D::Ptr rt)
 	desc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
 	
 	renderer->setDepthStencilState(desc);
-	renderer->setDefaultRasterizer();
+	D3D11_RASTERIZER_DESC rasterDesc;
+	rasterDesc.AntialiasedLineEnable = false;
+	rasterDesc.CullMode = D3D11_CULL_FRONT;
+	rasterDesc.DepthBias = 0;
+	rasterDesc.DepthBiasClamp = 0.0f;
+	rasterDesc.DepthClipEnable = true;
+	rasterDesc.FillMode = D3D11_FILL_SOLID;
+	rasterDesc.FrontCounterClockwise = false;
+	rasterDesc.MultisampleEnable = false;
+	rasterDesc.ScissorEnable = false;
+	rasterDesc.SlopeScaledDepthBias = 0.0f;
+	renderer->setRasterizer(rasterDesc);
 	renderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	renderer->setDefaultBlendState();
 
 	auto e = mEffect.lock();
+	e->setTech("skybox");
 	auto world = e->getVariable("World")->AsMatrix();
 	auto view = e->getVariable("View")->AsMatrix();
 	auto proj = e->getVariable("Projection")->AsMatrix();
@@ -62,7 +80,7 @@ void SkyBox::render(Renderer::Texture2D::Ptr rt)
 	auto rend = mSkyMesh->getMesh(0);
 	renderer->setIndexBuffer(rend.indices, DXGI_FORMAT_R32_UINT, 0);
 	renderer->setVertexBuffer(rend.vertices, rend.layout.lock()->getSize(), 0);
-	e->render(renderer, [&,this](auto pass)
+	e->render(renderer, [&,this](ID3DX11EffectPass* pass)
 	{
 		renderer->setTexture(mSkyTex);
 		renderer->setLayout(mLayout.lock()->bind(pass));

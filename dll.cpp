@@ -37,8 +37,12 @@ LRESULT CALLBACK process(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_CLOSE:
 	case WM_DESTROY:
 		{	
+#ifdef _WINDLL
 			electronCallback = nullptr;
 			PostMessage(parentWnd, WM_CLOSE, 0, 0);
+#else
+			PostMessage(hWnd, WM_CLOSE, 0, 0);
+#endif
 		}
 		return 0;
 	}
@@ -271,7 +275,7 @@ extern "C"
 			framework->setOverlay(overlay);
 			overlay->init(overlayWidth, overlayHeight);
 			MSG msg = {};
-			while (WM_QUIT != msg.message
+			while (WM_QUIT != msg.message && WM_CLOSE != msg.message
 #ifdef _WINDLL
 				&& electronCallback
 #endif

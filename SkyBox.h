@@ -10,7 +10,7 @@ public :
 	void init(const std::vector<std::string>& texs);
 	void render(Renderer::Texture2D::Ptr rt) override;
 private:
-	Renderer::Texture::Ptr mSkyTex;
+	Renderer::Texture2D::Ptr mSkyTex;
 	GeometryMesh::Ptr mSkyMesh;
 	Renderer::Effect::Ptr mEffect;
 	Renderer::Layout::Ptr mLayout;

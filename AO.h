@@ -2,22 +2,26 @@
 
 
 #include "Pipeline.h"
+#include "ImageProcessing.h"
 
 class AO :public Pipeline::Stage
 {
+	__declspec(align(16))
 	struct Kernel
 	{
-		int kernelSize;
-		float radius;
+		DirectX::XMFLOAT4 kernel[64];
 		DirectX::XMFLOAT2 scale;
-		DirectX::XMFLOAT3A kernel[64];
+		int kernelSize;
 	};
 
+	__declspec(align(16))
 	struct ConstantMatrix
 	{
 		DirectX::XMFLOAT4X4A invertProjection;
 		DirectX::XMFLOAT4X4A projection;
 		DirectX::XMFLOAT4X4A view;
+		float radius;
+		float intensity;
 	};
 public:
 	AO(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr set,Pipeline* p);
@@ -36,5 +40,6 @@ private:
 
 	Renderer::Sampler::Ptr mLinearWrap;
 	Renderer::Sampler::Ptr mPointWrap;
-
+	Gaussian::Ptr mGaussianFilter;
+	Renderer::Texture2D::Ptr mAO;
 };

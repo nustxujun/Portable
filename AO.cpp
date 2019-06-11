@@ -12,6 +12,9 @@ AO::AO(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr st, Pipeline* p)
 
 void AO::init(float radius)
 {
+	this->set("AOradius", { {"type","set"}, {"value",radius},{"min","1"},{"max","50"},{"interval", "1"} });
+	this->set("AOintensity", { {"type","set"}, {"value",4},{"min","0"},{"max","10"},{"interval", "0.1"} });
+
 	auto r = getRenderer();
 	auto blob = r->compileFile("hlsl/ssao.hlsl", "main", "ps_5_0");
 	mPS = r->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
@@ -36,10 +39,9 @@ void AO::init(float radius)
 		//DirectX::SimpleMath::Vector3 v = {1,0,1};
 		v.Normalize();
 		v *= pow(rand2(gen), 4);
-		kernel.kernel[i] = { v.x, v.y,v.z };
+		kernel.kernel[i] = { v.x, v.y,v.z ,0};
 	}
 	kernel.scale = { r->getWidth() / noiseSize, r->getHeight() / noiseSize };
-	kernel.radius = radius;
 	mKernel.lock()->blit(&kernel, sizeof(kernel));
 
 	D3D11_TEXTURE2D_DESC noiseTexDesc;
@@ -71,15 +73,21 @@ void AO::init(float radius)
 	mLinearWrap = r->createSampler("linear_wrap", D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
 	mPointWrap = r->createSampler("point_wrap", D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
 
+	mGaussianFilter = ImageProcessing::create<Gaussian>(getRenderer());
 }
 
 
 void AO::render(Renderer::Texture2D::Ptr rt) 
 {
+	if (mAO.expired())
+		mAO = getRenderer()->createTexture(rt.lock()->getDesc());
+
 	using namespace DirectX;
 	auto cam = getScene()->createOrGetCamera("main");
 
 	ConstantMatrix matrix;
+	matrix.radius = getValue<float>("AOradius");
+	matrix.intensity = getValue<float>("AOintensity");
 
 	auto view = cam->getViewMatrix();
 	auto proj = cam->getProjectionMatrix();
@@ -96,8 +104,17 @@ void AO::render(Renderer::Texture2D::Ptr rt)
 	quad->setSamplers({ mLinearWrap ,mPointWrap });
 	quad->setTextures({ getShaderResource("normal"), getShaderResource("depth"), mNoise});
 	
+	quad->setDefaultBlend(false);
+	quad->setRenderTarget(mAO);
+	quad->draw();
+
+	auto ret = mGaussianFilter->process(mAO);
 	quad->setBlendColorMul();
 	quad->setRenderTarget(rt);
+	quad->setDefaultPixelShader();
+	quad->setDefaultSampler();
+	quad->setDefaultViewport();
+	quad->setTextures({ ret });
 	quad->draw();
 }
 

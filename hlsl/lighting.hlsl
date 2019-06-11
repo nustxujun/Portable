@@ -109,7 +109,7 @@ float3 travelLights(uint pointoffset, uint pointnum, uint spotoffset, uint spotn
 		float3 L = normalize(lightpos.xyz - pos);
 
 		float dist = length(pos - lightpos.xyz);
-		float3 radiance = pointlight(dist, lightpos.w, lightcolor.rgb) / (dist ) ;
+		float3 radiance = pointlight(dist, lightpos.w, lightcolor.rgb) ;
 		Lo += BRDF(roughness, metallic, F0, albedo, N, L, -pos.xyz) * radiance * shadow;
 	}
 

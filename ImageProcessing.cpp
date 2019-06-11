@@ -100,3 +100,79 @@ Renderer::Texture2D::Ptr Gaussian::process(Renderer::Texture2D::Ptr tex, SampleT
 
 	return ret;
 }
+
+void IBLPreProcessing::init()
+{
+	mEffect = mRenderer->createEffect("hlsl/cubemap.fx");
+
+	D3D11_INPUT_ELEMENT_DESC modelLayout[] =
+	{
+		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0},
+	};
+
+	mLayout = mRenderer->createLayout(modelLayout, ARRAYSIZE(modelLayout));
+
+	{
+		Parameters params;
+		params["geom"] = "room";
+		params["size"] = "2";
+		mCube = GeometryMesh::Ptr(new GeometryMesh(params, mRenderer));
+	}
+}
+
+Renderer::Texture2D::Ptr IBLPreProcessing::process(Renderer::Texture2D::Ptr tex, SampleType st)
+{
+	using namespace DirectX;
+	using namespace DirectX::SimpleMath;
+	auto ret = createOrGet(tex, st);
+	auto desc = ret.lock()->getDesc();
+
+	auto e = mEffect.lock();
+	e->setTech("irradiance");
+	mRenderer->setDefaultBlendState();
+	mRenderer->setDefaultRasterizer();
+	mRenderer->setDefaultBlendState();
+	mRenderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	auto world = e->getVariable("World")->AsMatrix();
+	auto view = e->getVariable("View")->AsMatrix();
+	auto proj = e->getVariable("Projection")->AsMatrix();
+	world->SetMatrix((const float*)&Matrix::Identity);
+	Matrix op = DirectX::XMMatrixOrthographicLH(2, 2, 0, 1.0f);
+	//view->SetMatrix((const float*)&cam->getViewMatrix());
+	proj->SetMatrix((const float*)&op);
+	
+	mRenderer->setViewport({ 0.0f, 0.0f, (float)desc.Width, (float)desc.Height, 0.0f, 0.1f });
+	mRenderer->setRenderTarget(ret, {});
+
+	auto rend = mCube->getMesh(0);
+	mRenderer->setIndexBuffer(rend.indices, DXGI_FORMAT_R32_UINT, 0);
+	mRenderer->setVertexBuffer(rend.vertices, rend.layout.lock()->getSize(), 0);
+
+	Matrix viewMats[6] = {
+		XMMatrixLookAtLH(Vector3::Zero,Vector3::UnitX, Vector3::UnitY),
+		XMMatrixLookAtLH(Vector3::Zero,Vector3::UnitZ, Vector3::UnitY),
+		XMMatrixLookAtLH(Vector3::Zero,Vector3::UnitY, Vector3::UnitZ),
+		XMMatrixLookAtLH(Vector3::Zero,-Vector3::UnitX, Vector3::UnitY),
+		XMMatrixLookAtLH(Vector3::Zero,-Vector3::UnitY, -Vector3::UnitZ),
+		XMMatrixLookAtLH(Vector3::Zero,-Vector3::UnitZ, Vector3::UnitY),
+	};
+
+	e->render(mRenderer, [this,ret, tex,rend,view, viewMats](ID3DX11EffectPass* pass)
+	{
+		mRenderer->setTexture(tex);
+		mRenderer->setLayout(mLayout.lock()->bind(pass));
+
+		for (auto i = 0U; i < 6; ++i)
+		{
+			view->SetMatrix((const float*)&viewMats[i]);
+			mRenderer->getContext()->DrawIndexed(rend.numIndices, 0, 0);
+		}
+	});
+
+	return ret;
+}
+
+

@@ -161,19 +161,6 @@ void HDR::renderBloom(Renderer::Texture2D::Ptr rt)
 		ret = mDownsample->process(ret, ImageProcessing::UP);
 	}
 	auto quad = getQuad();
-	//int count = getValue<int>("blurcount");
-	//for (int i = 0; i < count; ++i)
-	//{
-	//	quad->setTextures({ mBloomRT[i % 2] });
-	//	quad->setRenderTarget(mBloomRT[1 - i % 2]);
-	//	quad->setDefaultSampler();
-	//	quad->setDefaultViewport();
-	//	quad->setPixelShader(mGaussianBlur[i %2]);
-
-	//	quad->setDefaultBlend(false);
-	//	quad->draw();
-	//}
-
 
 
 	quad->setDefaultSampler();

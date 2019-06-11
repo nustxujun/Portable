@@ -299,7 +299,19 @@ public:
 					checkResult(getDevice()->CreateDepthStencilView(mTexture, nullptr, &mDSView));
 
 				if (shaderRecource)
-					checkResult(getDevice()->CreateShaderResourceView(mTexture, nullptr, &mSRView));
+				{
+					if (mDesc.MiscFlags == D3D11_RESOURCE_MISC_TEXTURECUBE)
+					{
+						D3D11_SHADER_RESOURCE_VIEW_DESC desc;
+						desc.Format = mDesc.Format;
+						desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+						desc.TextureCube.MipLevels = mDesc.MipLevels;
+						desc.TextureCube.MostDetailedMip = 0;
+						checkResult(getDevice()->CreateShaderResourceView(mTexture, &desc, &mSRView));
+					}
+					else 
+						checkResult(getDevice()->CreateShaderResourceView(mTexture, nullptr, &mSRView));
+				}
 			}
 		}
 	protected:
@@ -331,27 +343,6 @@ public:
 		}
 	};
 
-	class TextureCube :public TextureUnknown<ID3D11Texture2D, D3D11_TEXTURE2D_DESC>
-	{
-		using Parent = TextureUnknown<ID3D11Texture2D, D3D11_TEXTURE2D_DESC>;
-	public:
-		TextureCube(Renderer* r, ID3D11Texture2D* tex) :D3DObject(r), Parent(tex)
-		{
-			initTexture();
-		}
-
-	private:
-		void initTexture()
-		{
-			D3D11_SHADER_RESOURCE_VIEW_DESC desc;
-			desc.Format = mDesc.Format;
-			desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
-			desc.TextureCube.MipLevels = mDesc.MipLevels;
-			desc.TextureCube.MostDetailedMip = 0;
-
-			checkResult(getDevice()->CreateShaderResourceView(mTexture, &desc, &mSRView));
-		}
-	};
 
 	class Sampler final : public NODefault
 	{
@@ -559,18 +550,19 @@ public:
 
 	Sampler::Ptr createSampler(const std::string& name, D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV,
 		D3D11_TEXTURE_ADDRESS_MODE addrW = D3D11_TEXTURE_ADDRESS_WRAP, D3D11_COMPARISON_FUNC cmpfunc = D3D11_COMPARISON_NEVER, float minlod = 0, float maxlod = D3D11_FLOAT32_MAX);
-	Texture2D::Ptr createTexture(const std::string& filename);
+	Texture2D::Ptr createTexture(const std::string& filename,  D3DX11_IMAGE_LOAD_INFO* loadinfo = NULL);
 	Texture2D::Ptr createTexture( const D3D11_TEXTURE2D_DESC& desc, const void* data = 0, size_t size = 0);
 	Texture3D::Ptr createTexture3D(const D3D11_TEXTURE3D_DESC& desc, const void* data = 0, size_t size = 0);
-	TextureCube::Ptr createTextureCube(const std::string& file);
-	TextureCube::Ptr createTextureCube(const std::array<std::string,6>& file);
-
+	Texture2D::Ptr createTextureCube(const std::string& file);
+	Texture2D::Ptr createTextureCube(const std::array<std::string, 6>& file, std::function<Texture2D::Ptr(Texture2D::Ptr tex)> preprocess = {});
+	void destroyTexture(Texture::Ptr tex);
 
 	Texture2D::Ptr createRenderTarget(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage = D3D11_USAGE_DEFAULT);
 	Buffer::Ptr createBuffer(int size, D3D11_BIND_FLAG bindflag, const D3D11_SUBRESOURCE_DATA* initialdata = NULL,D3D11_USAGE usage = D3D11_USAGE_DEFAULT, size_t CPUaccess = 0);
 	Buffer::Ptr createRWBuffer(int size, int stride, DXGI_FORMAT format, size_t bindflag,  D3D11_USAGE usage = D3D11_USAGE_DEFAULT, size_t CPUaccess = 0);
 
 	SharedCompiledData compileFile(const std::string& filename, const std::string& entryPoint, const std::string& shaderModel, const D3D10_SHADER_MACRO* macro = NULL);
+	Effect::Ptr createEffect(const std::string& file);
 	Effect::Ptr createEffect(void* data, size_t size);
 	VertexShader::Weak createVertexShader(const void* data, size_t size);
 	PixelShader::Weak createPixelShader(const void* data, size_t size);
