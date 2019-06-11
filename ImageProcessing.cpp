@@ -160,17 +160,17 @@ Renderer::Texture2D::Ptr IBLPreProcessing::process(Renderer::Texture2D::Ptr tex,
 		XMMatrixLookAtLH(Vector3::Zero,-Vector3::UnitZ, Vector3::UnitY),
 	};
 
-	e->render(mRenderer, [this,ret, tex,rend,view, viewMats](ID3DX11EffectPass* pass)
+	for (auto i = 0U; i < 6; ++i)
 	{
-		mRenderer->setTexture(tex);
-		mRenderer->setLayout(mLayout.lock()->bind(pass));
+		view->SetMatrix((const float*)&viewMats[i]);
 
-		for (auto i = 0U; i < 6; ++i)
+		e->render(mRenderer, [this,ret, tex,rend,view, viewMats](ID3DX11EffectPass* pass)
 		{
-			view->SetMatrix((const float*)&viewMats[i]);
+			mRenderer->setTexture(tex);
+			mRenderer->setLayout(mLayout.lock()->bind(pass));
 			mRenderer->getContext()->DrawIndexed(rend.numIndices, 0, 0);
-		}
-	});
+		});
+	}
 
 	return ret;
 }
