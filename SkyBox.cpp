@@ -11,7 +11,7 @@ void SkyBox::init(const std::vector<std::string> & tex)
 		mSkyTex = getRenderer()->createTextureCube({ tex[0],tex[1] ,tex[2] ,tex[3] ,tex[4] ,tex[5] });
 	}
 
-
+	mIP = ImageProcessing::create<IBLPreProcessing>(getRenderer());
 
 
 	{
@@ -37,8 +37,8 @@ void SkyBox::init(const std::vector<std::string> & tex)
 
 void SkyBox::render(Renderer::Texture2D::Ptr rt)
 {
-	auto pre = ImageProcessing::create<IBLPreProcessing>(getRenderer());
-	mSkyTex = pre->process(mSkyTex);
+	mSkyTex = mIP->process(mSkyTex);
+
 	auto renderer = getRenderer();
 
 	renderer->setRenderTargets({ rt }, getDepthStencil("depth"));
@@ -85,6 +85,9 @@ void SkyBox::render(Renderer::Texture2D::Ptr rt)
 		renderer->setTexture(mSkyTex);
 		renderer->setLayout(mLayout.lock()->bind(pass));
 		renderer->getContext()->DrawIndexed(rend.numIndices, 0, 0);
+		renderer->getContext()->DrawIndexed(rend.numIndices, 0, 0);
+		renderer->getContext()->DrawIndexed(rend.numIndices, 0, 0);
+
 	});
 
 	renderer->removeRenderTargets();

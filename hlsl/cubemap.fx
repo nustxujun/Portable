@@ -64,7 +64,7 @@ float4 irradianceMap(VertexShaderOutput pin) : SV_TARGET
 	float3 right = cross(up, normal);
 	up = cross(normal, right);
 
-	float sampleDelta = 0.025f;
+	float sampleDelta = 0.25f;
 	float numSamples = 0.0f;
 	for (float phi = 0.0f; phi < 2.0f * PI; phi += sampleDelta)
 	{
@@ -84,6 +84,10 @@ float4 irradianceMap(VertexShaderOutput pin) : SV_TARGET
 	return float4(irradiance, 1.0f);
 }
 
+float4 testps(VertexShaderOutput pin) : SV_TARGET
+{
+	return diffuseTex.Sample(sampLinear, pin.TexCoord);
+}
 
 technique11 skybox
 {
@@ -100,5 +104,15 @@ technique11 irradiance
 	{
 		SetVertexShader(CompileShader(vs_5_0, vs()));
 		SetPixelShader(CompileShader(ps_5_0, irradianceMap()));
+	}
+}
+
+
+technique11 test
+{
+	pass
+	{
+		SetVertexShader(CompileShader(vs_5_0, vs()));
+		SetPixelShader(CompileShader(ps_5_0, testps()));
 	}
 }

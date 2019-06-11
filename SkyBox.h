@@ -1,6 +1,7 @@
 #pragma once
 #include "Pipeline.h"
 #include "GeometryMesh.h"
+#include "ImageProcessing.h"
 
 class SkyBox :public Pipeline::Stage
 {
@@ -14,4 +15,5 @@ private:
 	GeometryMesh::Ptr mSkyMesh;
 	Renderer::Effect::Ptr mEffect;
 	Renderer::Layout::Ptr mLayout;
+	ImageProcessing::Ptr mIP;
 };

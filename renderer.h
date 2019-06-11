@@ -121,16 +121,15 @@ public:
 	public:
 		RenderTarget()  {}
 
-		RenderTarget(Renderer* r,ID3D11RenderTargetView* rt);
 
 		~RenderTarget();
-		operator ID3D11RenderTargetView*() { return mRTView; }
-		ID3D11RenderTargetView* getRenderTargetView() const{ return mRTView; }
+		operator ID3D11RenderTargetView*() { return *mRTView; }
+		ID3D11RenderTargetView* getRenderTargetView(size_t index = 0) const{ return mRTView[index]; }
 
 		void clear(const std::array<float, 4> c);
 
 	protected:
-		ID3D11RenderTargetView* mRTView = nullptr;
+		ID3D11RenderTargetView* mRTView[6] = {nullptr};
 	};
 
 	class Buffer : public UnorderedAccess, public ShaderResource
@@ -242,7 +241,23 @@ public:
 
 
 			if (rendertarget)
-				checkResult(getDevice()->CreateRenderTargetView(mTexture, nullptr, &mRTView));
+			{
+				if (mDesc.MiscFlags == D3D11_RESOURCE_MISC_TEXTURECUBE)
+				{
+					D3D11_RENDER_TARGET_VIEW_DESC desc;
+					desc.Format = mDesc.Format;
+					desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
+					desc.Texture2DArray.ArraySize = 1;
+					desc.Texture2DArray.MipSlice = 0;
+					for (int i = 0; i < 6; ++i)
+					{
+						desc.Texture2DArray.FirstArraySlice = i;
+						checkResult(getDevice()->CreateRenderTargetView(mTexture, &desc, &mRTView[i]));
+					}
+				}
+				else
+					checkResult(getDevice()->CreateRenderTargetView(mTexture, nullptr, &mRTView[0]));
+			};
 
 			if (unorderedAccess)
 			{

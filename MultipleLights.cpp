@@ -504,13 +504,13 @@ void MultipleLights::initCDRPipeline()
 	mPipeline->pushStage<GBuffer>();
 	mPipeline->pushStage<DepthLinearing>();
 
-	mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
+	//mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
 
 	mPipeline->pushStage<ClusteredLightCulling>(Vector3(SLICED_LEN, SLICED_LEN, SLICED_Z), Vector3(bw, bh,0));
 	
 	mPipeline->pushStage<PBR>(Vector3(bw, bh,0), shadowmaps);
 
-	mPipeline->pushStage<AO>(20.0f);
+	//mPipeline->pushStage<AO>(20.0f);
 	std::vector<std::string> files = { 
 		"media/skybox/right.jpg",
 		"media/skybox/left.jpg", 
@@ -522,7 +522,7 @@ void MultipleLights::initCDRPipeline()
 	//std::vector<std::string> files = { "media/uffizi_cross.dds" };
 	mPipeline->pushStage<SkyBox>(files);
 
-	mPipeline->pushStage<HDR>();
+	//mPipeline->pushStage<HDR>();
 
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);

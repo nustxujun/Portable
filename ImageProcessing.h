@@ -27,7 +27,7 @@ public:
 	}
 
 
-	virtual Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr ptr, SampleType st) = 0;
+	virtual Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr ptr, SampleType st = DEFAULT) = 0;
 protected:
 	Renderer::Texture2D::Ptr createOrGet(Renderer::Texture2D::Ptr ptr, SampleType st);
 

@@ -93,7 +93,7 @@ void Renderer::init(HWND win, int width, int height)
 
 void Renderer::present()
 {
-	mSwapChain->Present(0,0);
+	checkResult(mSwapChain->Present(0,0));
 
 
 	mContext->End(mDisjoint);
@@ -762,21 +762,17 @@ Renderer::ShaderResource::~ShaderResource()
 }
 
 
-Renderer::RenderTarget::RenderTarget(Renderer* r, ID3D11RenderTargetView* rt):D3DObject(r)
-{
-	mRTView = rt;
-}
-
 
 Renderer::RenderTarget::~RenderTarget()
 {
-	if (mRTView)
-		mRTView->Release();
+	for (auto i: mRTView)
+		if (i)
+			i->Release();
 }
 
 void Renderer::RenderTarget::clear(const std::array<float, 4> c)
 {
-	getContext()->ClearRenderTargetView(mRTView, c.data());
+	getContext()->ClearRenderTargetView(mRTView[0], c.data());
 }
 
 

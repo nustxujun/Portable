@@ -145,7 +145,6 @@ Renderer::Texture2D::Ptr IBLPreProcessing::process(Renderer::Texture2D::Ptr tex,
 	proj->SetMatrix((const float*)&op);
 	
 	mRenderer->setViewport({ 0.0f, 0.0f, (float)desc.Width, (float)desc.Height, 0.0f, 0.1f });
-	mRenderer->setRenderTarget(ret, {});
 
 	auto rend = mCube->getMesh(0);
 	mRenderer->setIndexBuffer(rend.indices, DXGI_FORMAT_R32_UINT, 0);
@@ -162,6 +161,8 @@ Renderer::Texture2D::Ptr IBLPreProcessing::process(Renderer::Texture2D::Ptr tex,
 
 	for (auto i = 0U; i < 6; ++i)
 	{
+		ID3D11RenderTargetView* rt = (ret.lock()->getRenderTargetView(i ));
+		mRenderer->getContext()->OMSetRenderTargets(1, &rt, NULL);
 		view->SetMatrix((const float*)&viewMats[i]);
 
 		e->render(mRenderer, [this,ret, tex,rend,view, viewMats](ID3DX11EffectPass* pass)
@@ -170,6 +171,10 @@ Renderer::Texture2D::Ptr IBLPreProcessing::process(Renderer::Texture2D::Ptr tex,
 			mRenderer->setLayout(mLayout.lock()->bind(pass));
 			mRenderer->getContext()->DrawIndexed(rend.numIndices, 0, 0);
 		});
+
+		rt = NULL;
+		mRenderer->getContext()->OMSetRenderTargets(1, &rt, NULL);
+
 	}
 
 	return ret;
