@@ -71,19 +71,36 @@ private:
 };
 
 
-class IBLPreProcessing : public ImageProcessing
+class CubeMapProcessing : public ImageProcessing
 {
 public:
-	using Ptr = std::shared_ptr<IBLPreProcessing>;
+	using Ptr = std::shared_ptr<CubeMapProcessing>;
 	using ImageProcessing::ImageProcessing;
 
-	void init();
+	virtual void init();
 
 
 	Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr tex, SampleType st = DEFAULT);
-private:
+protected:
 	Renderer::Effect::Ptr mEffect;
 	GeometryMesh::Ptr mCube;
 	Renderer::Layout::Ptr mLayout;
+};
 
+class IrradianceCubemap : public CubeMapProcessing
+{
+public:
+	using Ptr = std::shared_ptr<IrradianceCubemap>;
+	using CubeMapProcessing::CubeMapProcessing;
+
+	void init();
+};
+
+class PrefilterCubemap : public CubeMapProcessing
+{
+public:
+	using Ptr = std::shared_ptr<IrradianceCubemap>;
+	using CubeMapProcessing::CubeMapProcessing;
+
+	void init();
 };

@@ -1,23 +1,16 @@
 #include "SkyBox.h"
 #include "GeometryMesh.h"
 #include "ImageProcessing.h"
-void SkyBox::init(const std::vector<std::string> & tex)
+void SkyBox::init(const std::array<std::string,6> & tex)
 {
 	mName = "skybox";
-	if (tex.size() == 1)
-		mSkyTex = getRenderer()->createTextureCube(tex[0]);
-	else
-	{
-		mSkyTex = getRenderer()->createTextureCube({ tex[0],tex[1] ,tex[2] ,tex[3] ,tex[4] ,tex[5] });
-	}
 
-	mIP = ImageProcessing::create<IBLPreProcessing>(getRenderer());
-
+	mSkyTex = getRenderer()->createTextureCube({ tex[0],tex[1] ,tex[2] ,tex[3] ,tex[4] ,tex[5] });
 
 	{
 		Parameters params;
 		params["geom"] = "cube";
-		params["size"] = "1";
+		params["size"] = "1000";
 		mSkyMesh = GeometryMesh::Ptr(new GeometryMesh(params, getRenderer()));
 	}
 
@@ -37,7 +30,6 @@ void SkyBox::init(const std::vector<std::string> & tex)
 
 void SkyBox::render(Renderer::Texture2D::Ptr rt)
 {
-	mSkyTex = mIP->process(mSkyTex);
 
 	auto renderer = getRenderer();
 

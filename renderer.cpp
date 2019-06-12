@@ -4,6 +4,8 @@
 #include <fstream>
 #include "D3D11Helper.h"
 
+//#define USE_PROFILE
+
 void Renderer::checkResult(HRESULT hr)
 {
 	if (hr == S_OK) return;
@@ -87,7 +89,10 @@ void Renderer::init(HWND win, int width, int height)
 	d.MiscFlags = 0;
 
 	mDevice->CreateQuery(&d, &mDisjoint);
+
+#ifdef USE_PROFILE
 	mContext->Begin(mDisjoint);
+#endif
 }
 
 
@@ -95,6 +100,7 @@ void Renderer::present()
 {
 	checkResult(mSwapChain->Present(0,0));
 
+#ifdef USE_PROFILE
 
 	mContext->End(mDisjoint);
 	while (mContext->GetData(mDisjoint, NULL, 0, 0) == S_FALSE);
@@ -108,7 +114,7 @@ void Renderer::present()
 	}
 
 	mContext->Begin(mDisjoint);
-
+#endif
 }
 
 void Renderer::clearRenderTarget(RenderTarget::Ptr rt, const float color[4])
@@ -529,14 +535,15 @@ Renderer::Texture2D::Ptr Renderer::createTextureCube(const std::string& file)
 	return ptr;
 }
 
-Renderer::Texture2D::Ptr Renderer::createTextureCube(const std::array<std::string, 6>& files, std::function<Texture2D::Ptr(Texture2D::Ptr tex)> preprocess )
+Renderer::Texture2D::Ptr Renderer::createTextureCube(const std::array<std::string, 6>& files, D3DX11_IMAGE_LOAD_INFO* loadinfo )
 {
 
 	Texture2D::Ptr faces[6];
 	for (size_t i = 0; i < 6; ++i)
 	{
 		D3DX11_IMAGE_LOAD_INFO info;
-		info.MipLevels = 1;
+		if (loadinfo)
+			info = *loadinfo;
 		faces[i] = createTexture(files[i], &info);
 	}
 	D3D11_TEXTURE2D_DESC facedesc = faces[0].lock()->getDesc();
@@ -544,7 +551,6 @@ Renderer::Texture2D::Ptr Renderer::createTextureCube(const std::array<std::strin
 	D3D11_TEXTURE2D_DESC texdesc = facedesc;
 	texdesc.MipLevels = 1;
 	texdesc.ArraySize = 6;
-	texdesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 	texdesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
 
 	ID3D11Texture2D* cube;
@@ -553,8 +559,6 @@ Renderer::Texture2D::Ptr Renderer::createTextureCube(const std::array<std::strin
 	for (size_t i = 0; i < 6; ++i)
 	{
 		auto tex = faces[i];
-		if (preprocess)
-			tex = preprocess(tex);
 		mContext->CopySubresourceRegion(cube, i,0, 0, 0, tex.lock()->getTexture(), 0, NULL);
 		destroyTexture(faces[i]);
 	}
@@ -1156,4 +1160,18 @@ void Renderer::Texture2D::blit(const void * data, size_t size)
 	{
 		getContext()->UpdateSubresource(mTexture, 0, NULL, data, 0, 0);
 	}
+}
+
+Renderer::Profile::Timer::Timer(Profile * p) :profile(p)
+{
+#ifdef USE_PROFILE
+	p->getContext()->End(p->mBegin);
+#endif
+}
+
+Renderer::Profile::Timer::~Timer()
+{
+#ifdef USE_PROFILE
+	profile->getContext()->End(profile->mEnd);
+#endif
 }

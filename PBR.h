@@ -7,10 +7,10 @@ class PBR:public Pipeline::Stage
 	__declspec(align(16))
 	struct Constants
 	{
-		Matrix invertPorj;
-		Matrix View;
+		Matrix invertViewPorj;
 		Vector3 clustersize;
 		int numdirs;
+		Vector3 campos;
 		float roughness;
 		float metallic;
 		float width;

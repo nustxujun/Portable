@@ -463,15 +463,9 @@ public:
 		class Timer
 		{
 		public:
-			Timer(Profile* p):profile(p)
-			{
-				p->getContext()->End(p->mBegin);
-			}
+			Timer(Profile* p);
 
-			~Timer()
-			{
-				profile->getContext()->End(profile->mEnd);
-			}
+			~Timer();
 
 			Profile* profile;
 		};
@@ -569,7 +563,7 @@ public:
 	Texture2D::Ptr createTexture( const D3D11_TEXTURE2D_DESC& desc, const void* data = 0, size_t size = 0);
 	Texture3D::Ptr createTexture3D(const D3D11_TEXTURE3D_DESC& desc, const void* data = 0, size_t size = 0);
 	Texture2D::Ptr createTextureCube(const std::string& file);
-	Texture2D::Ptr createTextureCube(const std::array<std::string, 6>& file, std::function<Texture2D::Ptr(Texture2D::Ptr tex)> preprocess = {});
+	Texture2D::Ptr createTextureCube(const std::array<std::string, 6>& file, D3DX11_IMAGE_LOAD_INFO* loadinfo = NULL);
 	void destroyTexture(Texture::Ptr tex);
 
 	Texture2D::Ptr createRenderTarget(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage = D3D11_USAGE_DEFAULT);

@@ -64,7 +64,7 @@ float3 Lambert(float3 kS, float3 albedo, float metallic)
 	return kD * albedo / PI;
 }
 
-float3 BRDF(float roughness, float metallic, float3 f0, float3 albedo, float3 normal, float3 tolight, float3 tocam)
+float3 directBRDF(float roughness, float metallic, float3 f0, float3 albedo, float3 normal, float3 tolight, float3 tocam)
 {
 	f0 = lerp(f0, albedo, metallic);
 	float3 V = normalize(tocam);
@@ -77,6 +77,11 @@ float3 BRDF(float roughness, float metallic, float3 f0, float3 albedo, float3 no
 
 	float NdotL = max(dot(N, L), 0.0f);
 	return (specBRDF + diffBRDF) * NdotL;
+}
+
+float3 indirectBRDF(float3 irradiance, float3 albedo)
+{
+	return irradiance * albedo;
 }
 
 float attenuate(float distance, float range)

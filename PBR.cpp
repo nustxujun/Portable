@@ -107,12 +107,13 @@ void PBR::renderNormal(Renderer::Texture2D::Ptr rt)
 	auto desc = rt.lock()->getDesc();
 	constants.width = desc.Width;
 	constants.height = desc.Height;
-	constants.invertPorj = cam->getProjectionMatrix().Invert().Transpose();
+	constants.invertViewPorj = (cam->getViewMatrix() * cam->getProjectionMatrix()).Invert().Transpose();
 	constants.nearZ = cam->getNear();
 	constants.farZ = cam->getFar();
 	constants.clustersize = mCluster;
 	constants.numdirs = getValue<int>("numdirs");
 	constants.ambient = getValue<float>("ambient");
+	constants.campos = cam->getNode()->getRealPosition();
 
 	mConstants.lock()->blit(&constants, sizeof(constants));
 
@@ -120,21 +121,23 @@ void PBR::renderNormal(Renderer::Texture2D::Ptr rt)
 	quad->setRenderTarget(rt);
 	std::vector<Renderer::ShaderResource::Ptr> srvs = {
 		mAlbedo, mNormal, mDepthLinear ,
-		getShaderResource("pointlights"),
-		getShaderResource("spotlights"),
-		getShaderResource("dirlights"),
+		getShaderResource("irradinace"),
 	};
-
-	srvs.resize(20);
+	srvs.resize(30);
+	srvs[6] = getShaderResource("pointlights");
+	srvs[7] = getShaderResource("spotlights");
+	srvs[8] = getShaderResource("dirlights");
+	
+	
 	if (has("tiled") || has("clustered"))
 	{
-		srvs[6] = getShaderResource("lightindices");
-		srvs[7] = getShaderResource("lighttable");
+		srvs[9] = getShaderResource("lightindices");
+		srvs[10] = getShaderResource("lighttable");
 	}
 
 	//srvs[10] = mDefaultShadowTex;
 	for (int i = 0; i < mShadowTextures.size(); ++i)
-		srvs[i + 10] = mShadowTextures[i];
+		srvs[i + 20] = mShadowTextures[i];
 
 	quad->setTextures(srvs);
 
@@ -207,7 +210,7 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 	renderer->setVSConstantBuffers({ mLightVolumeConstants });
 
 	Constants constants;
-	constants.invertPorj = cam->getProjectionMatrix().Invert().Transpose();
+	constants.invertViewPorj = (cam->getViewMatrix() * cam->getProjectionMatrix()).Invert().Transpose();
 	constants.roughness = getValue<float>("roughness");
 	constants.metallic = getValue<float>("metallic");
 	constants.width = renderer->getWidth();

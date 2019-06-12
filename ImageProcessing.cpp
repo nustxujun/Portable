@@ -101,9 +101,9 @@ Renderer::Texture2D::Ptr Gaussian::process(Renderer::Texture2D::Ptr tex, SampleT
 	return ret;
 }
 
-void IBLPreProcessing::init()
+void CubeMapProcessing::init()
 {
-	mEffect = mRenderer->createEffect("hlsl/cubemap.fx");
+	//mEffect = mRenderer->createEffect("hlsl/cubemap.fx");
 
 	D3D11_INPUT_ELEMENT_DESC modelLayout[] =
 	{
@@ -122,7 +122,7 @@ void IBLPreProcessing::init()
 	}
 }
 
-Renderer::Texture2D::Ptr IBLPreProcessing::process(Renderer::Texture2D::Ptr tex, SampleType st)
+Renderer::Texture2D::Ptr CubeMapProcessing::process(Renderer::Texture2D::Ptr tex, SampleType st)
 {
 	using namespace DirectX;
 	using namespace DirectX::SimpleMath;
@@ -130,7 +130,6 @@ Renderer::Texture2D::Ptr IBLPreProcessing::process(Renderer::Texture2D::Ptr tex,
 	auto desc = ret.lock()->getDesc();
 
 	auto e = mEffect.lock();
-	e->setTech("irradiance");
 	mRenderer->setDefaultBlendState();
 	mRenderer->setDefaultRasterizer();
 	mRenderer->setDefaultBlendState();
@@ -152,10 +151,10 @@ Renderer::Texture2D::Ptr IBLPreProcessing::process(Renderer::Texture2D::Ptr tex,
 
 	Matrix viewMats[6] = {
 		XMMatrixLookAtLH(Vector3::Zero,Vector3::UnitX, Vector3::UnitY),
-		XMMatrixLookAtLH(Vector3::Zero,Vector3::UnitZ, Vector3::UnitY),
-		XMMatrixLookAtLH(Vector3::Zero,Vector3::UnitY, Vector3::UnitZ),
 		XMMatrixLookAtLH(Vector3::Zero,-Vector3::UnitX, Vector3::UnitY),
-		XMMatrixLookAtLH(Vector3::Zero,-Vector3::UnitY, -Vector3::UnitZ),
+		XMMatrixLookAtLH(Vector3::Zero,Vector3::UnitY, -Vector3::UnitZ),
+		XMMatrixLookAtLH(Vector3::Zero,-Vector3::UnitY, Vector3::UnitZ),
+		XMMatrixLookAtLH(Vector3::Zero,Vector3::UnitZ, Vector3::UnitY),
 		XMMatrixLookAtLH(Vector3::Zero,-Vector3::UnitZ, Vector3::UnitY),
 	};
 
@@ -180,4 +179,16 @@ Renderer::Texture2D::Ptr IBLPreProcessing::process(Renderer::Texture2D::Ptr tex,
 	return ret;
 }
 
+void IrradianceCubemap::init()
+{
+	CubeMapProcessing::init();
+	mEffect = mRenderer->createEffect("hlsl/cubemap.fx");
+	mEffect.lock()->setTech("irradiance");
+}
 
+void PrefilterCubemap::init()
+{
+	CubeMapProcessing::init();
+	mEffect = mRenderer->createEffect("hlsl/cubemap.fx");
+	mEffect.lock()->setTech("prefilter");
+}

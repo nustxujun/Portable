@@ -12,6 +12,7 @@
 #include "ClusteredLightCulling.h"
 #include "ShadowMap.h"
 #include "SkyBox.h"
+#include "ImageProcessing.h"
 
 #include <random>
 
@@ -76,18 +77,18 @@ void MultipleLights::initScene()
 
 	auto root = mScene->getRoot();
 
-	//{
-	//	Parameters params;
-	//	params["geom"] = "room";
-	//	params["size"] = "100";
-	//	auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
-	//	{
-	//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-	//	});
-	//	model->setCastShadow(false);
-	//	model->attach(root);
-	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-	//}
+	{
+		Parameters params;
+		params["geom"] = "room";
+		params["size"] = "100";
+		auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
+		{
+			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+		});
+		model->setCastShadow(false);
+		model->attach(root);
+		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+	}
 	//{
 	//	Parameters params;
 	//	params["geom"] = "cube";
@@ -101,20 +102,20 @@ void MultipleLights::initScene()
 	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
 	//}
 
-	{
-		Parameters params;
-		params["geom"] = "plane";
-		params["size"] = "100";
-		//params["resolution"] = "500";
-		auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
-		{
-			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		});
-		model->setCastShadow(true);
-		model->attach(root);
-		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+	//{
+	//	Parameters params;
+	//	params["geom"] = "plane";
+	//	params["size"] = "100";
+	//	//params["resolution"] = "500";
+	//	auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
+	//	{
+	//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+	//	});
+	//	model->setCastShadow(true);
+	//	model->attach(root);
+	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
 
-	}
+	//}
 
 	{
 		Parameters params;
@@ -149,6 +150,7 @@ void MultipleLights::initScene()
 	auto aabb = root->getWorldAABB();
 	auto len = aabb.second - aabb.first;
 	cam->setNearFar(1.0f, (len).Length());
+	//cam->setProjectType(Scene::Camera::PT_ORTHOGRAPHIC);
 
 	cam->lookat({ 0.0f, 10.0f, 0.0f }, { 1000.0f, 10.0f, 0.0f });
 	//cam->getNode()->setPosition((aabb.second + aabb.first) * 0.5f);
@@ -238,7 +240,6 @@ void MultipleLights::initScene()
 
 	auto updateLights = [this, lightCastingShadow](auto lights, const std::string& buffername) {
 		auto cam = mScene->createOrGetCamera("main");
-		Matrix view = cam->getViewMatrix();
 		D3D11_MAP map = D3D11_MAP_WRITE_DISCARD;
 		D3D11_MAPPED_SUBRESOURCE subresource;
 		auto context = mRenderer->getContext();
@@ -261,7 +262,7 @@ void MultipleLights::initScene()
 			if (light->getType() == Scene::Light::LT_POINT)
 			{
 				Vector3 pos = light->getNode()->getRealPosition();
-				Vector4 vpos = Vector4::Transform({ pos.x, pos.y, pos.z, 1 }, view);
+				Vector4 vpos = { pos.x, pos.y, pos.z, 1 };
 				vpos.w = range;
 				memcpy(data, &vpos, sizeof(vpos));
 				data += sizeof(vpos);
@@ -273,13 +274,13 @@ void MultipleLights::initScene()
 			else if (light->getType() == Scene::Light::LT_SPOT)
 			{
 				Vector3 pos = light->getNode()->getRealPosition();
-				Vector4 vpos = Vector4::Transform({ pos.x, pos.y, pos.z, 1 }, view);
+				Vector4 vpos = { pos.x, pos.y, pos.z, 1 };
 				vpos.w = range;
 				memcpy(data, &vpos, sizeof(vpos));
 				data += sizeof(vpos);
 
 				Vector3 dir = light->getDirection();
-				Vector4 vdir = Vector4::Transform({ dir.x, dir.y,dir.z,0 }, view);
+				Vector4 vdir = { dir.x, dir.y,dir.z,0 };
 				vdir.w = std::cos(light->getSpotAngle());
 				memcpy(data, &vdir, sizeof(vdir));
 				data += sizeof(vdir);
@@ -292,7 +293,7 @@ void MultipleLights::initScene()
 			else if (light->getType() == Scene::Light::LT_DIR)
 			{
 				Vector3 dir = light->getDirection();
-				Vector4 vdir = Vector4::Transform({ dir.x, dir.y,dir.z,0 }, view);
+				Vector4 vdir = { dir.x, dir.y,dir.z,0 };
 				memcpy(data, &vdir, sizeof(vdir));
 				data += sizeof(vdir);
 
@@ -463,6 +464,25 @@ void MultipleLights::initCDRPipeline()
 	auto w = mRenderer->getWidth();
 	auto h = mRenderer->getHeight();
 
+	//std::array<std::string,6> files = {
+	//"media/skybox/right.jpg",
+	//"media/skybox/left.jpg",
+	//"media/skybox/top.jpg",
+	//"media/skybox/bottom.jpg",
+	//"media/skybox/front.jpg",
+	//"media/skybox/back.jpg",
+	//};
+
+	std::array<std::string,6> files = {
+	"media/skybox/1.png",
+	"media/skybox/2.png",
+	"media/skybox/3.png",
+	"media/skybox/4.png",
+	"media/skybox/5.png",
+	"media/skybox/6.png",
+	};
+
+
 	auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 
 	constexpr auto MAX_SHADOWMAPS = 8;
@@ -494,6 +514,16 @@ void MultipleLights::initCDRPipeline()
 	mPipeline->addShaderResource("lighttable", lighttable);
 	mPipeline->addUnorderedAccess("lighttable", lighttable);
 
+	D3DX11_IMAGE_LOAD_INFO loadinfo;
+	loadinfo.Width = 512;
+	loadinfo.Height = 512;
+	loadinfo.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+	auto envmap = mRenderer->createTextureCube(files, &loadinfo);
+	auto proc = ImageProcessing::create<PrefilterCubemap>(mRenderer);
+	auto ret = proc->process(envmap);
+	mPipeline->addShaderResource("irradinace", ret);
+
+
 	mPipeline->setFrameBuffer(frame);
 	auto bb = mRenderer->getBackbuffer();
 	mPipeline->pushStage("clear rt", [bb](Renderer::RenderTarget::Ptr rt)
@@ -504,21 +534,15 @@ void MultipleLights::initCDRPipeline()
 	mPipeline->pushStage<GBuffer>();
 	mPipeline->pushStage<DepthLinearing>();
 
-	//mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
+	mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
 
 	mPipeline->pushStage<ClusteredLightCulling>(Vector3(SLICED_LEN, SLICED_LEN, SLICED_Z), Vector3(bw, bh,0));
 	
 	mPipeline->pushStage<PBR>(Vector3(bw, bh,0), shadowmaps);
 
 	//mPipeline->pushStage<AO>(20.0f);
-	std::vector<std::string> files = { 
-		"media/skybox/right.jpg",
-		"media/skybox/left.jpg", 
-		"media/skybox/top.jpg", 
-		"media/skybox/bottom.jpg", 
-		"media/skybox/front.jpg",
-		"media/skybox/back.jpg",
-	};
+
+
 	//std::vector<std::string> files = { "media/uffizi_cross.dds" };
 	mPipeline->pushStage<SkyBox>(files);
 

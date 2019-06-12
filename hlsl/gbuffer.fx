@@ -36,7 +36,7 @@ GBufferVertexShaderOutput vs(GBufferVertexShaderInput input)
 	float4 viewPosition = mul(worldPosition, View);
 	output.Position = mul(viewPosition, Projection);
 
-	output.Normal = mul(mul(input.Normal, World), View);
+	output.Normal = mul(input.Normal, World);
 
 	output.TexCoord = input.TexCoord;
 
