@@ -60,8 +60,6 @@ Quad::~Quad()
 
 void Quad::draw(const std::array<float, 4>& color)
 {
-	mRenderer->clearDefaultStencil(1.0f);
-
 	//mRenderTarget.lock()->clear(color);
 	mRenderer->setRenderTarget(mRenderTarget);
 

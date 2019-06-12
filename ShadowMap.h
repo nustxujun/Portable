@@ -36,7 +36,7 @@ public:
 	~ShadowMap();
 
 
-	void init(int mapsize, int numlevels, const std::vector<Renderer::Texture::Ptr>& rts);
+	void init(int mapsize, int numlevels, const std::vector<Renderer::Texture2D::Ptr>& rts);
 	void render(Renderer::Texture2D::Ptr rt) ;
 private:
 	void fitToScene(int index, Scene::Light::Ptr l);
@@ -54,8 +54,8 @@ private:
 	};
 	std::vector<MapParams> mMapParams;
 
-	std::vector<Renderer::Texture::Ptr> mShadowMaps;
-	std::vector<Renderer::Texture::Ptr> mShadowTextures;
+	std::vector<Renderer::Texture2D::Ptr> mShadowMaps;
+	std::vector<Renderer::Texture2D::Ptr> mShadowTextures;
 	int mShadowMapSize = 2048;
 	Matrix mLightView;
 	Renderer::Buffer::Ptr mCastConstants;

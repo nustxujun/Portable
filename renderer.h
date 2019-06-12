@@ -58,12 +58,37 @@ public:
 		T* mInterface;
 	};
 
+	template<class T>
+	class WeakWrapper
+	{
+	public:
+		template<class U>
+		WeakWrapper(std::weak_ptr<U> ptr) { mInstance = ptr; }
+		template<class U>
+		WeakWrapper(std::shared_ptr<U> ptr) { mInstance = ptr; }
+		template<class U>
+		WeakWrapper(WeakWrapper<U> ptr) { mInstance = ptr.get(); }
+
+		WeakWrapper() {}
+		WeakWrapper(std::shared_ptr<T> ptr) { mInstance = ptr; }
+		WeakWrapper(std::weak_ptr<T> ptr) { mInstance = ptr; }
+		operator T& ()const { return *mInstance.lock().operator->(); }
+		T& operator*() const { return *mInstance.lock().operator->(); }
+		std::shared_ptr<T> operator->() const { return mInstance.lock(); }
+
+		bool expired()const { return mInstance.expired(); }
+		std::shared_ptr<T> lock()const { return mInstance.lock(); }
+		std::weak_ptr<T> get()const { return mInstance; }
+	private:
+		std::weak_ptr<T> mInstance;
+	};
+
 	class ShaderResource : public NODefault, virtual public D3DObject
 	{
 	public:
 		using Ptr = std::weak_ptr<ShaderResource>;
 	public:
-		ShaderResource() {}
+		ShaderResource(ID3D11ShaderResourceView* ptr) { mSRView = ptr; }
 		~ShaderResource();
 
 		ID3D11ShaderResourceView* getShaderResourceView()const { return mSRView; }
@@ -79,7 +104,7 @@ public:
 		using Ptr = std::weak_ptr<UnorderedAccess>;
 
 	public:
-		UnorderedAccess()  {}
+		UnorderedAccess(ID3D11UnorderedAccessView* p) { mUAV = p; }
 
 		UnorderedAccess(Renderer* r, ID3D11UnorderedAccessView* uav);
 
@@ -100,7 +125,7 @@ public:
 	public:
 		using Ptr = std::weak_ptr<DepthStencil>;
 	public:
-		DepthStencil() {};
+		DepthStencil(ID3D11DepthStencilView* ds) { mDSView = ds; };
 		~DepthStencil();
 
 		operator ID3D11DepthStencilView* () const { return mDSView; }
@@ -119,20 +144,20 @@ public:
 	public:
 		using Ptr = std::weak_ptr<RenderTarget>;
 	public:
-		RenderTarget()  {}
+		RenderTarget(ID3D11RenderTargetView* p) { mRTView = p; }
 
 
 		~RenderTarget();
-		operator ID3D11RenderTargetView*() { return *mRTView; }
-		ID3D11RenderTargetView* getRenderTargetView(size_t index = 0) const{ return mRTView[index]; }
+		operator ID3D11RenderTargetView*() { return mRTView; }
+		ID3D11RenderTargetView* getRenderTargetView() const{ return mRTView; }
 
 		void clear(const std::array<float, 4> c);
 
 	protected:
-		ID3D11RenderTargetView* mRTView[6] = {nullptr};
+		ID3D11RenderTargetView* mRTView;
 	};
 
-	class Buffer : public UnorderedAccess, public ShaderResource
+	class Buffer :public D3DObject
 	{
 	public: 
 		using Ptr = std::weak_ptr<Buffer>;
@@ -154,6 +179,8 @@ public:
 	private:
 		ID3D11Buffer* mBuffer;
 		D3D11_BUFFER_DESC mDesc;
+		UnorderedAccess::Ptr mUAV;
+		ShaderResource::Ptr mSRV;
 	};
 
 	class Effect final: public NODefault, public D3DObject
@@ -180,23 +207,41 @@ public:
 		std::unordered_map<std::string, ID3DX11EffectTechnique*> mTechs;
 	};
 
-	class Texture : public RenderTarget,public ShaderResource, public UnorderedAccess, public DepthStencil
+	class Texture : public D3DObject
 	{
 	public:
-		using Ptr = std::weak_ptr<Texture>;
+		using Ptr = WeakWrapper<Texture>;
 	public:
+		Texture(Renderer* r) :D3DObject(r) {}
 		virtual ~Texture();
-	private:
+		operator ShaderResource::Ptr()const { return mSRViews[0]; }
+		operator RenderTarget::Ptr()const { return mRTViews[0]; }
+		operator UnorderedAccess::Ptr()const { return mUAViews[0]; }
+		operator DepthStencil::Ptr()const { return mDSViews[0]; }
 
+		ShaderResource::Ptr getShaderResource(size_t index = 0)const { return mSRViews[index]; }
+		RenderTarget::Ptr getRenderTarget(size_t index = 0)const { return mRTViews[index]; }
+		UnorderedAccess::Ptr getUnorderedAccess(size_t index = 0)const { return mUAViews[index]; }
+		DepthStencil::Ptr getDepthStencil(size_t index = 0)const { return mDSViews[index]; }
+
+		ShaderResource::Ptr addSR(ID3D11ShaderResourceView* srv);
+		RenderTarget::Ptr addRT(ID3D11RenderTargetView* rtv)const;
+		UnorderedAccess::Ptr addUA(ID3D11UnorderedAccessView* uav)const;
+		DepthStencil::Ptr addDS(ID3D11DepthStencilView* dsv)const;
+	protected:
+		std::vector<ShaderResource::Ptr> mSRViews;
+		std::vector<RenderTarget::Ptr> mRTViews;
+		std::vector<UnorderedAccess::Ptr> mUAViews;
+		std::vector<DepthStencil::Ptr> mDSViews;
 	};
 
 	template<class T, class D>
 	class TextureUnknown : public Texture
 	{
 	public:
-		using Ptr = std::weak_ptr<TextureUnknown>;
+		using Ptr = WeakWrapper<TextureUnknown>;
 	public:
-		TextureUnknown(T* tex )
+		TextureUnknown(Renderer* r,T* tex ):Texture(r)
 		{
 			mTexture = tex;
 			tex->GetDesc(&mDesc);
@@ -222,113 +267,15 @@ public:
 			}
 
 			std::swap(mTexture, ptr->mTexture);
-			std::swap(mRTView, ptr->mRTView);
-			std::swap(mSRView, ptr->mSRView);
-			std::swap(mUAV, ptr->mUAV);
+			std::swap(mRTViews, ptr->mRTViews);
+			std::swap(mSRViews, ptr->mSRViews);
+			std::swap(mUAViews, ptr->mUAViews);
+			std::swap(mRTViews, ptr->mRTViews);
 			std::swap(mDesc, ptr->mDesc);
 		}
 
 	protected:
-		virtual void initTexture()
-		{
-			bool unorderedAccess = ((mDesc.BindFlags & D3D11_BIND_UNORDERED_ACCESS) != 0);
-			bool shaderRecource = ((mDesc.BindFlags & D3D11_BIND_SHADER_RESOURCE) != 0);
-			bool rendertarget = ((mDesc.BindFlags & D3D11_BIND_RENDER_TARGET) != 0);
-			bool depthstencil = ((mDesc.BindFlags & D3D11_BIND_DEPTH_STENCIL) != 0);
-
-			if (rendertarget && depthstencil)
-				error("cannot support a texture with rtview and dsview");
-
-
-			if (rendertarget)
-			{
-				if (mDesc.MiscFlags == D3D11_RESOURCE_MISC_TEXTURECUBE)
-				{
-					D3D11_RENDER_TARGET_VIEW_DESC desc;
-					desc.Format = mDesc.Format;
-					desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
-					desc.Texture2DArray.ArraySize = 1;
-					desc.Texture2DArray.MipSlice = 0;
-					for (int i = 0; i < 6; ++i)
-					{
-						desc.Texture2DArray.FirstArraySlice = i;
-						checkResult(getDevice()->CreateRenderTargetView(mTexture, &desc, &mRTView[i]));
-					}
-				}
-				else
-					checkResult(getDevice()->CreateRenderTargetView(mTexture, nullptr, &mRTView[0]));
-			};
-
-			if (unorderedAccess)
-			{
-				checkResult(getDevice()->CreateUnorderedAccessView(mTexture, nullptr, &mUAV));
-			}
-
-			if (depthstencil && shaderRecource)
-			{
-				DXGI_FORMAT SRVfmt = DXGI_FORMAT_R32_FLOAT;
-				DXGI_FORMAT DSVfmt = DXGI_FORMAT_D32_FLOAT;
-
-				switch (mDesc.Format)
-				{
-				case DXGI_FORMAT_R32_TYPELESS:
-					SRVfmt = DXGI_FORMAT_R32_FLOAT;
-					DSVfmt = DXGI_FORMAT_D32_FLOAT;
-					break;
-				case DXGI_FORMAT_R24G8_TYPELESS:
-					SRVfmt = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-					DSVfmt = DXGI_FORMAT_D24_UNORM_S8_UINT;
-					break;
-				case DXGI_FORMAT_R16_TYPELESS:
-					SRVfmt = DXGI_FORMAT_R16_UNORM;
-					DSVfmt = DXGI_FORMAT_D16_UNORM;
-					break;
-				case DXGI_FORMAT_R8_TYPELESS:
-					SRVfmt = DXGI_FORMAT_R8_UNORM;
-					DSVfmt = DXGI_FORMAT_R8_UNORM;
-					break;
-				default:
-					{
-						error("unknown readable depthstencil format , it must be XXXX_TYPELESS");
-					}
-				}
-
-				D3D11_DEPTH_STENCIL_VIEW_DESC descDSV;
-				ZeroMemory(&descDSV, sizeof(descDSV));
-				descDSV.Format = DSVfmt;
-				descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-				descDSV.Texture2D.MipSlice = 0;
-				checkResult(getDevice()->CreateDepthStencilView(mTexture, &descDSV, &mDSView));
-
-				D3D11_SHADER_RESOURCE_VIEW_DESC srvd;
-				srvd.Format = SRVfmt;
-				srvd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-				srvd.Texture2D.MostDetailedMip = 0;
-				srvd.Texture2D.MipLevels = 1;
-
-				checkResult(getDevice()->CreateShaderResourceView(mTexture, &srvd, &mSRView));
-			}
-			else
-			{
-				if (depthstencil)
-					checkResult(getDevice()->CreateDepthStencilView(mTexture, nullptr, &mDSView));
-
-				if (shaderRecource)
-				{
-					if (mDesc.MiscFlags == D3D11_RESOURCE_MISC_TEXTURECUBE)
-					{
-						D3D11_SHADER_RESOURCE_VIEW_DESC desc;
-						desc.Format = mDesc.Format;
-						desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
-						desc.TextureCube.MipLevels = mDesc.MipLevels;
-						desc.TextureCube.MostDetailedMip = 0;
-						checkResult(getDevice()->CreateShaderResourceView(mTexture, &desc, &mSRView));
-					}
-					else 
-						checkResult(getDevice()->CreateShaderResourceView(mTexture, nullptr, &mSRView));
-				}
-			}
-		}
+		virtual void initTexture() = 0;
 	protected:
 		T* mTexture;
 		D mDesc;
@@ -338,12 +285,14 @@ public:
 	{
 		using Parent = TextureUnknown<ID3D11Texture2D, D3D11_TEXTURE2D_DESC>;
 	public:
-		using Ptr = std::weak_ptr<Texture2D>;
+		using Ptr = WeakWrapper<Texture2D>;
 
-		Texture2D(Renderer* r, ID3D11Texture2D* tex) :D3DObject(r), Parent(tex)
+		Texture2D(Renderer* r, ID3D11Texture2D* tex) : Parent(r,tex)
 		{
 			initTexture();
 		}
+
+		void initTexture();
 
 		void blit(const void* data, size_t size);
 	};
@@ -352,10 +301,12 @@ public:
 	{
 		using Parent = TextureUnknown<ID3D11Texture3D, D3D11_TEXTURE3D_DESC>;
 	public:
-		Texture3D(Renderer* r, ID3D11Texture3D* tex) :D3DObject(r), Parent(tex)
+		Texture3D(Renderer* r, ID3D11Texture3D* tex) : Parent(r,tex)
 		{
 			initTexture();
 		}
+
+		void initTexture();
 	};
 
 
@@ -502,11 +453,12 @@ public:
 	int getHeight()const { return mHeight; }
 
 	ID3D11DeviceContext* getContext() { return mContext; };
+	Texture::Ptr getBackbuffer() { return mBackbuffer; }
+	Texture2D::Ptr getDefaultDepthStencil() { return mDefaultDepthStencil; };
 
 	void present();
 	void clearRenderTarget(RenderTarget::Ptr rt, const float color[4]);
 	void clearRenderTargets(std::vector<RenderTarget::Ptr>& rts, const std::array<float,4>& color);
-	void clearDefaultStencil(float d, int s = 0);
 
 	//void setTexture(const Texture::Ptr tex);
 	//void setTextures(const std::vector<Texture::Ptr>& texs);
@@ -514,14 +466,13 @@ public:
 	//void setTextures(const std::vector<RenderTarget::Ptr>& texs);
 	void setTexture(ShaderResource::Ptr srv);
 	void setTextures(const std::vector<ShaderResource::Ptr>& srvs);
-	template<class Container>
-	void setTextures(const Container& c)
+	template<class T>
+	void setTextures(const std::vector<T>& c)
 	{
-		std::vector<ShaderResource::Ptr> list;
-		list.reserve(c.size());
-		for (auto& i : c)
-			list.push_back(i);
-
+		std::vector<ShaderResource::Ptr> list(c.size());
+		
+		for (size_t i = 0; i < c.size(); ++i)
+			list[i] = c[i]->getShaderResource();
 		setTextures(list);
 	}
 	void removeShaderResourceViews();
@@ -541,7 +492,6 @@ public:
 
 	void setDefaultRasterizer();
 
-	Texture::Ptr getBackbuffer() { return mBackbuffer; }
 	void setLayout(ID3D11InputLayout* layout);
 	void setPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY pri);
 	void setIndexBuffer(Buffer::Ptr b, DXGI_FORMAT format, int offset);
@@ -603,7 +553,7 @@ private:
 	ID3D11Query* mDisjoint;
 
 
-	DepthStencil::Ptr mDefaultDepthStencil;
+	Texture2D::Ptr mDefaultDepthStencil;
 	Rasterizer::Ptr mRasterizer;
 	Texture::Ptr mBackbuffer;
 

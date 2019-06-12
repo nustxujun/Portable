@@ -13,7 +13,7 @@ ShadowMap::~ShadowMap()
 {
 }
 
-void ShadowMap::init(int mapsize, int numlevels, const std::vector<Renderer::Texture::Ptr>& rts)
+void ShadowMap::init(int mapsize, int numlevels, const std::vector<Renderer::Texture2D::Ptr>& rts)
 {
 	this->set("shadowcolor", { {"type","set"}, {"value",0.00f},{"min","0"},{"max",1.0f},{"interval", "0.001"} });
 	this->set("depthbias", { {"type","set"}, {"value",0.001f},{"min","0"},{"max","0.01"},{"interval", "0.0001"} });
@@ -183,7 +183,7 @@ void ShadowMap::fitToScene(int index, Scene::Light::Ptr light)
 
 void ShadowMap::renderToShadowMap(int index)
 {
-	mShadowMaps[index].lock()->clearDepth(1.0f);
+	mShadowMaps[index]->getDepthStencil().lock()->clearDepth(1.0f);
 
 	using namespace DirectX;
 	using namespace DirectX::SimpleMath;
@@ -191,7 +191,7 @@ void ShadowMap::renderToShadowMap(int index)
 	CastConstants constant;
 	constant.view = mLightView.Transpose();
 
-	getRenderer()->setRenderTarget({}, mShadowMaps[index]);
+	getRenderer()->setRenderTarget({}, *mShadowMaps[index]);
 	getRenderer()->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	getRenderer()->setDefaultBlendState();
 	getRenderer()->setDefaultDepthStencilState();
@@ -259,7 +259,7 @@ void ShadowMap::renderShadow(int index, Renderer::RenderTarget::Ptr rt)
 	mQuad.setSamplers({ mLinear, mPoint,mShadowSampler });
 	mQuad.setDefaultBlend(false);
 
-	mQuad.setTextures({ getShaderResource("depth"), mShadowMaps[index] });
+	mQuad.setTextures({ getShaderResource("depth"), *mShadowMaps[index] });
 	mQuad.setPixelShader(mReceiveShadowPS);
 	mQuad.setDefaultViewport();
 	mQuad.draw();
@@ -278,7 +278,7 @@ void ShadowMap::render(Renderer::Texture2D::Ptr rt)
 	{
 		fitToScene(i, lights[i]);
 		renderToShadowMap(i);
-		renderShadow(i, mShadowTextures[i]);
+		renderShadow(i, *mShadowTextures[i]);
 	}
 
 

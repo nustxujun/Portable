@@ -77,14 +77,14 @@ void HDR::render(Renderer::Texture2D::Ptr rt)
 void HDR::renderLuminance(Renderer::Texture2D::Ptr rt)
 {
 	float len = pow(3, mLuminance.size() - 1);
-	mLuminance.back().lock()->RenderTarget::clear({ 1,1,1,1 });
+	mLuminance.back()->getRenderTarget().lock()->clear({ 1,1,1,1 });
 	auto quad = getQuad();
 	quad->setDefaultBlend(false);
 
-	quad->setRenderTarget(mLuminance.back());
+	quad->setRenderTarget(*mLuminance.back());
 	quad->setSamplers({ mPoint });
 	quad->setPixelShader(mDownSamplePS2x2);
-	quad->setTextures({rt });
+	quad->setTextures({*rt });
 
 	quad->setViewport({0,0,len ,len ,0,1.0f});
 	quad->draw();
@@ -94,8 +94,8 @@ void HDR::renderLuminance(Renderer::Texture2D::Ptr rt)
 	{
 		len /= 3;
 		quad->setViewport({ 0,0,len ,len ,0,1.0f });
-		quad->setRenderTarget(mLuminance[i - 1]);
-		quad->setTextures({ mLuminance[i] });
+		quad->setRenderTarget(*mLuminance[i - 1]);
+		quad->setTextures({* mLuminance[i] });
 		quad->draw();
 	}
 	//quad->setRenderTarget(rt);
@@ -120,8 +120,8 @@ void HDR::renderHDR(Renderer::Texture2D::Ptr frame)
 	quad->setDefaultBlend(false);
 	quad->setSamplers({ mPoint });
 	quad->setPixelShader(mPS);
-	quad->setTextures({ frame,mLuminance[0] });
-	quad->setRenderTarget(mTarget);
+	quad->setTextures({ *frame,*mLuminance[0] });
+	quad->setRenderTarget(*mTarget);
 	quad->draw();
 	frame.lock()->swap(mTarget);
 }
@@ -133,8 +133,8 @@ void HDR::renderBrightness(Renderer::Texture2D::Ptr rt)
 		mBloomRT = getRenderer()->createTexture(rt.lock()->getDesc());
 	}
 	auto quad = getQuad();
-	quad->setTextures({ rt });
-	quad->setRenderTarget(mBloomRT);
+	quad->setTextures({ *rt });
+	quad->setRenderTarget(*mBloomRT);
 	quad->setDefaultBlend(false);
 	quad->setDefaultSampler();
 	quad->setDefaultViewport();
@@ -180,7 +180,7 @@ void HDR::renderBloom(Renderer::Texture2D::Ptr rt)
 		D3D11_COLOR_WRITE_ENABLE_ALL
 	};
 	quad->setBlend(desc);
-	quad->setRenderTarget(rt);
-	quad->setTextures({ ret });
+	quad->setRenderTarget(*rt);
+	quad->setTextures({ *ret });
 	quad->draw();
 }

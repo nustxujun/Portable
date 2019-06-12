@@ -132,13 +132,6 @@ void Renderer::clearRenderTargets(std::vector<RenderTarget::Ptr>& rts, const std
 	}
 }
 
-void Renderer::clearDefaultStencil(float d, int s)
-{
-	auto ptr = mDefaultDepthStencil.lock();
-	ptr->clearDepth(d);
-	ptr->clearStencil(0);
-}
-
 
 void Renderer::setTexture(ShaderResource::Ptr srv)
 {
@@ -239,9 +232,9 @@ void Renderer::setRenderTarget(RenderTarget::Ptr rt, DepthStencil::Ptr ds)
 
 void Renderer::setRenderTargets(const std::vector<RenderTarget::Ptr>& rts, DepthStencil::Ptr ds)
 {
-	auto dsv = ds.lock();
-	if (dsv == nullptr)
-		dsv = mDefaultDepthStencil.lock();
+	ID3D11DepthStencilView* dsv = 0;
+	if (!ds.expired())
+		dsv = *ds.lock();
 
 	std::vector<ID3D11RenderTargetView*> list;
 	list.reserve(rts.size());
@@ -249,7 +242,7 @@ void Renderer::setRenderTargets(const std::vector<RenderTarget::Ptr>& rts, Depth
 	for (auto i : rts)
 		list.push_back(*i.lock());
 	
-	mContext->OMSetRenderTargets(list.size(), list.data(), *dsv);
+	mContext->OMSetRenderTargets(list.size(), list.data(), dsv);
 }
 
 void Renderer::removeRenderTargets()
@@ -769,14 +762,12 @@ Renderer::ShaderResource::~ShaderResource()
 
 Renderer::RenderTarget::~RenderTarget()
 {
-	for (auto i: mRTView)
-		if (i)
-			i->Release();
+	mRTView->Release();
 }
 
 void Renderer::RenderTarget::clear(const std::array<float, 4> c)
 {
-	getContext()->ClearRenderTargetView(mRTView[0], c.data());
+	getContext()->ClearRenderTargetView(mRTView, c.data());
 }
 
 
@@ -809,7 +800,10 @@ Renderer::Buffer::Buffer(Renderer * r, int size, int stride, DXGI_FORMAT format,
 		srDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
 		srDesc.Buffer.FirstElement = 0;
 		srDesc.Buffer.NumElements = size / stride;
-		checkResult(getDevice()->CreateShaderResourceView(mBuffer, &srDesc, &mSRView));
+		ID3D11ShaderResourceView* srv;
+		checkResult(getDevice()->CreateShaderResourceView(mBuffer, &srDesc, &srv));
+
+		mSRV = Sha
 	}
 
 	if (unorderedAccess)
@@ -929,6 +923,27 @@ ID3DX11EffectConstantBuffer * Renderer::Effect::getConstantBuffer(const std::str
 
 Renderer::Texture::~Texture()
 {
+}
+
+Renderer::ShaderResource::Ptr Renderer::Texture::addSR(ID3D11ShaderResourceView * srv)
+{
+
+	ShaderResource::Ptr ptr = std::shared_ptr<ShaderResource>(new ShaderResource(srv));
+}
+
+Renderer::RenderTarget::Ptr Renderer::Texture::addRT(ID3D11RenderTargetView * rtv) const
+{
+	return RenderTarget::Ptr();
+}
+
+Renderer::UnorderedAccess::Ptr Renderer::Texture::addUA(ID3D11UnorderedAccessView * uav) const
+{
+	return UnorderedAccess::Ptr();
+}
+
+Renderer::DepthStencil::Ptr Renderer::Texture::addDS(ID3D11DepthStencilView * dsv) const
+{
+	return DepthStencil::Ptr();
 }
 
 
@@ -1136,6 +1151,133 @@ void Renderer::Profile::getData(UINT64 frq)
 	//mElapsedTime = mCachedTime / (float)mNumCached;
 	//mCachedTime = 0;
 	//mNumCached = 0;
+}
+
+void Renderer::Texture2D::initTexture()
+{
+	bool unorderedAccess = ((mDesc.BindFlags & D3D11_BIND_UNORDERED_ACCESS) != 0);
+	bool shaderRecource = ((mDesc.BindFlags & D3D11_BIND_SHADER_RESOURCE) != 0);
+	bool rendertarget = ((mDesc.BindFlags & D3D11_BIND_RENDER_TARGET) != 0);
+	bool depthstencil = ((mDesc.BindFlags & D3D11_BIND_DEPTH_STENCIL) != 0);
+
+	if (rendertarget && depthstencil)
+		error("cannot support a texture with rtview and dsview");
+
+
+	if (rendertarget)
+	{
+		if (mDesc.ArraySize > 1)
+		{
+			for (UINT i = 0; i < mDesc.MipLevels; ++i)
+			{
+				for (UINT j = 0; j < mDesc.ArraySize; ++j)
+				{
+					D3D11_RENDER_TARGET_VIEW_DESC desc;
+					desc.Format = mDesc.Format;
+					desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
+					desc.Texture2DArray.ArraySize = 1;
+					desc.Texture2DArray.MipSlice = i;
+					desc.Texture2DArray.FirstArraySlice = j;
+					ID3D11RenderTargetView* rtv;
+					checkResult(getDevice()->CreateRenderTargetView(mTexture, &desc, &rtv));
+					addRT(rtv);
+				}
+			}
+		}
+		else
+		{
+			ID3D11RenderTargetView* rtv;
+			checkResult(getDevice()->CreateRenderTargetView(mTexture, NULL, &rtv));
+			addRT(rtv);
+		}
+	};
+
+	if (unorderedAccess)
+	{
+		ID3D11UnorderedAccessView* uav;
+		checkResult(getDevice()->CreateUnorderedAccessView(mTexture, nullptr, &uav));
+		addUA(uav);
+	}
+
+	if (depthstencil && shaderRecource)
+	{
+		DXGI_FORMAT SRVfmt = DXGI_FORMAT_R32_FLOAT;
+		DXGI_FORMAT DSVfmt = DXGI_FORMAT_D32_FLOAT;
+
+		switch (mDesc.Format)
+		{
+		case DXGI_FORMAT_R32_TYPELESS:
+			SRVfmt = DXGI_FORMAT_R32_FLOAT;
+			DSVfmt = DXGI_FORMAT_D32_FLOAT;
+			break;
+		case DXGI_FORMAT_R24G8_TYPELESS:
+			SRVfmt = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+			DSVfmt = DXGI_FORMAT_D24_UNORM_S8_UINT;
+			break;
+		case DXGI_FORMAT_R16_TYPELESS:
+			SRVfmt = DXGI_FORMAT_R16_UNORM;
+			DSVfmt = DXGI_FORMAT_D16_UNORM;
+			break;
+		case DXGI_FORMAT_R8_TYPELESS:
+			SRVfmt = DXGI_FORMAT_R8_UNORM;
+			DSVfmt = DXGI_FORMAT_R8_UNORM;
+			break;
+		default:
+			{
+				error("unknown readable depthstencil format , it must be XXXX_TYPELESS");
+			}
+		}
+
+		ID3D11DepthStencilView* dsv;
+		ID3D11ShaderResourceView* srv;
+		D3D11_DEPTH_STENCIL_VIEW_DESC descDSV;
+		ZeroMemory(&descDSV, sizeof(descDSV));
+		descDSV.Format = DSVfmt;
+		descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+		descDSV.Texture2D.MipSlice = 0;
+		checkResult(getDevice()->CreateDepthStencilView(mTexture, &descDSV, &dsv));
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvd;
+		srvd.Format = SRVfmt;
+		srvd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srvd.Texture2D.MostDetailedMip = 0;
+		srvd.Texture2D.MipLevels = 1;
+
+		checkResult(getDevice()->CreateShaderResourceView(mTexture, &srvd, &srv));
+
+		addSR(srv);
+		addDS(dsv);
+	}
+	else
+	{
+		if (depthstencil)
+		{
+			ID3D11DepthStencilView* dsv;
+			checkResult(getDevice()->CreateDepthStencilView(mTexture, nullptr, &dsv));
+			addDS(dsv);
+		}
+		if (shaderRecource)
+		{
+			if (mDesc.MiscFlags == D3D11_RESOURCE_MISC_TEXTURECUBE)
+			{
+				D3D11_SHADER_RESOURCE_VIEW_DESC desc;
+				desc.Format = mDesc.Format;
+				desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+				desc.TextureCube.MipLevels = mDesc.MipLevels;
+				desc.TextureCube.MostDetailedMip = 0;
+				ID3D11ShaderResourceView* srv;
+				checkResult(getDevice()->CreateShaderResourceView(mTexture, &desc, &srv));
+				addSR(srv);
+			}
+			else
+			{
+				ID3D11ShaderResourceView* srv;
+				checkResult(getDevice()->CreateShaderResourceView(mTexture, nullptr, &srv));
+				addSR(srv);
+			}
+		}
+	}
+
 }
 
 void Renderer::Texture2D::blit(const void * data, size_t size)

@@ -36,7 +36,7 @@ public:
 	~PBR();
 
 	void render(Renderer::Texture2D::Ptr rt)  override final;
-	void init(const Vector3& cluster = { 0,0,0 }, const std::vector<Renderer::Texture::Ptr>& shadows = {});
+	void init(const Vector3& cluster = { 0,0,0 }, const std::vector<Renderer::Texture2D::Ptr>& shadows = {});
 private:
 	void renderLightVolumes(Renderer::Texture2D::Ptr rt);
 	void renderNormal(Renderer::Texture2D::Ptr rt);
@@ -46,7 +46,7 @@ private:
 	Renderer::DepthStencil::Ptr mDepth;
 	Renderer::ShaderResource::Ptr mDepthLinear;
 	Renderer::ShaderResource::Ptr mLightsIndex;
-	std::vector<Renderer::Texture::Ptr> mShadowTextures;
+	std::vector<Renderer::Texture2D::Ptr> mShadowTextures;
 
 	std::vector<Renderer::PixelShader::Weak> mPSs;
 	Renderer::Sampler::Ptr mLinear;

@@ -25,17 +25,17 @@ void MultipleLights::initPipeline()
 	auto w = mRenderer->getWidth();
 	auto h = mRenderer->getHeight();
 	auto albedo = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
-	mPipeline->addShaderResource("albedo", albedo);
-	mPipeline->addRenderTarget("albedo", albedo);
+	mPipeline->addShaderResource("albedo", *albedo);
+	mPipeline->addRenderTarget("albedo", *albedo);
 	auto normal = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
-	mPipeline->addShaderResource("normal", normal);
-	mPipeline->addRenderTarget("normal", normal);
+	mPipeline->addShaderResource("normal", *normal);
+	mPipeline->addRenderTarget("normal", *normal);
 	auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R32_TYPELESS, true);
-	mPipeline->addShaderResource("depth", depth);
-	mPipeline->addDepthStencil("depth", depth);
+	mPipeline->addShaderResource("depth", *depth);
+	mPipeline->addDepthStencil("depth", *depth);
 	auto depthLinear = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32_FLOAT);
-	mPipeline->addShaderResource("depthlinear", depthLinear);
-	mPipeline->addRenderTarget("depthlinear", depthLinear);
+	mPipeline->addShaderResource("depthlinear", *depthLinear);
+	mPipeline->addRenderTarget("depthlinear", *depthLinear);
 
 
 	constexpr auto MAX_NUM_LIGHTS = 1024;
@@ -363,9 +363,9 @@ void MultipleLights::initDRPipeline()
 
 	mPipeline->setFrameBuffer(frame);
 	auto bb = mRenderer->getBackbuffer();
-	mPipeline->pushStage("clear rt",[bb](Renderer::RenderTarget::Ptr rt)
+	mPipeline->pushStage("clear rt",[bb](Renderer::Texture2D::Ptr rt)
 	{
-		rt.lock()->clear({ 0,0,0,0 });
+		rt->getRenderTarget().lock()->clear({ 0,0,0,0 });
 	});
 
 	mPipeline->pushStage<GBuffer>();
@@ -376,8 +376,8 @@ void MultipleLights::initDRPipeline()
 
 	mPipeline->pushStage("draw to backbuffer",[bb, quad](Renderer::Texture2D::Ptr rt)
 	{
-		quad->setRenderTarget(bb);
-		quad->drawTexture(rt, false);
+		quad->setRenderTarget(*bb);
+		quad->drawTexture(*rt, false);
 	});
 }
 
@@ -405,8 +405,8 @@ void MultipleLights::initTBDRPipeline()
 	desc.CPUAccessFlags = 0;
 	desc.MiscFlags = 0;
 	auto depthBounds = mRenderer->createTexture(desc);
-	mPipeline->addUnorderedAccess("depthbounds", depthBounds);
-	mPipeline->addShaderResource("depthbounds", depthBounds);
+	mPipeline->addUnorderedAccess("depthbounds", *depthBounds);
+	mPipeline->addShaderResource("depthbounds", *depthBounds);
 
 	constexpr auto maxlightspercluster = 1024;
 	auto lightindices = mRenderer->createRWBuffer(maxlightspercluster * bw * bh * sizeof(UINT), sizeof(UINT), DXGI_FORMAT_R32_UINT, D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE);
@@ -428,15 +428,15 @@ void MultipleLights::initTBDRPipeline()
 
 
 	auto lighttable = mRenderer->createTexture(texdesc);
-	mPipeline->addShaderResource("lighttable", lighttable);
-	mPipeline->addUnorderedAccess("lighttable", lighttable);
+	mPipeline->addShaderResource("lighttable", *lighttable);
+	mPipeline->addUnorderedAccess("lighttable", *lighttable);
 
 
 	mPipeline->setFrameBuffer(frame);
 	auto bb = mRenderer->getBackbuffer();
-	mPipeline->pushStage("clear rt",[bb](Renderer::RenderTarget::Ptr rt)
+	mPipeline->pushStage("clear rt",[bb](Renderer::Texture2D::Ptr rt)
 	{
-		rt.lock()->clear({ 0,0,0,0 });
+		rt->getRenderTarget().lock()->clear({ 0,0,0,0 });
 	});
 
 	mPipeline->pushStage<GBuffer>();
@@ -451,8 +451,8 @@ void MultipleLights::initTBDRPipeline()
 
 	mPipeline->pushStage("draw to backbuffer",[bb, quad](Renderer::Texture2D::Ptr rt)
 	{
-		quad->setRenderTarget(bb);
-		quad->drawTexture(rt, false);
+		quad->setRenderTarget(*bb);
+		quad->drawTexture(*rt, false);
 	});
 
 
@@ -486,7 +486,7 @@ void MultipleLights::initCDRPipeline()
 	auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 
 	constexpr auto MAX_SHADOWMAPS = 8;
-	std::vector<Renderer::Texture::Ptr> shadowmaps;
+	std::vector<Renderer::Texture2D::Ptr> shadowmaps;
 	for (int i = 0; i < MAX_SHADOWMAPS; ++i)
 		shadowmaps.push_back(mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32_FLOAT));
 
@@ -511,8 +511,8 @@ void MultipleLights::initCDRPipeline()
 	texdesc.CPUAccessFlags = 0;
 	texdesc.MiscFlags = 0;
 	auto lighttable = mRenderer->createTexture3D(texdesc);
-	mPipeline->addShaderResource("lighttable", lighttable);
-	mPipeline->addUnorderedAccess("lighttable", lighttable);
+	mPipeline->addShaderResource("lighttable", *lighttable);
+	mPipeline->addUnorderedAccess("lighttable", *lighttable);
 
 	D3DX11_IMAGE_LOAD_INFO loadinfo;
 	loadinfo.Width = 512;
@@ -521,14 +521,14 @@ void MultipleLights::initCDRPipeline()
 	auto envmap = mRenderer->createTextureCube(files, &loadinfo);
 	auto proc = ImageProcessing::create<PrefilterCubemap>(mRenderer);
 	auto ret = proc->process(envmap);
-	mPipeline->addShaderResource("irradinace", ret);
+	mPipeline->addShaderResource("irradinace", *ret);
 
 
 	mPipeline->setFrameBuffer(frame);
 	auto bb = mRenderer->getBackbuffer();
-	mPipeline->pushStage("clear rt", [bb](Renderer::RenderTarget::Ptr rt)
+	mPipeline->pushStage("clear rt", [bb](Renderer::Texture2D::Ptr rt)
 	{
-		rt.lock()->clear({ 0,0,0,0 });
+		rt->getRenderTarget().lock()->clear({ 0,0,0,0 });
 	});
 
 	mPipeline->pushStage<GBuffer>();
@@ -552,8 +552,8 @@ void MultipleLights::initCDRPipeline()
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
 	mPipeline->pushStage("draw to backbuffer", [bb, quad](Renderer::Texture2D::Ptr rt)
 	{
-		quad->setRenderTarget(bb);
-		quad->drawTexture(rt, false);
+		quad->setRenderTarget(*bb);
+		quad->drawTexture(*rt, false);
 	});
 
 }

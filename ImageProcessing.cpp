@@ -59,8 +59,8 @@ Renderer::Texture2D::Ptr SamplingBox::process(Renderer::Texture2D::Ptr tex, Samp
 
 	desc = ret.lock()->getDesc();
 	mQuad.setViewport({ 0.0f, 0.0f, (float)desc.Width, (float)desc.Height, 0.0f, 0.1f });
-	mQuad.setTextures({ tex });
-	mQuad.setRenderTarget(ret);
+	mQuad.setTextures({ *tex });
+	mQuad.setRenderTarget(*ret);
 	mQuad.setDefaultBlend(false);
 	mQuad.setDefaultSampler();
 	mQuad.setPixelShader(mPS);
@@ -87,14 +87,14 @@ Renderer::Texture2D::Ptr Gaussian::process(Renderer::Texture2D::Ptr tex, SampleT
 	mQuad.setDefaultBlend(false);
 	mQuad.setDefaultSampler();
 
-	mQuad.setTextures({ tex });
-	mQuad.setRenderTarget(ret);
+	mQuad.setTextures({ *tex });
+	mQuad.setRenderTarget(*ret);
 	mQuad.setPixelShader(mPS[0]);
 	mQuad.draw();
 
-	mQuad.setTextures({ ret });
+	mQuad.setTextures({ *ret });
 	ret = createOrGet(ret, st);
-	mQuad.setRenderTarget(ret);
+	mQuad.setRenderTarget(*ret);
 	mQuad.setPixelShader(mPS[1]);
 	mQuad.draw();
 
@@ -160,19 +160,17 @@ Renderer::Texture2D::Ptr CubeMapProcessing::process(Renderer::Texture2D::Ptr tex
 
 	for (auto i = 0U; i < 6; ++i)
 	{
-		ID3D11RenderTargetView* rt = (ret.lock()->getRenderTargetView(i ));
-		mRenderer->getContext()->OMSetRenderTargets(1, &rt, NULL);
+		auto rt = (ret.lock()->getRenderTarget(i ));
+		mRenderer->setRenderTarget(rt, {});
 		view->SetMatrix((const float*)&viewMats[i]);
 
 		e->render(mRenderer, [this,ret, tex,rend,view, viewMats](ID3DX11EffectPass* pass)
 		{
-			mRenderer->setTexture(tex);
+			mRenderer->setTexture(*tex);
 			mRenderer->setLayout(mLayout.lock()->bind(pass));
 			mRenderer->getContext()->DrawIndexed(rend.numIndices, 0, 0);
 		});
 
-		rt = NULL;
-		mRenderer->getContext()->OMSetRenderTargets(1, &rt, NULL);
 
 	}
 

@@ -33,7 +33,7 @@ void SkyBox::render(Renderer::Texture2D::Ptr rt)
 
 	auto renderer = getRenderer();
 
-	renderer->setRenderTargets({ rt }, getDepthStencil("depth"));
+	renderer->setRenderTargets({ *rt }, getDepthStencil("depth"));
 	D3D11_DEPTH_STENCIL_DESC desc = {0};
 	desc.DepthEnable = true;
 	desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
@@ -74,7 +74,7 @@ void SkyBox::render(Renderer::Texture2D::Ptr rt)
 	renderer->setVertexBuffer(rend.vertices, rend.layout.lock()->getSize(), 0);
 	e->render(renderer, [&,this](ID3DX11EffectPass* pass)
 	{
-		renderer->setTexture(mSkyTex);
+		renderer->setTexture(*mSkyTex);
 		renderer->setLayout(mLayout.lock()->bind(pass));
 		renderer->getContext()->DrawIndexed(rend.numIndices, 0, 0);
 		renderer->getContext()->DrawIndexed(rend.numIndices, 0, 0);

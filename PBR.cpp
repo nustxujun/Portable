@@ -84,7 +84,7 @@ void PBR::render(Renderer::Texture2D::Ptr rt)
 
 }
 
-void PBR::init(const Vector3 & cluster, const std::vector<Renderer::Texture::Ptr>& shadows)
+void PBR::init(const Vector3 & cluster, const std::vector<Renderer::Texture2D::Ptr>& shadows)
 { 
 	mCluster = cluster; 
 	mShadowTextures = shadows; 
@@ -118,7 +118,7 @@ void PBR::renderNormal(Renderer::Texture2D::Ptr rt)
 	mConstants.lock()->blit(&constants, sizeof(constants));
 
 	auto quad = getQuad();
-	quad->setRenderTarget(rt);
+	quad->setRenderTarget(*rt);
 	std::vector<Renderer::ShaderResource::Ptr> srvs = {
 		mAlbedo, mNormal, mDepthLinear ,
 		getShaderResource("irradinace"),
@@ -137,7 +137,7 @@ void PBR::renderNormal(Renderer::Texture2D::Ptr rt)
 
 	//srvs[10] = mDefaultShadowTex;
 	for (int i = 0; i < mShadowTextures.size(); ++i)
-		srvs[i + 20] = mShadowTextures[i];
+		srvs[i + 20] = *mShadowTextures[i];
 
 	quad->setTextures(srvs);
 
@@ -290,7 +290,7 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 		rasterDesc.CullMode = D3D11_CULL_FRONT;
 		renderer->setRasterizer(rasterDesc);
 		renderer->setPixelShader(mPSs[Scene::Light::LT_POINT]);
-		renderer->setRenderTarget(rt, mDepth);
+		renderer->setRenderTarget(*rt, mDepth);
 		context->DrawIndexedInstanced(rend.numIndices, count, 0, 0, 0);
 
 	}
