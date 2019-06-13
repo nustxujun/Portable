@@ -49,7 +49,8 @@ void VolumetricLighting::renderBlur(Renderer::Texture2D::Ptr rt)
 	mConstants.lock()->blit(&size, sizeof(size));
 
 
-	mBlur->getRenderTarget().lock()->clear({ 1,1,1,1 });
+	//mBlur->getRenderTarget().lock()->clear({ 1,1,1,1 });
+	getRenderer()->clearRenderTarget(mBlur, { 1,1,1,1 });
 
 	mQuad.setSamplers({ mLinearClamp });
 	mQuad.setDefaultViewport();
@@ -57,8 +58,8 @@ void VolumetricLighting::renderBlur(Renderer::Texture2D::Ptr rt)
 	mQuad.setConstant(mConstants);
 
 	mQuad.setPixelShader(mColorFilter);
-	mQuad.setTextures({* rt });
-	mQuad.setRenderTarget(*mBlur);
+	mQuad.setTextures({ rt });
+	mQuad.setRenderTarget(mBlur);
 	mQuad.draw();
 
 	D3D11_BLEND_DESC desc = { 0 };
@@ -77,8 +78,8 @@ void VolumetricLighting::renderBlur(Renderer::Texture2D::Ptr rt)
 	mQuad.setBlend(desc);
 
 	mQuad.setPixelShader(mPS);
-	mQuad.setTextures({ *mBlur });
-	mQuad.setRenderTarget(*rt);
+	mQuad.setTextures({ mBlur });
+	mQuad.setRenderTarget(rt);
 
 	mQuad.draw();
 

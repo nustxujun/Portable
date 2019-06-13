@@ -117,19 +117,52 @@ void Renderer::present()
 #endif
 }
 
-void Renderer::clearRenderTarget(RenderTarget::Ptr rt, const float color[4])
+void Renderer::clearDepth(DepthStencil::Ptr rt, float depth)
 {
-	auto ptr = rt.lock();
-	if (ptr == nullptr) return;
-	mContext->ClearRenderTargetView(*ptr, color);
+	mContext->ClearDepthStencilView(rt->getView(), D3D11_CLEAR_DEPTH , depth, 0);
 }
 
-void Renderer::clearRenderTargets(std::vector<RenderTarget::Ptr>& rts, const std::array<float, 4>& color)
+void Renderer::clearStencil(DepthStencil::Ptr rt, UINT stencil)
 {
-	for (auto& i : rts)
+	mContext->ClearDepthStencilView(rt->getView(), D3D11_CLEAR_STENCIL, 0, stencil);
+}
+
+void Renderer::clearDepthStencil(DepthStencil::Ptr rt, float depth, UINT stencil)
+{
+	mContext->ClearDepthStencilView(rt->getView(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, depth, stencil);
+}
+
+void Renderer::clearRenderTarget(RenderTarget::Ptr rt, const std::array<float, 4>& color, size_t index )
+{
+	if (index == -1)
 	{
-		mContext->ClearRenderTargetView(*i.lock(), color.data());
+		for (size_t i = 0; i < rt->getNumViews(); ++i)
+			mContext->ClearRenderTargetView(rt->getView(i), color.data());
 	}
+	else
+		mContext->ClearRenderTargetView(rt->getView(index), color.data());
+}
+
+void Renderer::clearUnorderedAccess(UnorderedAccess::Ptr rt, const std::array<float, 4>& value, size_t index)
+{
+	if (index == -1)
+	{
+		for (size_t i = 0; i < rt->getNumViews(); ++i)
+			mContext->ClearUnorderedAccessViewFloat(rt->getView(i), value.data());
+	}
+	else
+		mContext->ClearUnorderedAccessViewFloat(rt->getView(index), value.data());
+}
+
+void Renderer::clearUnorderedAccess(UnorderedAccess::Ptr rt, const std::array<UINT, 4>& value, size_t index)
+{
+	if (index == -1)
+	{
+		for (size_t i = 0; i < rt->getNumViews(); ++i)
+			mContext->ClearUnorderedAccessViewUint(rt->getView(i), value.data());
+	}
+	else
+		mContext->ClearUnorderedAccessViewUint(rt->getView(index), value.data());
 }
 
 
@@ -139,7 +172,7 @@ void Renderer::setTexture(ShaderResource::Ptr srv)
 	mSRVState = 1;
 	auto ptr = srv.lock();
 	if (ptr == nullptr) return;
-	auto in = ptr->getShaderResourceView();
+	auto in = ptr->getView();
 	mContext->PSSetShaderResources(0, 1, &in);
 }
 
@@ -230,6 +263,15 @@ void Renderer::setRenderTarget(RenderTarget::Ptr rt, DepthStencil::Ptr ds)
 	mContext->OMSetRenderTargets(1, &rtv, dsv);
 }
 
+void Renderer::setRenderTarget(ID3D11RenderTargetView* rt, DepthStencil::Ptr ds )
+{
+	auto dsvptr = ds.lock();
+	ID3D11DepthStencilView* dsv = nullptr;
+	if (dsvptr != nullptr)
+		dsv = *dsvptr;
+	mContext->OMSetRenderTargets(1, &rt, dsv);
+}
+
 void Renderer::setRenderTargets(const std::vector<RenderTarget::Ptr>& rts, DepthStencil::Ptr ds)
 {
 	ID3D11DepthStencilView* dsv = 0;
@@ -244,6 +286,16 @@ void Renderer::setRenderTargets(const std::vector<RenderTarget::Ptr>& rts, Depth
 	
 	mContext->OMSetRenderTargets(list.size(), list.data(), dsv);
 }
+
+void Renderer::setRenderTargets(ID3D11RenderTargetView** rts, size_t size, DepthStencil::Ptr ds )
+{
+	ID3D11DepthStencilView* dsv = 0;
+	if (!ds.expired())
+		dsv = *ds.lock();
+
+	mContext->OMSetRenderTargets(size, rts, dsv);
+}
+
 
 void Renderer::removeRenderTargets()
 {
@@ -751,26 +803,6 @@ Renderer::Profile::Ptr Renderer::createProfile()
 
 
 
-Renderer::ShaderResource::~ShaderResource()
-{
-	if (mSRView)
-		mSRView->Release();
-	mSRView = nullptr;
-}
-
-
-
-Renderer::RenderTarget::~RenderTarget()
-{
-	mRTView->Release();
-}
-
-void Renderer::RenderTarget::clear(const std::array<float, 4> c)
-{
-	getContext()->ClearRenderTargetView(mRTView, c.data());
-}
-
-
 Renderer::Buffer::Buffer(Renderer* r, const D3D11_BUFFER_DESC& desc, const D3D11_SUBRESOURCE_DATA* data):D3DObject(r)
 {
 	mDesc = desc;
@@ -803,7 +835,7 @@ Renderer::Buffer::Buffer(Renderer * r, int size, int stride, DXGI_FORMAT format,
 		ID3D11ShaderResourceView* srv;
 		checkResult(getDevice()->CreateShaderResourceView(mBuffer, &srDesc, &srv));
 
-		mSRV = Sha
+		ShaderResource::addView(srv);
 	}
 
 	if (unorderedAccess)
@@ -815,7 +847,9 @@ Renderer::Buffer::Buffer(Renderer * r, int size, int stride, DXGI_FORMAT format,
 		DescUAV.Buffer.FirstElement = 0;
 		DescUAV.Buffer.NumElements = size / stride;
 
-		checkResult(getDevice()->CreateUnorderedAccessView(mBuffer, &DescUAV, &mUAV));
+		ID3D11UnorderedAccessView* uav;
+		checkResult(getDevice()->CreateUnorderedAccessView(mBuffer, &DescUAV, &uav));
+		UnorderedAccess::addView(uav);
 	}
 
 }
@@ -923,27 +957,6 @@ ID3DX11EffectConstantBuffer * Renderer::Effect::getConstantBuffer(const std::str
 
 Renderer::Texture::~Texture()
 {
-}
-
-Renderer::ShaderResource::Ptr Renderer::Texture::addSR(ID3D11ShaderResourceView * srv)
-{
-
-	ShaderResource::Ptr ptr = std::shared_ptr<ShaderResource>(new ShaderResource(srv));
-}
-
-Renderer::RenderTarget::Ptr Renderer::Texture::addRT(ID3D11RenderTargetView * rtv) const
-{
-	return RenderTarget::Ptr();
-}
-
-Renderer::UnorderedAccess::Ptr Renderer::Texture::addUA(ID3D11UnorderedAccessView * uav) const
-{
-	return UnorderedAccess::Ptr();
-}
-
-Renderer::DepthStencil::Ptr Renderer::Texture::addDS(ID3D11DepthStencilView * dsv) const
-{
-	return DepthStencil::Ptr();
 }
 
 
@@ -1074,43 +1087,6 @@ Renderer::Rasterizer::~Rasterizer()
 }
 
 
-Renderer::DepthStencil::~DepthStencil()
-{
-	if (mDSView)
-	mDSView->Release();
-}
-
-
-void Renderer::DepthStencil::clearDepth(float d)
-{
-	getContext()->ClearDepthStencilView(mDSView, D3D11_CLEAR_DEPTH, d, 0);
-}
-
-void Renderer::DepthStencil::clearStencil(int s)
-{
-	getContext()->ClearDepthStencilView(mDSView, D3D11_CLEAR_STENCIL, 1.0f, s);
-}
-
-Renderer::UnorderedAccess::UnorderedAccess(Renderer* r, ID3D11UnorderedAccessView* uav):D3DObject(r),mUAV(uav)
-{
-
-}
-
-Renderer::UnorderedAccess::~UnorderedAccess()
-{
-	if (mUAV)
-		mUAV->Release();
-}
-
-void Renderer::UnorderedAccess::clear( const std::array<UINT, 4>& value)
-{
-	getContext()->ClearUnorderedAccessViewUint(mUAV, value.data());
-}
-void Renderer::UnorderedAccess::clear( const std::array<float, 4>& value)
-{
-	getContext()->ClearUnorderedAccessViewFloat(mUAV, value.data());
-}
-
 Renderer::Profile::Profile(Renderer * r):D3DObject(r)
 {
 	D3D11_QUERY_DESC desc;
@@ -1180,7 +1156,7 @@ void Renderer::Texture2D::initTexture()
 					desc.Texture2DArray.FirstArraySlice = j;
 					ID3D11RenderTargetView* rtv;
 					checkResult(getDevice()->CreateRenderTargetView(mTexture, &desc, &rtv));
-					addRT(rtv);
+					RenderTarget::addView(rtv);
 				}
 			}
 		}
@@ -1188,7 +1164,7 @@ void Renderer::Texture2D::initTexture()
 		{
 			ID3D11RenderTargetView* rtv;
 			checkResult(getDevice()->CreateRenderTargetView(mTexture, NULL, &rtv));
-			addRT(rtv);
+			RenderTarget::addView(rtv);
 		}
 	};
 
@@ -1196,7 +1172,7 @@ void Renderer::Texture2D::initTexture()
 	{
 		ID3D11UnorderedAccessView* uav;
 		checkResult(getDevice()->CreateUnorderedAccessView(mTexture, nullptr, &uav));
-		addUA(uav);
+		UnorderedAccess::addView(uav);
 	}
 
 	if (depthstencil && shaderRecource)
@@ -1245,8 +1221,8 @@ void Renderer::Texture2D::initTexture()
 
 		checkResult(getDevice()->CreateShaderResourceView(mTexture, &srvd, &srv));
 
-		addSR(srv);
-		addDS(dsv);
+		ShaderResource::addView(srv);
+		DepthStencil::addView(dsv);
 	}
 	else
 	{
@@ -1254,7 +1230,7 @@ void Renderer::Texture2D::initTexture()
 		{
 			ID3D11DepthStencilView* dsv;
 			checkResult(getDevice()->CreateDepthStencilView(mTexture, nullptr, &dsv));
-			addDS(dsv);
+			DepthStencil::addView(dsv);
 		}
 		if (shaderRecource)
 		{
@@ -1267,13 +1243,15 @@ void Renderer::Texture2D::initTexture()
 				desc.TextureCube.MostDetailedMip = 0;
 				ID3D11ShaderResourceView* srv;
 				checkResult(getDevice()->CreateShaderResourceView(mTexture, &desc, &srv));
-				addSR(srv);
+				ShaderResource::addView(srv);
+
 			}
 			else
 			{
 				ID3D11ShaderResourceView* srv;
 				checkResult(getDevice()->CreateShaderResourceView(mTexture, nullptr, &srv));
-				addSR(srv);
+				ShaderResource::addView(srv);
+
 			}
 		}
 	}
@@ -1316,4 +1294,40 @@ Renderer::Profile::Timer::~Timer()
 #ifdef USE_PROFILE
 	profile->getContext()->End(profile->mEnd);
 #endif
+}
+
+void Renderer::Texture3D::initTexture()
+{
+	bool unorderedAccess = ((mDesc.BindFlags & D3D11_BIND_UNORDERED_ACCESS) != 0);
+	bool shaderRecource = ((mDesc.BindFlags & D3D11_BIND_SHADER_RESOURCE) != 0);
+	bool rendertarget = ((mDesc.BindFlags & D3D11_BIND_RENDER_TARGET) != 0);
+	bool depthstencil = ((mDesc.BindFlags & D3D11_BIND_DEPTH_STENCIL) != 0);
+
+	if (rendertarget && depthstencil)
+		error("cannot support a texture with rtview and dsview");
+
+
+	if (rendertarget)
+	{
+		{
+			ID3D11RenderTargetView* rtv;
+			checkResult(getDevice()->CreateRenderTargetView(mTexture, NULL, &rtv));
+			RenderTarget::addView(rtv);
+		}
+	};
+
+	if (unorderedAccess)
+	{
+		ID3D11UnorderedAccessView* uav;
+		checkResult(getDevice()->CreateUnorderedAccessView(mTexture, nullptr, &uav));
+		UnorderedAccess::addView(uav);
+	}
+
+	if (shaderRecource)
+	{
+		ID3D11ShaderResourceView* srv;
+		checkResult(getDevice()->CreateShaderResourceView(mTexture, nullptr, &srv));
+		ShaderResource::addView(srv);
+
+	}
 }

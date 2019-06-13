@@ -72,8 +72,8 @@ public:
 		WeakWrapper() {}
 		WeakWrapper(std::shared_ptr<T> ptr) { mInstance = ptr; }
 		WeakWrapper(std::weak_ptr<T> ptr) { mInstance = ptr; }
-		operator T& ()const { return *mInstance.lock().operator->(); }
-		T& operator*() const { return *mInstance.lock().operator->(); }
+		operator std::weak_ptr<T>() const { return mInstance; }
+
 		std::shared_ptr<T> operator->() const { return mInstance.lock(); }
 
 		bool expired()const { return mInstance.expired(); }
@@ -83,81 +83,37 @@ public:
 		std::weak_ptr<T> mInstance;
 	};
 
-	class ShaderResource : public NODefault, virtual public D3DObject
+	template<class T>
+	class View
 	{
 	public:
-		using Ptr = std::weak_ptr<ShaderResource>;
-	public:
-		ShaderResource(ID3D11ShaderResourceView* ptr) { mSRView = ptr; }
-		~ShaderResource();
-
-		ID3D11ShaderResourceView* getShaderResourceView()const { return mSRView; }
-		operator ID3D11ShaderResourceView* ()const { return mSRView; }
-
-	protected:
-		ID3D11ShaderResourceView* mSRView = NULL;
+		using Ptr = WeakWrapper<View>;
+		View() {}
+		~View() {
+			for (auto&i : mViews)
+				i->Release();
+		}
+		void addView(T* v) { mViews.push_back(v); }
+		T* getView(size_t index = 0) { 
+			if (mViews.empty())
+				return nullptr;
+			return mViews[index]; 
+		}
+		size_t getNumViews()const { return mViews.size(); }
+		operator T*()const { return mViews[0]; }
+		void swap(Ptr ptr) {
+			std::swap(mViews, ptr->mViews);
+		}
+	private:
+		std::vector<T*> mViews;
 	};
 
-	class UnorderedAccess : public NODefault, virtual public D3DObject
-	{
-	public:
-		using Ptr = std::weak_ptr<UnorderedAccess>;
+	using RenderTarget = View<ID3D11RenderTargetView>;
+	using ShaderResource = View<ID3D11ShaderResourceView>;
+	using UnorderedAccess = View<ID3D11UnorderedAccessView>;
+	using DepthStencil = View<ID3D11DepthStencilView>;
 
-	public:
-		UnorderedAccess(ID3D11UnorderedAccessView* p) { mUAV = p; }
-
-		UnorderedAccess(Renderer* r, ID3D11UnorderedAccessView* uav);
-
-		~UnorderedAccess();
-
-		operator ID3D11UnorderedAccessView* ()const { return mUAV; }
-		ID3D11UnorderedAccessView* getUnorderedAccess()const { return mUAV; }
-
-		void clear(const std::array<UINT, 4>& value);
-		void clear( const std::array<float, 4>& value);
-
-	protected:
-		ID3D11UnorderedAccessView* mUAV = NULL;
-	};
-
-	class DepthStencil : public NODefault, virtual public D3DObject
-	{
-	public:
-		using Ptr = std::weak_ptr<DepthStencil>;
-	public:
-		DepthStencil(ID3D11DepthStencilView* ds) { mDSView = ds; };
-		~DepthStencil();
-
-		operator ID3D11DepthStencilView* () const { return mDSView; }
-		void clearDepth(float d);
-		void clearStencil(int s);
-		void clearDepthAndStencil(float d, int s);
-	protected:
-		ID3D11DepthStencilView* mDSView = nullptr;
-	};
-
-
-
-
-	class RenderTarget : public NODefault, virtual public D3DObject
-	{
-	public:
-		using Ptr = std::weak_ptr<RenderTarget>;
-	public:
-		RenderTarget(ID3D11RenderTargetView* p) { mRTView = p; }
-
-
-		~RenderTarget();
-		operator ID3D11RenderTargetView*() { return mRTView; }
-		ID3D11RenderTargetView* getRenderTargetView() const{ return mRTView; }
-
-		void clear(const std::array<float, 4> c);
-
-	protected:
-		ID3D11RenderTargetView* mRTView;
-	};
-
-	class Buffer :public D3DObject
+	class Buffer :public D3DObject, public ShaderResource, public UnorderedAccess
 	{
 	public: 
 		using Ptr = std::weak_ptr<Buffer>;
@@ -179,8 +135,7 @@ public:
 	private:
 		ID3D11Buffer* mBuffer;
 		D3D11_BUFFER_DESC mDesc;
-		UnorderedAccess::Ptr mUAV;
-		ShaderResource::Ptr mSRV;
+
 	};
 
 	class Effect final: public NODefault, public D3DObject
@@ -207,32 +162,15 @@ public:
 		std::unordered_map<std::string, ID3DX11EffectTechnique*> mTechs;
 	};
 
-	class Texture : public D3DObject
+	class Texture : public D3DObject,public RenderTarget, public ShaderResource, public UnorderedAccess, public DepthStencil
 	{
 	public:
 		using Ptr = WeakWrapper<Texture>;
 	public:
 		Texture(Renderer* r) :D3DObject(r) {}
 		virtual ~Texture();
-		operator ShaderResource::Ptr()const { return mSRViews[0]; }
-		operator RenderTarget::Ptr()const { return mRTViews[0]; }
-		operator UnorderedAccess::Ptr()const { return mUAViews[0]; }
-		operator DepthStencil::Ptr()const { return mDSViews[0]; }
 
-		ShaderResource::Ptr getShaderResource(size_t index = 0)const { return mSRViews[index]; }
-		RenderTarget::Ptr getRenderTarget(size_t index = 0)const { return mRTViews[index]; }
-		UnorderedAccess::Ptr getUnorderedAccess(size_t index = 0)const { return mUAViews[index]; }
-		DepthStencil::Ptr getDepthStencil(size_t index = 0)const { return mDSViews[index]; }
-
-		ShaderResource::Ptr addSR(ID3D11ShaderResourceView* srv);
-		RenderTarget::Ptr addRT(ID3D11RenderTargetView* rtv)const;
-		UnorderedAccess::Ptr addUA(ID3D11UnorderedAccessView* uav)const;
-		DepthStencil::Ptr addDS(ID3D11DepthStencilView* dsv)const;
 	protected:
-		std::vector<ShaderResource::Ptr> mSRViews;
-		std::vector<RenderTarget::Ptr> mRTViews;
-		std::vector<UnorderedAccess::Ptr> mUAViews;
-		std::vector<DepthStencil::Ptr> mDSViews;
 	};
 
 	template<class T, class D>
@@ -266,11 +204,12 @@ public:
 				return;
 			}
 
+
 			std::swap(mTexture, ptr->mTexture);
-			std::swap(mRTViews, ptr->mRTViews);
-			std::swap(mSRViews, ptr->mSRViews);
-			std::swap(mUAViews, ptr->mUAViews);
-			std::swap(mRTViews, ptr->mRTViews);
+			ShaderResource::swap(t);
+			RenderTarget::swap(t);
+			UnorderedAccess::swap(t);
+			DepthStencil::swap(t);
 			std::swap(mDesc, ptr->mDesc);
 		}
 
@@ -457,8 +396,13 @@ public:
 	Texture2D::Ptr getDefaultDepthStencil() { return mDefaultDepthStencil; };
 
 	void present();
-	void clearRenderTarget(RenderTarget::Ptr rt, const float color[4]);
-	void clearRenderTargets(std::vector<RenderTarget::Ptr>& rts, const std::array<float,4>& color);
+	void clearDepth(DepthStencil::Ptr rt, float depth);
+	void clearStencil(DepthStencil::Ptr rt, UINT stencil);
+	void clearDepthStencil(DepthStencil::Ptr rt,float depth, UINT stencil = 0);
+	void clearRenderTarget(RenderTarget::Ptr rt, const std::array<float,4>& color, size_t index = -1);
+	void clearUnorderedAccess(UnorderedAccess::Ptr rt, const std::array<float, 4>& value, size_t index = -1);
+	void clearUnorderedAccess(UnorderedAccess::Ptr rt, const std::array<UINT, 4>& value, size_t index = -1);
+
 
 	//void setTexture(const Texture::Ptr tex);
 	//void setTextures(const std::vector<Texture::Ptr>& texs);
@@ -472,7 +416,7 @@ public:
 		std::vector<ShaderResource::Ptr> list(c.size());
 		
 		for (size_t i = 0; i < c.size(); ++i)
-			list[i] = c[i]->getShaderResource();
+			list[i] = c[i];
 		setTextures(list);
 	}
 	void removeShaderResourceViews();
@@ -481,8 +425,12 @@ public:
 	void setSamplers(const std::vector<Sampler::Ptr>& ss);
 	void removeSamplers();
 	Sampler::Ptr getSampler(const std::string&name);
-	void setRenderTarget(RenderTarget::Ptr rt, DepthStencil::Ptr ds = DepthStencil::Ptr());
-	void setRenderTargets(const std::vector<RenderTarget::Ptr>& rts, DepthStencil::Ptr ds = DepthStencil::Ptr());
+	void setRenderTarget(RenderTarget::Ptr rt, DepthStencil::Ptr ds = {});
+	void setRenderTarget(ID3D11RenderTargetView* rt, DepthStencil::Ptr ds = {});
+
+	void setRenderTargets(const std::vector<RenderTarget::Ptr>& rts, DepthStencil::Ptr ds = {});
+	void setRenderTargets(ID3D11RenderTargetView** rts, size_t size, DepthStencil::Ptr ds = {});
+
 	void removeRenderTargets();
 	void setVSConstantBuffers(const std::vector<Buffer::Ptr>& bs);
 	void setPSConstantBuffers(const std::vector<Buffer::Ptr>& bs);

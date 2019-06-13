@@ -10,8 +10,8 @@ PBR::PBR(
 	Pipeline::Stage(r, s, q,set, p)
 {
 	mName = "pbr lighting";
-	this->set("roughness", { {"type","set"}, {"value",0.5f},{"min","0.01"},{"max",1.0f},{"interval", "0.01"} });
-	this->set("metallic", { {"type","set"}, {"value",0.5f},{"min","0"},{"max",1.0f},{"interval", "0.01"} });
+	this->set("roughness", { {"type","set"}, {"value",0.1f},{"min","0.01"},{"max",1.0f},{"interval", "0.01"} });
+	this->set("metallic", { {"type","set"}, {"value",0.9f},{"min","0"},{"max",1.0f},{"interval", "0.01"} });
 	this->set("ambient", { {"type","set"}, {"value",0.01f},{"min","0"},{"max","1"},{"interval", "0.001"} });
 
 
@@ -26,8 +26,8 @@ PBR::PBR(
 	}
 
 
-	mLinear = r->createSampler("liear_wrap", D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
-	mPoint = r->createSampler("point_wrap", D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
+	mLinear = r->createSampler("liear_clamp", D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
+	mPoint = r->createSampler("point_clamp", D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
 	mConstants = r->createBuffer(sizeof(Constants), D3D11_BIND_CONSTANT_BUFFER,NULL, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 
 
@@ -118,10 +118,12 @@ void PBR::renderNormal(Renderer::Texture2D::Ptr rt)
 	mConstants.lock()->blit(&constants, sizeof(constants));
 
 	auto quad = getQuad();
-	quad->setRenderTarget(*rt);
+	quad->setRenderTarget(rt);
 	std::vector<Renderer::ShaderResource::Ptr> srvs = {
 		mAlbedo, mNormal, mDepthLinear ,
 		getShaderResource("irradinace"),
+		getShaderResource("prefiltered"),
+		getShaderResource("lut"),
 	};
 	srvs.resize(30);
 	srvs[6] = getShaderResource("pointlights");
@@ -137,7 +139,7 @@ void PBR::renderNormal(Renderer::Texture2D::Ptr rt)
 
 	//srvs[10] = mDefaultShadowTex;
 	for (int i = 0; i < mShadowTextures.size(); ++i)
-		srvs[i + 20] = *mShadowTextures[i];
+		srvs[i + 20] = mShadowTextures[i];
 
 	quad->setTextures(srvs);
 
@@ -273,7 +275,7 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 			}
 		};
 
-		mDepth.lock()->clearStencil(1);
+		renderer->clearStencil(mDepth,1);
 		renderer->setDepthStencilState(dsdesc, 1);
 		renderer->setPixelShader({});
 		renderer->setRenderTargets({}, mDepth);
@@ -290,7 +292,7 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 		rasterDesc.CullMode = D3D11_CULL_FRONT;
 		renderer->setRasterizer(rasterDesc);
 		renderer->setPixelShader(mPSs[Scene::Light::LT_POINT]);
-		renderer->setRenderTarget(*rt, mDepth);
+		renderer->setRenderTarget(rt, mDepth);
 		context->DrawIndexedInstanced(rend.numIndices, count, 0, 0, 0);
 
 	}

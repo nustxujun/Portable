@@ -4,12 +4,15 @@ Texture2D albedoTexture: register(t0);
 Texture2D normalTexture: register(t1);
 Texture2D depthTexture: register(t2);
 TextureCube irradianceTexture: register(t3);
+TextureCube prefilteredTexture: register(t4);
+Texture2D lutTexture: register(t5);
 
 
 Buffer<float4> pointlights: register(t6);
 Buffer<float4> spotlights: register(t7);
 Buffer<float4> dirlights: register(t8);
 
+#define PREFILTERED_MIP_LEVEL 5
 
 #if TILED || CLUSTERED
 Buffer<uint> lightsIndices: register(t9);
@@ -99,7 +102,7 @@ float3 travelLights(uint pointoffset, uint pointnum, uint spotoffset, uint spotn
 	{
 		shadowlist[i ] = shadows[i - 1].SampleLevel(sampPoint, uv, 0).r;
 	}
-
+	return (float)pointnum / (float)100;
 	for (uint i = 0; i < pointnum; ++i)
 	{
 		uint index = lightsIndices[pointoffset + i];
@@ -147,8 +150,12 @@ float3 travelLights(uint pointoffset, uint pointnum, uint spotoffset, uint spotn
 		Lo += directBRDF(roughness, metallic, F0, albedo, N, L, V) * radiance * shadow;
 	}
 
-	float3 irradiance = irradianceTexture.Sample(sampLinear, N).rgb;
-	Lo += indirectBRDF(irradiance, albedo);
+
+	//float3 lut = LUT(N, V, roughness, lutTexture, sampLinear);
+	//float3 prefiltered = prefilteredTexture.SampleLevel(sampLinear, N, roughness * (PREFILTERED_MIP_LEVEL -1));
+	//float3 irradiance = irradianceTexture.Sample(sampLinear, N).rgb;
+	//Lo += indirectBRDF(irradiance, prefiltered, lut, roughness, metallic, F0, albedo, N, V);
+
 	return Lo;
 }
 
@@ -160,9 +167,9 @@ float4 main(PS_INPUT input) : SV_TARGET
 	float2 texcoord = float2(input.Pos.x / width, input.Pos.y / height);
 	float3 albedo = albedoTexture.Sample(sampLinear, texcoord).rgb;
 
-	float4 normalData = normalTexture.Sample(sampPoint, texcoord);
+	float4 normalData = normalTexture.Sample(sampLinear, texcoord);
 	float3 N = normalize(normalData.xyz);
-	float depthVal = depthTexture.Sample(sampPoint, texcoord).g;
+	float depthVal = depthTexture.Sample(sampLinear, texcoord).g;
 	float4 worldpos;
 	worldpos.x = texcoord.x * 2.0f - 1.0f;
 	worldpos.y = -(texcoord.y * 2.0f - 1.0f);

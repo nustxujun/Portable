@@ -30,6 +30,8 @@ public:
 	virtual Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr ptr, SampleType st = DEFAULT) = 0;
 protected:
 	Renderer::Texture2D::Ptr createOrGet(Renderer::Texture2D::Ptr ptr, SampleType st);
+	Renderer::Texture2D::Ptr createOrGet(const D3D11_TEXTURE2D_DESC& desc);
+
 
 protected:
 	Renderer::Ptr mRenderer;
@@ -103,4 +105,5 @@ public:
 	using CubeMapProcessing::CubeMapProcessing;
 
 	void init();
+	Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr tex, SampleType st = DEFAULT);
 };

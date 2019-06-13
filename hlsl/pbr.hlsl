@@ -79,9 +79,36 @@ float3 directBRDF(float roughness, float metallic, float3 f0, float3 albedo, flo
 	return (specBRDF + diffBRDF) * NdotL;
 }
 
-float3 indirectBRDF(float3 irradiance, float3 albedo)
+
+float3 FresnelSchlickRoughness(float3 v, float3 n, float3 f0, float roughness)
 {
-	return irradiance * albedo;
+	float NdotV = max(dot(v, n), 0.0f);
+	float r1 = 1.0f - roughness;
+	return f0 + (max(float3(r1, r1, r1), f0) - f0) * pow(1 - NdotV, 5.0f);
+}
+
+float3 LUT(float3 normal, float3 viewDir, float roughness, Texture2D lut, SamplerState smp)
+{
+	float NdotV = dot(normal, viewDir);
+	NdotV = max(NdotV, 0.0f);
+	float2 uv = float2(NdotV, roughness);
+	return lut.Sample(smp, uv).r;
+}
+
+float3 indirectBRDF(float3 irradiance,float3 prefilter, float3 lut, float roughness, float metallic, float3 f0, float3 albedo, float3 normal, float3 tocam)
+{
+	f0 = lerp(f0, albedo, metallic);
+
+	float3 kS = FresnelSchlickRoughness(tocam, normal, f0, roughness);
+	float3 kD = 1.0f - kS;
+	kD *= (1.0f - metallic);
+
+	float3 specular = prefilter * (kS * lut.x + lut.y);
+	float3 diffuse = irradiance * albedo;
+
+	float3 ambient = (kD * diffuse + specular);
+
+	return ambient;
 }
 
 float attenuate(float distance, float range)

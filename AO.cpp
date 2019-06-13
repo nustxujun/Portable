@@ -102,19 +102,19 @@ void AO::render(Renderer::Texture2D::Ptr rt)
 	quad->setConstants({ mKernel, mMatrix });
 	quad->setPixelShader(mPS);
 	quad->setSamplers({ mLinearWrap ,mPointWrap });
-	quad->setTextures({ getShaderResource("normal"), getShaderResource("depth"), *mNoise});
+	quad->setTextures({ getShaderResource("normal"), getShaderResource("depth"), mNoise});
 	
 	quad->setDefaultBlend(false);
-	quad->setRenderTarget(*mAO);
+	quad->setRenderTarget(mAO);
 	quad->draw();
 
 	auto ret = mGaussianFilter->process(mAO);
 	quad->setBlendColorMul();
-	quad->setRenderTarget(*rt);
+	quad->setRenderTarget(rt);
 	quad->setDefaultPixelShader();
 	quad->setDefaultSampler();
 	quad->setDefaultViewport();
-	quad->setTextures({ *ret });
+	quad->setTextures({ ret });
 	quad->draw();
 }
 

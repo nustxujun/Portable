@@ -129,7 +129,7 @@ float3 ImportanceSampleGGX(float2 Xi, float3 N, float roughness)
 
 float4 prefilterMap(VertexShaderOutput pin) : SV_TARGET
 {
-	float roughness = 0.00001;
+	float roughness = roughnessCb;
 	const uint NumSamples = 1024u;
 	float3 N = normalize(pin.TexCoord);
 	float3 R = N;

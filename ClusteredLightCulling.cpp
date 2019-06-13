@@ -17,7 +17,7 @@ void ClusteredLightCulling::init(const Vector3& slices, const Vector3& clustersi
 void ClusteredLightCulling::render(Renderer::Texture2D::Ptr rt)
 {
 	std::array<UINT, 4> clear = {0,0,0,0};
-	mCurIndex.lock()->clear( clear);
+	getRenderer()->clearUnorderedAccess(mCurIndex, clear);
 
 	mComputer->setInputs({ getShaderResource("pointlights") , getShaderResource("spotlights") });
 	mComputer->setOuputs({ mCurIndex ,getUnorderedAccess("lightindices"), getUnorderedAccess("lighttable") });

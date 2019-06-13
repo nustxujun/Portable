@@ -39,6 +39,23 @@ Renderer::Texture2D::Ptr ImageProcessing::createOrGet(Renderer::Texture2D::Ptr p
 	return mTextures[hash][0];
 }
 
+Renderer::Texture2D::Ptr ImageProcessing::createOrGet(const D3D11_TEXTURE2D_DESC & texDesc)
+{
+	auto desc = texDesc;
+	desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
+
+	size_t hash = Common::hash(desc);
+	auto ret = mTextures.find(hash);
+	if (ret != mTextures.end())
+		return ret->second[0];
+
+
+	mTextures[hash][0] = mRenderer->createTexture(desc);
+	mTextures[hash][1] = mRenderer->createTexture(desc);
+
+	return mTextures[hash][0];
+}
+
 
 void SamplingBox::init()
 {
@@ -59,8 +76,8 @@ Renderer::Texture2D::Ptr SamplingBox::process(Renderer::Texture2D::Ptr tex, Samp
 
 	desc = ret.lock()->getDesc();
 	mQuad.setViewport({ 0.0f, 0.0f, (float)desc.Width, (float)desc.Height, 0.0f, 0.1f });
-	mQuad.setTextures({ *tex });
-	mQuad.setRenderTarget(*ret);
+	mQuad.setTextures({ tex });
+	mQuad.setRenderTarget(ret);
 	mQuad.setDefaultBlend(false);
 	mQuad.setDefaultSampler();
 	mQuad.setPixelShader(mPS);
@@ -87,14 +104,14 @@ Renderer::Texture2D::Ptr Gaussian::process(Renderer::Texture2D::Ptr tex, SampleT
 	mQuad.setDefaultBlend(false);
 	mQuad.setDefaultSampler();
 
-	mQuad.setTextures({ *tex });
-	mQuad.setRenderTarget(*ret);
+	mQuad.setTextures({ tex });
+	mQuad.setRenderTarget(ret);
 	mQuad.setPixelShader(mPS[0]);
 	mQuad.draw();
 
-	mQuad.setTextures({ *ret });
+	mQuad.setTextures({ ret });
 	ret = createOrGet(ret, st);
-	mQuad.setRenderTarget(*ret);
+	mQuad.setRenderTarget(ret);
 	mQuad.setPixelShader(mPS[1]);
 	mQuad.draw();
 
@@ -160,13 +177,13 @@ Renderer::Texture2D::Ptr CubeMapProcessing::process(Renderer::Texture2D::Ptr tex
 
 	for (auto i = 0U; i < 6; ++i)
 	{
-		auto rt = (ret.lock()->getRenderTarget(i ));
+		auto rt = ret->Renderer::RenderTarget::getView(i);
 		mRenderer->setRenderTarget(rt, {});
 		view->SetMatrix((const float*)&viewMats[i]);
 
 		e->render(mRenderer, [this,ret, tex,rend,view, viewMats](ID3DX11EffectPass* pass)
 		{
-			mRenderer->setTexture(*tex);
+			mRenderer->setTexture(tex);
 			mRenderer->setLayout(mLayout.lock()->bind(pass));
 			mRenderer->getContext()->DrawIndexed(rend.numIndices, 0, 0);
 		});
@@ -189,4 +206,78 @@ void PrefilterCubemap::init()
 	CubeMapProcessing::init();
 	mEffect = mRenderer->createEffect("hlsl/cubemap.fx");
 	mEffect.lock()->setTech("prefilter");
+}
+
+Renderer::Texture2D::Ptr PrefilterCubemap::process(Renderer::Texture2D::Ptr tex, SampleType st)
+{
+	using namespace DirectX;
+	using namespace DirectX::SimpleMath;
+	auto desc = tex->getDesc();
+	desc.MipLevels = 5;
+	desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
+
+	auto ret = createOrGet(desc);
+
+	auto e = mEffect.lock();
+	mRenderer->setDefaultBlendState();
+	mRenderer->setDefaultRasterizer();
+	mRenderer->setDefaultBlendState();
+	mRenderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	auto world = e->getVariable("World")->AsMatrix();
+	auto view = e->getVariable("View")->AsMatrix();
+	auto proj = e->getVariable("Projection")->AsMatrix();
+	world->SetMatrix((const float*)&Matrix::Identity);
+	Matrix op = DirectX::XMMatrixOrthographicLH(2, 2, 0, 1.0f);
+	//view->SetMatrix((const float*)&cam->getViewMatrix());
+	proj->SetMatrix((const float*)&op);
+
+
+	auto rend = mCube->getMesh(0);
+	mRenderer->setIndexBuffer(rend.indices, DXGI_FORMAT_R32_UINT, 0);
+	mRenderer->setVertexBuffer(rend.vertices, rend.layout.lock()->getSize(), 0);
+
+	Matrix viewMats[6] = {
+		XMMatrixLookAtLH(Vector3::Zero,Vector3::UnitX, Vector3::UnitY),
+		XMMatrixLookAtLH(Vector3::Zero,-Vector3::UnitX, Vector3::UnitY),
+		XMMatrixLookAtLH(Vector3::Zero,Vector3::UnitY, -Vector3::UnitZ),
+		XMMatrixLookAtLH(Vector3::Zero,-Vector3::UnitY, Vector3::UnitZ),
+		XMMatrixLookAtLH(Vector3::Zero,Vector3::UnitZ, Vector3::UnitY),
+		XMMatrixLookAtLH(Vector3::Zero,-Vector3::UnitZ, Vector3::UnitY),
+	};
+
+	int w = desc.Width;
+	int h = desc.Height;
+
+	float rs[] = { 0.000001f, 0.25f,0.5f,0.75f,1.0f };
+	for (auto r = 0U; r < desc.MipLevels; ++r)
+	{
+		mRenderer->setViewport({ 0.0f, 0.0f, (float)w, (float)h, 0.0f, 0.1f });
+		w /= 2;
+		h /= 2;
+
+		auto roughness = e->getVariable("roughnessCb")->AsScalar();
+		roughness->SetFloat(rs[r]);
+		for (auto i = 0U; i < 6; ++i)
+		{
+			auto rt = ret->Renderer::RenderTarget::getView(i + r * 6);
+			mRenderer->setRenderTarget(rt, {});
+			view->SetMatrix((const float*)&viewMats[i]);
+
+			e->render(mRenderer, [this, ret, tex, rend, view, viewMats](ID3DX11EffectPass* pass)
+			{
+				mRenderer->setTexture(tex);
+				mRenderer->setLayout(mLayout.lock()->bind(pass));
+				mRenderer->getContext()->DrawIndexed(rend.numIndices, 0, 0);
+			});
+
+
+		}
+	}
+
+	return ret;
+
+
+
+	return Renderer::Texture2D::Ptr();
 }

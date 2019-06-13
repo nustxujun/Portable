@@ -25,7 +25,7 @@ LightCulling::LightCulling(
 void LightCulling::render(Renderer::Texture2D::Ptr rt) 
 {
 	std::array<UINT, 4> clear = { 0,0,0,0 };
-	mCurIndex.lock()->clear(clear);
+	getRenderer()->clearUnorderedAccess(mCurIndex, clear);
 
 	Constants consts;
 	auto cam = getScene()->createOrGetCamera("main");

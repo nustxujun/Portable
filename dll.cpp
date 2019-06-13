@@ -214,8 +214,8 @@ public:
 		vp.MinDepth = 0.0f;
 		vp.MaxDepth = 1.0f;
 		mQuad->setViewport(vp);
-		mQuad->setTextures({ mTarget->getShaderResource() });
-		mQuad->setRenderTarget(*mRenderer->getBackbuffer());
+		mQuad->setTextures({ mTarget });
+		mQuad->setRenderTarget(mRenderer->getBackbuffer());
 		mQuad->draw();
 
 	}

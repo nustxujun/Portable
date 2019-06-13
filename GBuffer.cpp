@@ -54,10 +54,10 @@ void GBuffer::render(Renderer::Texture2D::Ptr rt)
 	renderer->setViewport(cam->getViewport());
 
 	std::vector<Renderer::RenderTarget::Ptr> rts = { mAlbedo, mNormal};
-	mAlbedo.lock()->clear({ 0,0,0,0 });
-	mNormal.lock()->clear({ 0,0,0,0 });
+	renderer->clearRenderTarget(mAlbedo, { 0,0,0,0 });
+	renderer->clearRenderTarget(mNormal, { 0,0,0,0 });
 
-	mDepth.lock()->clearDepth(1.0f);
+	renderer->clearDepthStencil(mDepth, 1.0f);
 	renderer->setRenderTargets(rts, mDepth);
 	renderer->setDefaultDepthStencilState();
 	renderer->setDefaultRasterizer();

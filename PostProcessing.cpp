@@ -34,8 +34,8 @@ void PostProcessing::render(Renderer::Texture2D::Ptr rt)
 	mQuad.setDefaultViewport();
 	mQuad.setDefaultBlend(false);
 	mQuad.setPixelShader(mPS);
-	mQuad.setTextures({ mSrc->getShaderResource() });
-	mQuad.setRenderTarget(*mMid);
+	mQuad.setTextures({ mSrc });
+	mQuad.setRenderTarget(mMid);
 	mQuad.draw();
 
 
