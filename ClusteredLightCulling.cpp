@@ -25,6 +25,7 @@ void ClusteredLightCulling::render(Renderer::Texture2D::Ptr rt)
 	Constants constants;
 	auto cam = getScene()->createOrGetCamera("main");
 	constants.invertProj = cam->getProjectionMatrix().Invert().Transpose();
+	constants.view = cam->getViewMatrix().Transpose();
 	constants.farZ = cam->getFar();
 	constants.nearZ = cam->getNear();
 	constants.numPointLights = getValue<int>("numpoints");

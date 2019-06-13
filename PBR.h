@@ -8,6 +8,7 @@ class PBR:public Pipeline::Stage
 	struct Constants
 	{
 		Matrix invertViewPorj;
+		Matrix view;
 		Vector3 clustersize;
 		int numdirs;
 		Vector3 campos;

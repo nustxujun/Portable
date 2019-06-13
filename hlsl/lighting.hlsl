@@ -36,6 +36,7 @@ SamplerState sampPoint: register(s1);
 cbuffer ConstantBuffer: register(b0)
 {
 	matrix invertViewProj;
+	matrix view;
 	float3 clustersize;
 	uint numdirs;
 	float3 campos;
@@ -102,7 +103,6 @@ float3 travelLights(uint pointoffset, uint pointnum, uint spotoffset, uint spotn
 	{
 		shadowlist[i ] = shadows[i - 1].SampleLevel(sampPoint, uv, 0).r;
 	}
-	return (float)pointnum / (float)100;
 	for (uint i = 0; i < pointnum; ++i)
 	{
 		uint index = lightsIndices[pointoffset + i];
@@ -117,7 +117,7 @@ float3 travelLights(uint pointoffset, uint pointnum, uint spotoffset, uint spotn
 
 		float dist = length(pos - lightpos.xyz);
 		float3 radiance = pointlight(dist, lightpos.w, lightcolor.rgb) ;
-		Lo += directBRDF(roughness, metallic, F0, albedo, N, L, -pos.xyz) * radiance * shadow;
+		Lo += directBRDF(roughness, metallic, F0, albedo, N, L, V) * radiance * shadow;
 	}
 
 	for (uint i = 0; i < spotnum; ++i)
@@ -151,10 +151,10 @@ float3 travelLights(uint pointoffset, uint pointnum, uint spotoffset, uint spotn
 	}
 
 
-	//float3 lut = LUT(N, V, roughness, lutTexture, sampLinear);
-	//float3 prefiltered = prefilteredTexture.SampleLevel(sampLinear, N, roughness * (PREFILTERED_MIP_LEVEL -1));
-	//float3 irradiance = irradianceTexture.Sample(sampLinear, N).rgb;
-	//Lo += indirectBRDF(irradiance, prefiltered, lut, roughness, metallic, F0, albedo, N, V);
+	float3 lut = LUT(N, V, roughness, lutTexture, sampLinear);
+	float3 prefiltered = prefilteredTexture.SampleLevel(sampLinear, N, roughness * (PREFILTERED_MIP_LEVEL -1));
+	float3 irradiance = irradianceTexture.Sample(sampLinear, N).rgb;
+	Lo += indirectBRDF(irradiance, prefiltered, lut, roughness, metallic, F0, albedo, N, V);
 
 	return Lo;
 }
@@ -195,13 +195,14 @@ float4 main(PS_INPUT input) : SV_TARGET
 	Lo += travelLights(tile.x, tile.y, tile.x + tile.y, tile.z, N, worldpos.xyz, albedo, texcoord);
 
 #elif CLUSTERED
+
+	float4 viewpos = mul(worldpos, view);
 	uint x = input.Pos.x / clustersize.x;
 	uint y = input.Pos.y / clustersize.y;
-	uint z = viewToSlice(worldpos.z);
+	uint z = viewToSlice(viewpos.z);
 	uint3 coord = uint3(x, y, z);
 
 	uint4 cluster = clusters[coord];
-
 	Lo += travelLights(cluster.x, cluster.y, cluster.x + cluster.y, cluster.z, N, worldpos.xyz, albedo, texcoord);
 #else
 

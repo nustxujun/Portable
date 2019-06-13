@@ -72,23 +72,23 @@ void MultipleLights::initScene()
 	set("dirradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
 
 
-	set("lightRange", { {"value", 20}, {"min", 1}, {"max", 1000}, {"interval", 1}, {"type","set"} });
+	set("lightRange", { {"value", 50}, {"min", 1}, {"max", 1000}, {"interval", 1}, {"type","set"} });
 	set("fovy", { {"value", 0.785398185f}, {"min", "0.1"}, {"max", "2"}, {"interval", "0.01"}, {"type","set"} });
 
 	auto root = mScene->getRoot();
 
-	{
-		Parameters params;
-		params["geom"] = "room";
-		params["size"] = "100";
-		auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
-		{
-			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		});
-		model->setCastShadow(false);
-		model->attach(root);
-		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-	}
+	//{
+	//	Parameters params;
+	//	params["geom"] = "room";
+	//	params["size"] = "100";
+	//	auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
+	//	{
+	//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+	//	});
+	//	model->setCastShadow(false);
+	//	model->attach(root);
+	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+	//}
 	//{
 	//	Parameters params;
 	//	params["geom"] = "cube";
@@ -474,14 +474,25 @@ void MultipleLights::initCDRPipeline()
 	//"media/skybox/back.jpg",
 	//};
 
-	std::array<std::string,6> files = {
-	"media/skybox/1.png",
-	"media/skybox/2.png",
-	"media/skybox/3.png",
-	"media/skybox/4.png",
-	"media/skybox/5.png",
-	"media/skybox/6.png",
+	std::array<std::string, 6> files = {
+				"media/skybox/emeraldfog_ft.png",
+		"media/skybox/emeraldfog_bk.png",
+
+		"media/skybox/emeraldfog_up.png",
+		"media/skybox/emeraldfog_dn.png",
+				"media/skybox/emeraldfog_rt.png",
+		"media/skybox/emeraldfog_lf.png",
+
 	};
+
+	//std::array<std::string,6> files = {
+	//"media/skybox/1.png",
+	//"media/skybox/2.png",
+	//"media/skybox/3.png",
+	//"media/skybox/4.png",
+	//"media/skybox/5.png",
+	//"media/skybox/6.png",
+	//};
 
 
 	auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
@@ -545,7 +556,7 @@ void MultipleLights::initCDRPipeline()
 	mPipeline->pushStage<GBuffer>();
 	mPipeline->pushStage<DepthLinearing>();
 
-	//mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
+	mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
 
 	mPipeline->pushStage<ClusteredLightCulling>(Vector3(SLICED_LEN, SLICED_LEN, SLICED_Z), Vector3(bw, bh,0));
 	
@@ -555,9 +566,9 @@ void MultipleLights::initCDRPipeline()
 
 
 	//std::vector<std::string> files = { "media/uffizi_cross.dds" };
-	//mPipeline->pushStage<SkyBox>(files);
+	mPipeline->pushStage<SkyBox>(files);
 
-	//mPipeline->pushStage<HDR>();
+	mPipeline->pushStage<HDR>();
 
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);

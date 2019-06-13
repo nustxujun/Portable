@@ -13,7 +13,7 @@ HDR::~HDR()
 
 void HDR::init()
 {
-	this->set("brightness", { {"type","set"}, {"value",1.0f},{"min","0.1"},{"max","3"},{"interval", "0.1"} });
+	this->set("brightness", { {"type","set"}, {"value",1.0f},{"min","0.1"},{"max","10"},{"interval", "0.1"} });
 	this->set("blurcount", { {"type","set"}, {"value",5},{"min","1"},{"max","5"},{"interval", "1"} });
 	this->set("samplescale", { {"type","set"}, {"value",1},{"min","0.1"},{"max","2"},{"interval", "0.1"} });
 

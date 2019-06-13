@@ -8,6 +8,7 @@ class ClusteredLightCulling: public Pipeline::Stage
 	struct Constants
 	{
 		Matrix invertProj;
+		Matrix view;
 		Vector3 slicesSize;
 		int numPointLights;
 		int numSpotLights;

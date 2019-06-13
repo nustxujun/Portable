@@ -12,7 +12,7 @@ PBR::PBR(
 	mName = "pbr lighting";
 	this->set("roughness", { {"type","set"}, {"value",0.1f},{"min","0.01"},{"max",1.0f},{"interval", "0.01"} });
 	this->set("metallic", { {"type","set"}, {"value",0.9f},{"min","0"},{"max",1.0f},{"interval", "0.01"} });
-	this->set("ambient", { {"type","set"}, {"value",0.01f},{"min","0"},{"max","1"},{"interval", "0.001"} });
+	this->set("ambient", { {"type","set"}, {"value",0},{"min","0"},{"max","1"},{"interval", "0.001"} });
 
 
 	const std::vector<const char*> definitions = { "POINT", "DIR", "SPOT", "TILED", "CLUSTERED" };
@@ -108,6 +108,8 @@ void PBR::renderNormal(Renderer::Texture2D::Ptr rt)
 	constants.width = desc.Width;
 	constants.height = desc.Height;
 	constants.invertViewPorj = (cam->getViewMatrix() * cam->getProjectionMatrix()).Invert().Transpose();
+	constants.view = cam->getViewMatrix().Transpose();
+	
 	constants.nearZ = cam->getNear();
 	constants.farZ = cam->getFar();
 	constants.clustersize = mCluster;
@@ -213,6 +215,8 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 
 	Constants constants;
 	constants.invertViewPorj = (cam->getViewMatrix() * cam->getProjectionMatrix()).Invert().Transpose();
+	constants.view = cam->getViewMatrix().Invert().Transpose();
+
 	constants.roughness = getValue<float>("roughness");
 	constants.metallic = getValue<float>("metallic");
 	constants.width = renderer->getWidth();

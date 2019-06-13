@@ -10,6 +10,7 @@ RWTexture3D<uint4> clusters:register(u2);
 cbuffer Constants: register(c0)
 {
 	matrix invertProj;
+	matrix view;
 	float3 slicesSize;
 	int numPointLights;
 	int numSpotLights;
@@ -19,7 +20,7 @@ cbuffer Constants: register(c0)
 
 
 #ifndef LIGHT_THREAD
-#define LIGHT_THREAD 2
+#define LIGHT_THREAD 1
 #endif
 
 #ifndef MAX_LIGHTS_PER_CLUSTER
@@ -89,7 +90,7 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 	for (int i = 0; i < numPointLights; i += LIGHT_THREAD)
 	{
 		float4 light = pointlights[i * 2];
-		float3 pos = light.xyz;
+		float3 pos = mul(float4(light.xyz,1.0), view).xyz;
 		float range = light.w;
 
 		if (!TestSphereVsAABB(pos, range, aabbCenter, aabbHalf))
@@ -106,7 +107,7 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 	for (int i = 0; i < numSpotLights; i += LIGHT_THREAD)
 	{
 		float4 light = spotlights[i * 3];
-		float3 pos = light.xyz;
+		float3 pos = mul(float4(light.xyz, 1.0), view).xyz;
 		float range = light.w;
 
 		if (!TestSphereVsAABB(pos, range, aabbCenter, aabbHalf))
