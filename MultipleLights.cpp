@@ -36,7 +36,9 @@ void MultipleLights::initPipeline()
 	auto depthLinear = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32_FLOAT);
 	mPipeline->addShaderResource("depthlinear", depthLinear);
 	mPipeline->addRenderTarget("depthlinear", depthLinear);
-
+	auto material = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32_FLOAT);
+	mPipeline->addShaderResource("material", material);
+	mPipeline->addRenderTarget("material", material);
 
 	constexpr auto MAX_NUM_LIGHTS = 1024;
 	auto pointlights = mRenderer->createRWBuffer(sizeof(Vector4) * 2 * MAX_NUM_LIGHTS, sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
@@ -59,7 +61,7 @@ void MultipleLights::initPipeline()
 void MultipleLights::initScene()
 {
 	int numpoints = 100;
-	int numspots = 1;
+	int numspots = 0;
 	int numdirs = 1;
 
 
@@ -77,18 +79,22 @@ void MultipleLights::initScene()
 
 	auto root = mScene->getRoot();
 
-	//{
-	//	Parameters params;
-	//	params["geom"] = "room";
-	//	params["size"] = "100";
-	//	auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
-	//	{
-	//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-	//	});
-	//	model->setCastShadow(false);
-	//	model->attach(root);
-	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-	//}
+	{
+		Parameters params;
+		params["geom"] = "room";
+		params["size"] = "100";
+		auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
+		{
+			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+		});
+		model->setCastShadow(false);
+		model->attach(root);
+		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+		Material::Ptr mat = Material::create();
+		mat->metallic = 0;
+		mat->roughness = 1.0f;
+		model->setMaterial(mat);
+	}
 	//{
 	//	Parameters params;
 	//	params["geom"] = "cube";
@@ -116,20 +122,31 @@ void MultipleLights::initScene()
 	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
 
 	//}
-
+	for (int r = 0; r <= 10; ++r)
 	{
-		Parameters params;
-		params["geom"] = "sphere";
-		params["radius"] = "10";
-		params["resolution"] = "500";
-		auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
+		for (int m = 0; m <= 10; ++m)
 		{
-			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		});
-		model->setCastShadow(false);
-		model->attach(root);
-		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+			Parameters params;
+			params["geom"] = "sphere";
+			params["radius"] = "1";
+			params["resolution"] = "100";
+			params["size"] = "1";
+			std::stringstream ss;
+			ss << "material" << r << m; 
+			auto model = mScene->createModel(ss.str(), params, [this](const Parameters& p)
+			{
+				return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+			});
+			model->setCastShadow(false);
+			model->attach(root);
+			model->getNode()->setPosition(0.0f, 2.0f * r, 2.0f * m);
+			Material::Ptr mat = Material::create();
+			mat->metallic = m * 0.1f;
+			mat->roughness = r * 0.1f;
+			model->setMaterial(mat);
+		}
 	}
+
 
 	//{
 	//	Parameters params;
@@ -371,7 +388,7 @@ void MultipleLights::initDRPipeline()
 	mPipeline->pushStage<GBuffer>();
 	mPipeline->pushStage<DepthLinearing>();
 	mPipeline->pushStage<PBR>();
-	//mPipeline->pushStage<HDR>();
+	mPipeline->pushStage<HDR>();
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 
 	mPipeline->pushStage("draw to backbuffer",[bb, quad](Renderer::Texture2D::Ptr rt)
@@ -463,27 +480,28 @@ void MultipleLights::initCDRPipeline()
 {
 	auto w = mRenderer->getWidth();
 	auto h = mRenderer->getHeight();
-
-	
 	//std::array<std::string,6> files = {
-	//"media/skybox/right.jpg",
-	//"media/skybox/left.jpg",
-	//"media/skybox/top.jpg",
-	//"media/skybox/bottom.jpg",
-	//"media/skybox/front.jpg",
-	//"media/skybox/back.jpg",
+	//	"media/skybox/sunsetcube1024.dds"
 	//};
-
-	std::array<std::string, 6> files = {
-				"media/skybox/emeraldfog_ft.png",
-		"media/skybox/emeraldfog_bk.png",
-
-		"media/skybox/emeraldfog_up.png",
-		"media/skybox/emeraldfog_dn.png",
-				"media/skybox/emeraldfog_rt.png",
-		"media/skybox/emeraldfog_lf.png",
-
+	std::array<std::string,6> files = {
+	"media/skybox/right.jpg",
+	"media/skybox/left.jpg",
+	"media/skybox/top.jpg",
+	"media/skybox/bottom.jpg",
+	"media/skybox/front.jpg",
+	"media/skybox/back.jpg",
 	};
+
+	//std::array<std::string, 6> files = {
+	//			"media/skybox/emeraldfog_ft.png",
+	//	"media/skybox/emeraldfog_bk.png",
+
+	//	"media/skybox/emeraldfog_up.png",
+	//	"media/skybox/emeraldfog_dn.png",
+	//			"media/skybox/emeraldfog_rt.png",
+	//	"media/skybox/emeraldfog_lf.png",
+
+	//};
 
 	//std::array<std::string,6> files = {
 	//"media/skybox/1.png",
@@ -568,7 +586,7 @@ void MultipleLights::initCDRPipeline()
 	//std::vector<std::string> files = { "media/uffizi_cross.dds" };
 	mPipeline->pushStage<SkyBox>(files);
 
-	mPipeline->pushStage<HDR>();
+	//mPipeline->pushStage<HDR>();
 
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);

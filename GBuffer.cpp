@@ -47,15 +47,18 @@ void GBuffer::render(Renderer::Texture2D::Ptr rt)
 	auto world = e->getVariable("World")->AsMatrix();
 	auto view = e->getVariable("View")->AsMatrix();
 	auto proj = e->getVariable("Projection")->AsMatrix();
-
+	auto roughness = e->getVariable("roughness")->AsScalar();
+	auto metallic = e->getVariable("metallic")->AsScalar();
 	auto cam = getScene()->createOrGetCamera("main");
 	view->SetMatrix((const float*)&cam->getViewMatrix());
 	proj->SetMatrix((const float*)&cam->getProjectionMatrix());
 	renderer->setViewport(cam->getViewport());
 
-	std::vector<Renderer::RenderTarget::Ptr> rts = { mAlbedo, mNormal};
+	std::vector<Renderer::RenderTarget::Ptr> rts = { mAlbedo, mNormal, getRenderTarget("material")};
 	renderer->clearRenderTarget(mAlbedo, { 0,0,0,0 });
 	renderer->clearRenderTarget(mNormal, { 0,0,0,0 });
+	renderer->clearRenderTarget(getRenderTarget("material"), { 0,0,0,0 });
+
 
 	renderer->clearDepthStencil(mDepth, 1.0f);
 	renderer->setRenderTargets(rts, mDepth);
@@ -75,9 +78,11 @@ void GBuffer::render(Renderer::Texture2D::Ptr rt)
 	//rasterDesc.ScissorEnable = false;
 	//rasterDesc.SlopeScaledDepthBias = 0.0f;
 	//renderer->setRasterizer(renderer->createOrGetRasterizer(rasterDesc));
-	getScene()->visitRenderables([world, this, e](const Renderable& r)
+	getScene()->visitRenderables([world, this, e, roughness, metallic](const Renderable& r)
 	{
 		world->SetMatrix((const float*)&r.tranformation);
+		roughness->SetFloat(r.material->roughness);
+		metallic->SetFloat(r.material->metallic);
 		getRenderer()->setIndexBuffer(r.indices, DXGI_FORMAT_R32_UINT, 0);
 		getRenderer()->setVertexBuffer(r.vertices, r.layout.lock()->getSize(), 0);
 		if (r.material->hasTexture())

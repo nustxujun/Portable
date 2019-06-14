@@ -1,6 +1,7 @@
 
 static const float PI = 3.14159265359f;
 static const float3 F0_DEFAULT = 0.04f;
+static const float MIN_ROUGHNESS = 0.0001f;
 
 float3 fresnelSchlick(float cosTheta, float3 F0)
 {
@@ -66,6 +67,7 @@ float3 Lambert(float3 kS, float3 albedo, float metallic)
 
 float3 directBRDF(float roughness, float metallic, float3 f0, float3 albedo, float3 normal, float3 tolight, float3 tocam)
 {
+	roughness = max(roughness, MIN_ROUGHNESS);
 	f0 = lerp(f0, albedo, metallic);
 	float3 V = normalize(tocam);
 	float3 L = normalize(tolight);
@@ -97,6 +99,7 @@ float3 LUT(float3 normal, float3 viewDir, float roughness, Texture2D lut, Sample
 
 float3 indirectBRDF(float3 irradiance,float3 prefilter, float3 lut, float roughness, float metallic, float3 f0, float3 albedo, float3 normal, float3 tocam)
 {
+	roughness = max(roughness, MIN_ROUGHNESS);
 	f0 = lerp(f0, albedo, metallic);
 
 	float3 kS = FresnelSchlickRoughness(tocam, normal, f0, roughness);
@@ -108,7 +111,7 @@ float3 indirectBRDF(float3 irradiance,float3 prefilter, float3 lut, float roughn
 
 	float3 ambient = (kD * diffuse + specular);
 
-	return ambient;
+	return specular;
 }
 
 float attenuate(float distance, float range)

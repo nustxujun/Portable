@@ -582,7 +582,8 @@ Renderer::Texture2D::Ptr Renderer::createTextureCube(const std::string& file)
 
 Renderer::Texture2D::Ptr Renderer::createTextureCube(const std::array<std::string, 6>& files, D3DX11_IMAGE_LOAD_INFO* loadinfo )
 {
-
+	if (files[1].empty())
+		return createTextureCube(files[0]);
 	Texture2D::Ptr faces[6];
 	for (size_t i = 0; i < 6; ++i)
 	{

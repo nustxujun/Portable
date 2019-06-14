@@ -249,7 +249,7 @@ Renderer::Texture2D::Ptr PrefilterCubemap::process(Renderer::Texture2D::Ptr tex,
 	int w = desc.Width;
 	int h = desc.Height;
 
-	float rs[] = { 0.000001f, 0.25f,0.5f,0.75f,1.0f };
+	float rs[] = { 0.0f, 0.25f,0.5f,0.75f,1.0f };
 	for (auto r = 0U; r < desc.MipLevels; ++r)
 	{
 		mRenderer->setViewport({ 0.0f, 0.0f, (float)w, (float)h, 0.0f, 0.1f });

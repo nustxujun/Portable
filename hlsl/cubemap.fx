@@ -79,8 +79,9 @@ float4 irradianceMap(VertexShaderOutput pin) : SV_TARGET
 			float3 tangentSample = float3(sin(theta) * cos(phi),  sin(theta) * sin(phi), cos(theta));
 			// tangent space to world
 			float3 sampleVec = tangentSample.x * right + tangentSample.y * up + tangentSample.z * normal;
-
-			irradiance += diffuseTex.Sample(sampLinear, sampleVec).rgb * cos(theta) * sin(theta);
+			
+			float3 albedo = pow(diffuseTex.Sample(sampLinear, sampleVec).rgb, 2.2f);
+			irradiance += albedo * cos(theta) * sin(theta);
 			numSamples++;
 		}
 	}
@@ -145,7 +146,8 @@ float4 prefilterMap(VertexShaderOutput pin) : SV_TARGET
 		float NdotL = max(dot(N, L), 0.0f);
 		if (NdotL > 0.f)
 		{
-			prefilteredColor += diffuseTex.Sample(sampLinear, L).rgb * NdotL;
+			float3 albedo = pow(diffuseTex.Sample(sampLinear, L).rgb, 2.2f);
+			prefilteredColor += albedo * NdotL;
 			totalWeight += NdotL;
 		}
 	}

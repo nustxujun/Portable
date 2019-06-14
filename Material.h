@@ -26,4 +26,6 @@ public:
 public:
 	std::vector<Renderer::Texture2D::Ptr> mTextures;
 	bool mLighting = true;
+	float metallic = 0.5f;
+	float roughness = 0.5f;
 };

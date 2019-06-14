@@ -282,4 +282,9 @@
       <Filter>源文件</Filter>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="hlsl\gbuffer.fx">
+      <Filter>shader</Filter>
+    </FxCompile>
+  </ItemGroup>
 </Project>

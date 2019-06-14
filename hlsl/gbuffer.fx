@@ -3,6 +3,8 @@ cbuffer ConstantBuffer: register(b0)
 	matrix World;
 	matrix View;
 	matrix Projection;
+	float roughness;
+	float metallic;
 }
 
 Texture2D diffuseTex: register(t0);
@@ -47,6 +49,7 @@ struct GBufferPixelShaderOutput
 {
 	float4 Color : COLOR0;
 	float4 Normal : COLOR1;
+	float2 Material: COLOR2;
 };
 
 //float2 encode(float3 n)
@@ -63,14 +66,17 @@ GBufferPixelShaderOutput ps(GBufferVertexShaderOutput input) : SV_TARGET
 	output.Color.rgb = pow(output.Color.rgb, 2.2f);
 	output.Color.a = 1.0f;
 	output.Normal.xyz = input.Normal;
+	output.Material = float2(roughness, metallic);
 	return output;
 }
 
 GBufferPixelShaderOutput ps_notex(GBufferVertexShaderOutput input) : SV_TARGET
 {
 	GBufferPixelShaderOutput output;
-	output.Color = float4(1, 1, 1,1);
+	output.Color = 1.0f;
 	output.Normal.xyz = input.Normal;
+	output.Material = float2(roughness, metallic);
+
 	return output;
 }
 

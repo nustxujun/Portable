@@ -122,21 +122,22 @@ void PBR::renderNormal(Renderer::Texture2D::Ptr rt)
 	auto quad = getQuad();
 	quad->setRenderTarget(rt);
 	std::vector<Renderer::ShaderResource::Ptr> srvs = {
-		mAlbedo, mNormal, mDepthLinear ,
+		mAlbedo, mNormal, mDepthLinear , 
+		getShaderResource("material"),
 		getShaderResource("irradinace"),
 		getShaderResource("prefiltered"),
 		getShaderResource("lut"),
 	};
 	srvs.resize(30);
-	srvs[6] = getShaderResource("pointlights");
-	srvs[7] = getShaderResource("spotlights");
-	srvs[8] = getShaderResource("dirlights");
+	srvs[7] = getShaderResource("pointlights");
+	srvs[8] = getShaderResource("spotlights");
+	srvs[9] = getShaderResource("dirlights");
 	
 	
 	if (has("tiled") || has("clustered"))
 	{
-		srvs[9] = getShaderResource("lightindices");
-		srvs[10] = getShaderResource("lighttable");
+		srvs[10] = getShaderResource("lightindices");
+		srvs[11] = getShaderResource("lighttable");
 	}
 
 	//srvs[10] = mDefaultShadowTex;

@@ -11,6 +11,7 @@ RWTexture2D<uint4> tiles: register(u2);
 cbuffer ConstantBuffer: register(b0)
 {
 	matrix invertProj;
+	matrix view;
 	int numPointLights;
 	int numSpotLights;
 	float texelwidth;
@@ -51,7 +52,7 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 	for (int i = 0; i < numPointLights; ++i)
 	{
 		float4 light = pointlights[i * 2];
-		float3 pos = light.xyz;
+		float3 pos = mul(float4(light.xyz, 1.0), view).xyz;
 		float range = light.w;
 
 		if (!TestSphereVsAABB(pos, range, aabbcenter, aabbhalf) )
@@ -67,7 +68,7 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 	for (int i = 0; i < numSpotLights; ++i)
 	{
 		float4 light = spotlights[i * 3];
-		float3 pos = light.xyz;
+		float3 pos = mul(float4(light.xyz, 1.0), view).xyz;
 		float range = light.w;
 
 		if (!TestSphereVsAABB(pos, range, aabbcenter, aabbhalf))
