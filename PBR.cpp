@@ -10,7 +10,7 @@ PBR::PBR(
 	Pipeline::Stage(r, s, q,set, p)
 {
 	mName = "pbr lighting";
-	this->set("roughness", { {"type","set"}, {"value",0.1f},{"min","0.01"},{"max",1.0f},{"interval", "0.01"} });
+	this->set("roughness", { {"type","set"}, {"value",1.0f},{"min","0.01"},{"max",1.0f},{"interval", "0.01"} });
 	this->set("metallic", { {"type","set"}, {"value",0.9f},{"min","0"},{"max",1.0f},{"interval", "0.01"} });
 	this->set("ambient", { {"type","set"}, {"value",0},{"min","0"},{"max","1"},{"interval", "0.001"} });
 
@@ -26,7 +26,7 @@ PBR::PBR(
 	}
 
 
-	mLinear = r->createSampler("liear_clamp", D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
+	mLinear = r->createSampler("liear_clamp", D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
 	mPoint = r->createSampler("point_clamp", D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
 	mConstants = r->createBuffer(sizeof(Constants), D3D11_BIND_CONSTANT_BUFFER,NULL, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 

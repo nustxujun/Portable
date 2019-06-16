@@ -1,4 +1,10 @@
-TextureCube diffuseTex: register(t0);
+
+#if EQUIRECT
+Texture2D
+#else
+TextureCube
+#endif
+diffuseTex: register(t0);
 
 cbuffer ConstantBuffer: register(b0)
 {
@@ -15,9 +21,9 @@ cbuffer PrefilterConstants: register(b1)
 SamplerState sampLinear
 {
 	Filter = MIN_MAG_MIP_LINEAR;
-	AddressU = Wrap;
-	AddressV = Wrap;
-	AddressW = Wrap;
+	AddressU = Clamp;
+	AddressV = Clamp;
+	AddressW = Clamp;
 };
 
 struct VertexShaderInput
@@ -48,10 +54,28 @@ struct PixelShaderOutput
 	float4 Color : COLOR0;
 };
 
+
+#if EQUIRECT
+
+float4 sampleTex(float3 coords)
+{
+	float2 uv = float2(atan2(coords.z, coords.x), asin(-coords.y));
+	uv *= float2(0.1591f, 0.3183f);
+	uv += 0.5;
+	return diffuseTex.Sample(sampLinear, uv);
+}
+#else
+float4 sampleTex(float3 coords)
+{
+	return diffuseTex.Sample(sampLinear, coords);
+}
+#endif
+
+
 PixelShaderOutput ps(VertexShaderOutput input) : SV_TARGET
 {
 	PixelShaderOutput output;
-	output.Color = diffuseTex.Sample(sampLinear, input.TexCoord);
+	output.Color = sampleTex(input.TexCoord);
 	output.Color.rgb = pow(output.Color.rgb, 2.2f);
 	output.Color.a = 1.0f;
 	return output;
@@ -80,7 +104,7 @@ float4 irradianceMap(VertexShaderOutput pin) : SV_TARGET
 			// tangent space to world
 			float3 sampleVec = tangentSample.x * right + tangentSample.y * up + tangentSample.z * normal;
 			
-			float3 albedo = pow(diffuseTex.Sample(sampLinear, sampleVec).rgb, 2.2f);
+			float3 albedo = pow(sampleTex(sampleVec).rgb, 2.2f);
 			irradiance += albedo * cos(theta) * sin(theta);
 			numSamples++;
 		}
@@ -146,7 +170,7 @@ float4 prefilterMap(VertexShaderOutput pin) : SV_TARGET
 		float NdotL = max(dot(N, L), 0.0f);
 		if (NdotL > 0.f)
 		{
-			float3 albedo = pow(diffuseTex.Sample(sampLinear, L).rgb, 2.2f);
+			float3 albedo = pow(sampleTex(L).rgb, 2.2f);
 			prefilteredColor += albedo * NdotL;
 			totalWeight += NdotL;
 		}
@@ -158,12 +182,10 @@ float4 prefilterMap(VertexShaderOutput pin) : SV_TARGET
 }
 
 
-
 float4 testps(VertexShaderOutput pin) : SV_TARGET
 {
 	return float4(pin.TexCoord, 1);
 }
-
 
 
 technique11 skybox

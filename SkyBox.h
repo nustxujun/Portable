@@ -9,6 +9,9 @@ public :
 	using Pipeline::Stage::Stage;
 
 	void init(const std::array<std::string,6>& texs);
+	void init(const std::string& tex, bool isCubemap);
+	void init(bool isCubemap);
+
 	void render(Renderer::Texture2D::Ptr rt) override;
 private:
 	Renderer::Texture2D::Ptr mSkyTex;

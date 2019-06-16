@@ -3,19 +3,43 @@
 #include "ImageProcessing.h"
 void SkyBox::init(const std::array<std::string,6> & tex)
 {
-	mName = "skybox";
-
+	init(true);
 	mSkyTex = getRenderer()->createTextureCube({ tex[0],tex[1] ,tex[2] ,tex[3] ,tex[4] ,tex[5] });
+}
+
+void SkyBox::init(const std::string& tex, bool isCubemap)
+{
+	init(isCubemap);
+
+	if (isCubemap)
+	{
+		mSkyTex = getRenderer()->createTextureCube(tex);
+	}
+	else
+	{
+		mSkyTex = getRenderer()->createTexture(tex);
+	}
+}
+
+void SkyBox::init(bool isCubemap)
+{
+	mName = "skybox";
 
 	{
 		Parameters params;
-		params["geom"] = "cube";
+		params["geom"] = "sphere";
 		params["size"] = "1000";
 		mSkyMesh = GeometryMesh::Ptr(new GeometryMesh(params, getRenderer()));
 	}
 
-	auto blob = getRenderer()->compileFile("hlsl/cubemap.fx", "", "fx_5_0");
+	D3D10_SHADER_MACRO macros[] = { { "EQUIRECT", "0"}, {NULL,NULL} };
+
+	if (!isCubemap)
+		macros[0].Definition = "1";
+	auto blob = getRenderer()->compileFile("hlsl/cubemap.fx", "", "fx_5_0", macros);
 	mEffect = getRenderer()->createEffect((**blob).GetBufferPointer(), (**blob).GetBufferSize());
+	mEffect.lock()->setTech("skybox");
+
 	D3D11_INPUT_ELEMENT_DESC modelLayout[] =
 	{
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -24,8 +48,6 @@ void SkyBox::init(const std::array<std::string,6> & tex)
 	};
 
 	mLayout = getRenderer()->createLayout(modelLayout, ARRAYSIZE(modelLayout));
-
-
 }
 
 void SkyBox::render(Renderer::Texture2D::Ptr rt)
@@ -56,7 +78,6 @@ void SkyBox::render(Renderer::Texture2D::Ptr rt)
 	renderer->setDefaultBlendState();
 
 	auto e = mEffect.lock();
-	e->setTech("skybox");
 	auto world = e->getVariable("World")->AsMatrix();
 	auto view = e->getVariable("View")->AsMatrix();
 	auto proj = e->getVariable("Projection")->AsMatrix();

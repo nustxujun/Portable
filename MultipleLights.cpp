@@ -481,36 +481,28 @@ void MultipleLights::initCDRPipeline()
 	auto w = mRenderer->getWidth();
 	auto h = mRenderer->getHeight();
 	//std::array<std::string,6> files = {
-	//	"media/skybox/sunsetcube1024.dds"
+	//	"media/Ditch-River_2k.hdr",
 	//};
-	std::array<std::string,6> files = {
-	"media/skybox/right.jpg",
-	"media/skybox/left.jpg",
-	"media/skybox/top.jpg",
-	"media/skybox/bottom.jpg",
-	"media/skybox/front.jpg",
-	"media/skybox/back.jpg",
+	//std::array<std::string,6> files = {
+	//"media/skybox/right.jpg",
+	//"media/skybox/left.jpg",
+	//"media/skybox/top.jpg",
+	//"media/skybox/bottom.jpg",
+	//"media/skybox/front.jpg",
+	//"media/skybox/back.jpg",
+	//};
+
+	std::array<std::string, 6> files = {
+				"media/skybox/emeraldfog_ft.png",
+		"media/skybox/emeraldfog_bk.png",
+
+		"media/skybox/emeraldfog_up.png",
+		"media/skybox/emeraldfog_dn.png",
+				"media/skybox/emeraldfog_rt.png",
+		"media/skybox/emeraldfog_lf.png",
+
 	};
 
-	//std::array<std::string, 6> files = {
-	//			"media/skybox/emeraldfog_ft.png",
-	//	"media/skybox/emeraldfog_bk.png",
-
-	//	"media/skybox/emeraldfog_up.png",
-	//	"media/skybox/emeraldfog_dn.png",
-	//			"media/skybox/emeraldfog_rt.png",
-	//	"media/skybox/emeraldfog_lf.png",
-
-	//};
-
-	//std::array<std::string,6> files = {
-	//"media/skybox/1.png",
-	//"media/skybox/2.png",
-	//"media/skybox/3.png",
-	//"media/skybox/4.png",
-	//"media/skybox/5.png",
-	//"media/skybox/6.png",
-	//};
 
 
 	auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
@@ -549,13 +541,14 @@ void MultipleLights::initCDRPipeline()
 	loadinfo.Height = 512;
 	loadinfo.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
 	auto envmap = mRenderer->createTextureCube(files, &loadinfo);
+	auto equirect = mRenderer->createTexture("media/Ditch-River_2k.hdr");
 	{
-		auto proc = ImageProcessing::create<IrradianceCubemap>(mRenderer);
+		auto proc = ImageProcessing::create<IrradianceCubemap>(mRenderer,ImageProcessing::RT_TEMP, true);
 		auto ret = proc->process(envmap);
 		mPipeline->addShaderResource("irradinace", ret);
 	}
 	{
-		auto proc = ImageProcessing::create<PrefilterCubemap>(mRenderer);
+		auto proc = ImageProcessing::create<PrefilterCubemap>(mRenderer, ImageProcessing::RT_TEMP, true);
 		auto ret = proc->process(envmap);
 		mPipeline->addShaderResource("prefiltered", ret);
 	}
@@ -584,7 +577,7 @@ void MultipleLights::initCDRPipeline()
 
 
 	//std::vector<std::string> files = { "media/uffizi_cross.dds" };
-	mPipeline->pushStage<SkyBox>(files);
+	mPipeline->pushStage<SkyBox>("media/Ditch-River_2k.hdr", false);
 
 	//mPipeline->pushStage<HDR>();
 

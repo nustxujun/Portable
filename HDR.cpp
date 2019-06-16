@@ -56,8 +56,8 @@ void HDR::init()
 	mGaussianBlur[1] = r->createPixelShader("hlsl/gaussianblur.hlsl", "main", macros);
 	mBloomConstants = r->createBuffer(sizeof(Vector4), D3D11_BIND_CONSTANT_BUFFER);
 
-	mDownsample = ImageProcessing::create<SamplingBox>(getRenderer());
-	mGaussian = ImageProcessing::create<Gaussian>(getRenderer());
+	mDownsample = ImageProcessing::create<SamplingBox>(getRenderer(), ImageProcessing::RT_TEMP);
+	mGaussian = ImageProcessing::create<Gaussian>(getRenderer(), ImageProcessing::RT_TEMP);
 }
 
 

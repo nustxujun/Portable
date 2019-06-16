@@ -14,14 +14,20 @@ public:
 		UP
 	};
 
+	enum ResultType
+	{
+		RT_TEMP,
+		RT_COPY,
+	};
+
 
 	using Ptr = std::shared_ptr<ImageProcessing>;
-	ImageProcessing(Renderer::Ptr r);
+	ImageProcessing(Renderer::Ptr r, ResultType type);
 
 	template<class T, class ... Args>
-	static std::shared_ptr<T> create(Renderer::Ptr r, const Args& ... args)
+	static std::shared_ptr<T> create(Renderer::Ptr r, ResultType type, const Args& ... args)
 	{
-		std::shared_ptr<T> p = std::shared_ptr<T>(new T(r));
+		std::shared_ptr<T> p = std::shared_ptr<T>(new T(r, type));
 		p->init(args...);
 		return p;
 	}
@@ -30,15 +36,15 @@ public:
 	virtual Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr ptr, SampleType st = DEFAULT) = 0;
 protected:
 	Renderer::Texture2D::Ptr createOrGet(Renderer::Texture2D::Ptr ptr, SampleType st);
-	Renderer::Texture2D::Ptr createOrGet(const D3D11_TEXTURE2D_DESC& desc);
+	Renderer::Texture2D::Ptr createOrGet(const D3D11_TEXTURE2D_DESC & texDesc);
 
 
 protected:
 	Renderer::Ptr mRenderer;
 	Quad mQuad;
-
+	ResultType mType = RT_TEMP;
 private:
-	static std::unordered_map<size_t,std::array< Renderer::Texture2D::Ptr,2>> mTextures;
+	static std::unordered_map<size_t,std::vector< Renderer::Texture2D::Ptr>> mTextures;
 };
 
 
@@ -79,7 +85,7 @@ public:
 	using Ptr = std::shared_ptr<CubeMapProcessing>;
 	using ImageProcessing::ImageProcessing;
 
-	virtual void init();
+	virtual void init(bool cube);
 
 
 	Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr tex, SampleType st = DEFAULT);
@@ -87,6 +93,8 @@ protected:
 	Renderer::Effect::Ptr mEffect;
 	GeometryMesh::Ptr mCube;
 	Renderer::Layout::Ptr mLayout;
+	bool mIsCubemap;
+
 };
 
 class IrradianceCubemap : public CubeMapProcessing
@@ -95,7 +103,7 @@ public:
 	using Ptr = std::shared_ptr<IrradianceCubemap>;
 	using CubeMapProcessing::CubeMapProcessing;
 
-	void init();
+	void init(bool);
 };
 
 class PrefilterCubemap : public CubeMapProcessing
@@ -104,6 +112,7 @@ public:
 	using Ptr = std::shared_ptr<IrradianceCubemap>;
 	using CubeMapProcessing::CubeMapProcessing;
 
-	void init();
+	void init(bool iscube);
 	Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr tex, SampleType st = DEFAULT);
+private:
 };

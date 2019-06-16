@@ -3,6 +3,11 @@
 #include <D3Dcompiler.h>
 #include <fstream>
 #include "D3D11Helper.h"
+#include <regex>
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 
 //#define USE_PROFILE
 
@@ -535,12 +540,50 @@ Renderer::Sampler::Ptr Renderer::createSampler(const std::string& name, D3D11_FI
 
 Renderer::Texture2D::Ptr Renderer::createTexture(const std::string & filename,  D3DX11_IMAGE_LOAD_INFO* loadinfo)
 {
-	ID3D11Texture2D* tex;
-	checkResult(D3DX11CreateTextureFromFileA(mDevice, filename.c_str(), loadinfo, NULL, (ID3D11Resource**)&tex, NULL));
+		DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	std::regex reg(".+\\.(\\d+)$");
+	std::smatch ret;
+	void *data = 0;
+	int width, height, nrComponents;
 
-	auto ptr = std::shared_ptr<Texture2D>(new Texture2D(this, tex));
-	mTextures.emplace_back(ptr);
-	return ptr;
+	if (std::regex_match(filename, ret, reg))
+	{
+		if (ret[1] == "hdr" || ret[1] == "HDR")
+		{
+			format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+		}
+		data = stbi_loadf(filename.c_str(), &width, &height, &nrComponents, 4);
+	}
+	else
+	{
+		data = stbi_load(filename.c_str(), &width, &height, &nrComponents, 4);
+	}
+
+	
+
+	D3D11_TEXTURE2D_DESC desc = { 0 };
+	desc.Width = width;
+	desc.Height = height;
+	desc.MipLevels = 1;
+	desc.Format = format;
+	desc.Usage = D3D11_USAGE_DEFAULT;
+	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	desc.CPUAccessFlags = 0;
+	desc.MiscFlags = 0;
+	desc.ArraySize = 1;
+	desc.SampleDesc.Quality = 0;
+	desc.SampleDesc.Count = 1;
+
+	
+	auto tex = createTexture(desc, data);
+	stbi_image_free(data);
+	return tex;
+	//ID3D11Texture2D* tex;
+	//checkResult(D3DX11CreateTextureFromFileA(mDevice, filename.c_str(), loadinfo, NULL, (ID3D11Resource**)&tex, NULL));
+
+	//auto ptr = std::shared_ptr<Texture2D>(new Texture2D(this, tex));
+	//mTextures.emplace_back(ptr);
+	//return ptr;
 }
 
 Renderer::Texture2D::Ptr Renderer::createTexture( const D3D11_TEXTURE2D_DESC& desc, const void* data, size_t size)
@@ -683,9 +726,9 @@ Renderer::SharedCompiledData Renderer::compileFile(const std::string& filename, 
 	return SharedCompiledData(new CompiledData(blob));
 }
 
-Renderer::Effect::Ptr Renderer::createEffect(const std::string& file)
+Renderer::Effect::Ptr Renderer::createEffect(const std::string& file, const D3D10_SHADER_MACRO* macro)
 {
-	auto blob = compileFile(file, "", "fx_5_0");
+	auto blob = compileFile(file, "", "fx_5_0", macro);
 	return createEffect((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
 }
 

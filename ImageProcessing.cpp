@@ -1,8 +1,8 @@
 #include "ImageProcessing.h"
 
-std::unordered_map<size_t, std::array< Renderer::Texture2D::Ptr, 2>> ImageProcessing::mTextures = {};
+std::unordered_map<size_t, std::vector< Renderer::Texture2D::Ptr>> ImageProcessing::mTextures = {};
 
-ImageProcessing::ImageProcessing(Renderer::Ptr r):mRenderer(r), mQuad(r)
+ImageProcessing::ImageProcessing(Renderer::Ptr r, ResultType type):mRenderer(r), mQuad(r), mType(type)
 {
 }
 
@@ -27,16 +27,22 @@ Renderer::Texture2D::Ptr ImageProcessing::createOrGet(Renderer::Texture2D::Ptr p
 
 	desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
 
-	size_t hash = Common::hash(desc);
-	auto ret = mTextures.find(hash);
-	if (ret != mTextures.end())
-		return (ret->second[0].lock() != ptr.lock())?ret->second[0]: ret->second[1];
-
-
-	mTextures[hash][0] = mRenderer->createTexture(desc);
-	mTextures[hash][1] = mRenderer->createTexture(desc);
-
-	return mTextures[hash][0];
+	if (mType == RT_TEMP)
+	{
+		size_t hash = Common::hash(desc);
+		auto ret = mTextures.find(hash);
+		if (ret != mTextures.end())
+		{
+			for (auto& i : ret->second)
+				if (i.lock() != ptr.lock())
+					return i;
+		}
+		auto newtex = mRenderer->createTexture(desc);
+		mTextures[hash].push_back(newtex);
+		return newtex;
+	}
+	else
+		return mRenderer->createTexture(desc);
 }
 
 Renderer::Texture2D::Ptr ImageProcessing::createOrGet(const D3D11_TEXTURE2D_DESC & texDesc)
@@ -44,16 +50,22 @@ Renderer::Texture2D::Ptr ImageProcessing::createOrGet(const D3D11_TEXTURE2D_DESC
 	auto desc = texDesc;
 	desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
 
-	size_t hash = Common::hash(desc);
-	auto ret = mTextures.find(hash);
-	if (ret != mTextures.end())
-		return ret->second[0];
+	if (mType == RT_TEMP)
+	{
+		size_t hash = Common::hash(desc);
+		auto ret = mTextures.find(hash);
+		if (ret != mTextures.end())
+			return ret->second[0];
 
-
-	mTextures[hash][0] = mRenderer->createTexture(desc);
-	mTextures[hash][1] = mRenderer->createTexture(desc);
-
-	return mTextures[hash][0];
+		auto newtex = mRenderer->createTexture(desc);
+		mTextures[hash].push_back(newtex);
+		return newtex;
+	}
+	else
+	{
+		auto newtex = mRenderer->createTexture(desc);
+		return newtex;
+	}
 }
 
 
@@ -118,9 +130,13 @@ Renderer::Texture2D::Ptr Gaussian::process(Renderer::Texture2D::Ptr tex, SampleT
 	return ret;
 }
 
-void CubeMapProcessing::init()
+void CubeMapProcessing::init(bool cube)
 {
-	//mEffect = mRenderer->createEffect("hlsl/cubemap.fx");
+	mIsCubemap = cube;
+	D3D10_SHADER_MACRO macros[] = { { "EQUIRECT", "0"}, {NULL,NULL} };
+	if (!cube)
+		macros[0].Definition = "1";
+	mEffect = mRenderer->createEffect("hlsl/cubemap.fx",macros);
 
 	D3D11_INPUT_ELEMENT_DESC modelLayout[] =
 	{
@@ -133,8 +149,10 @@ void CubeMapProcessing::init()
 
 	{
 		Parameters params;
-		params["geom"] = "room";
+		params["geom"] = "cube";
 		params["size"] = "2";
+		params["raidus"] = "1";
+		params["resolution"] = "300";
 		mCube = GeometryMesh::Ptr(new GeometryMesh(params, mRenderer));
 	}
 }
@@ -143,14 +161,41 @@ Renderer::Texture2D::Ptr CubeMapProcessing::process(Renderer::Texture2D::Ptr tex
 {
 	using namespace DirectX;
 	using namespace DirectX::SimpleMath;
-	auto ret = createOrGet(tex, st);
-	auto desc = ret.lock()->getDesc();
+
+	auto desc = tex.lock()->getDesc();
+	if (mIsCubemap)
+	{
+		desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
+	}
+	else
+	{
+		desc.Width = 512;
+		desc.Height = 512;
+		desc.ArraySize = 6;
+		desc.MipLevels = 1;
+		desc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+		desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
+	}
+	auto ret = createOrGet(desc);
 
 	auto e = mEffect.lock();
 	mRenderer->setDefaultBlendState();
-	mRenderer->setDefaultRasterizer();
 	mRenderer->setDefaultBlendState();
 	mRenderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	D3D11_RASTERIZER_DESC rasterDesc;
+	rasterDesc.AntialiasedLineEnable = false;
+	rasterDesc.CullMode = D3D11_CULL_FRONT;
+	rasterDesc.DepthBias = 0;
+	rasterDesc.DepthBiasClamp = 0.0f;
+	rasterDesc.DepthClipEnable = true;
+	rasterDesc.FillMode = D3D11_FILL_SOLID;
+	rasterDesc.FrontCounterClockwise = false;
+	rasterDesc.MultisampleEnable = false;
+	rasterDesc.ScissorEnable = false;
+	rasterDesc.SlopeScaledDepthBias = 0.0f;
+	mRenderer->setRasterizer(rasterDesc);
+
 
 	auto world = e->getVariable("World")->AsMatrix();
 	auto view = e->getVariable("View")->AsMatrix();
@@ -194,17 +239,15 @@ Renderer::Texture2D::Ptr CubeMapProcessing::process(Renderer::Texture2D::Ptr tex
 	return ret;
 }
 
-void IrradianceCubemap::init()
+void IrradianceCubemap::init(bool cube)
 {
-	CubeMapProcessing::init();
-	mEffect = mRenderer->createEffect("hlsl/cubemap.fx");
+	CubeMapProcessing::init(cube);
 	mEffect.lock()->setTech("irradiance");
 }
 
-void PrefilterCubemap::init()
+void PrefilterCubemap::init(bool iscube)
 {
-	CubeMapProcessing::init();
-	mEffect = mRenderer->createEffect("hlsl/cubemap.fx");
+	CubeMapProcessing::init(iscube);
 	mEffect.lock()->setTech("prefilter");
 }
 
@@ -275,9 +318,6 @@ Renderer::Texture2D::Ptr PrefilterCubemap::process(Renderer::Texture2D::Ptr tex,
 		}
 	}
 
+
 	return ret;
-
-
-
-	return Renderer::Texture2D::Ptr();
 }
