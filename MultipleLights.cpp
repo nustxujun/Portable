@@ -483,25 +483,25 @@ void MultipleLights::initCDRPipeline()
 	//std::array<std::string,6> files = {
 	//	"media/Ditch-River_2k.hdr",
 	//};
-	//std::array<std::string,6> files = {
-	//"media/skybox/right.jpg",
-	//"media/skybox/left.jpg",
-	//"media/skybox/top.jpg",
-	//"media/skybox/bottom.jpg",
-	//"media/skybox/front.jpg",
-	//"media/skybox/back.jpg",
-	//};
-
-	std::array<std::string, 6> files = {
-				"media/skybox/emeraldfog_ft.png",
-		"media/skybox/emeraldfog_bk.png",
-
-		"media/skybox/emeraldfog_up.png",
-		"media/skybox/emeraldfog_dn.png",
-				"media/skybox/emeraldfog_rt.png",
-		"media/skybox/emeraldfog_lf.png",
-
+	std::array<std::string,6> files = {
+	"media/skybox/right.jpg",
+	"media/skybox/left.jpg",
+	"media/skybox/top.jpg",
+	"media/skybox/bottom.jpg",
+	"media/skybox/front.jpg",
+	"media/skybox/back.jpg",
 	};
+
+	//std::array<std::string, 6> files = {
+	//			"media/skybox/emeraldfog_ft.png",
+	//	"media/skybox/emeraldfog_bk.png",
+
+	//	"media/skybox/emeraldfog_up.png",
+	//	"media/skybox/emeraldfog_dn.png",
+	//			"media/skybox/emeraldfog_rt.png",
+	//	"media/skybox/emeraldfog_lf.png",
+
+	//};
 
 
 
@@ -542,14 +542,22 @@ void MultipleLights::initCDRPipeline()
 	loadinfo.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
 	auto envmap = mRenderer->createTextureCube(files, &loadinfo);
 	auto equirect = mRenderer->createTexture("media/Ditch-River_2k.hdr");
+
+	constexpr auto equirectTex = true;
+	Renderer::Texture2D::Ptr ibltex;
+	if (equirectTex)
+		ibltex = equirect;
+	else
+		ibltex = envmap;
+
 	{
-		auto proc = ImageProcessing::create<IrradianceCubemap>(mRenderer,ImageProcessing::RT_TEMP, true);
-		auto ret = proc->process(envmap);
+		auto proc = ImageProcessing::create<IrradianceCubemap>(mRenderer,ImageProcessing::RT_TEMP, !equirectTex);
+		auto ret = proc->process(ibltex);
 		mPipeline->addShaderResource("irradinace", ret);
 	}
 	{
-		auto proc = ImageProcessing::create<PrefilterCubemap>(mRenderer, ImageProcessing::RT_TEMP, true);
-		auto ret = proc->process(envmap);
+		auto proc = ImageProcessing::create<PrefilterCubemap>(mRenderer, ImageProcessing::RT_TEMP, !equirectTex);
+		auto ret = proc->process(ibltex);
 		mPipeline->addShaderResource("prefiltered", ret);
 	}
 	loadinfo = D3DX11_IMAGE_LOAD_INFO();
@@ -579,7 +587,7 @@ void MultipleLights::initCDRPipeline()
 	//std::vector<std::string> files = { "media/uffizi_cross.dds" };
 	mPipeline->pushStage<SkyBox>("media/Ditch-River_2k.hdr", false);
 
-	//mPipeline->pushStage<HDR>();
+	mPipeline->pushStage<HDR>();
 
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);

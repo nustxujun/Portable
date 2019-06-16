@@ -165,12 +165,12 @@ Renderer::Texture2D::Ptr CubeMapProcessing::process(Renderer::Texture2D::Ptr tex
 	auto desc = tex.lock()->getDesc();
 	if (!mIsCubemap)
 	{
-		desc.Width = 512;
-		desc.Height = 512;
 		desc.ArraySize = 6;
 		desc.MipLevels = 1;
 		desc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
 	}
+	desc.Width = 32;
+	desc.Height = 32;
 	desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
 
 	auto ret = createOrGet(desc);
