@@ -1,56 +1,12 @@
 Texture2D frameTex: register(t0);
-Texture2D lumTex: register(t1);
+Texture2D exposureTex: register(t1);
 SamplerState PointWrap : register(s0);
-
-cbuffer ConstantBuffer: register(b0)
-{
-	float keyvalue;
-	float lumminclamp;
-	float lummaxclamp;
-
-};
-
 
 struct PS_INPUT
 {
 	float4 Pos : SV_POSITION;
 	float2 Tex: TEXCOORD0;
 };
-
-#define EPSILON         1.0e-4
-
-float Exposure(in float avgLuminance)
-{
-	float exposure = 0.0f;
-	avgLuminance = min(avgLuminance, lummaxclamp);
-	avgLuminance = max(avgLuminance, lumminclamp);
-
-
-	avgLuminance = max(avgLuminance, EPSILON);
-	float linearExposure = (keyvalue / avgLuminance);
-	exposure = (max(linearExposure, EPSILON));
-	return exposure;
-}
-
-
-float3 CalcExposedColor(in float3 color, in float avgLuminance, in float offset, out float exposure)
-{
-	exposure = Exposure(avgLuminance);
-	exposure += offset;
-	return (exposure) * color;
-}
-
-float3 ACESToneMapping(float3 color)
-{
-
-	const float A = 2.51f;
-	const float B = 0.03f;
-	const float C = 2.43f;
-	const float D = 0.59f;
-	const float E = 0.14f;
-	return (color * (A * color + B)) / (color * (C * color + D) + E);
-}
-
 
 
 static const float3x3 ACESInputMat =
@@ -90,31 +46,18 @@ float3 ACESFitted(float3 color)
 	return color;
 }
 
-float3 tonemappnig(float3 color, float avglum)
+float3 tonemappnig(float3 color, float exp)
 {
-	float exposure = 0;
-	color = CalcExposedColor(color, avglum, 0, exposure);
-	return ACESFitted(color);
-	//return ACESToneMapping(color);
+	return ACESFitted(color * exp);
 }
 
 float4 main(PS_INPUT Input) : SV_TARGET
 {
-	//float4 vColor = 0;
 	float4 vColor = frameTex.Sample(PointWrap, Input.Tex);
-	float vLum = lumTex.Sample(PointWrap, float2(0,0)).r;
-	//float3 vBloom = s2.Sample(LinearSampler, Input.Tex);
+	float exp = exposureTex[uint2(0,0)].r;
 
-	// Tone mapping
-	//vColor.rgb *= MIDDLE_GRAY / (vLum.r + 0.001f);
-	//vColor.rgb *= (1.0f + vColor / LUM_WHITE);
-	//vColor.rgb /= (1.0f + vColor);
+	vColor.rgb = tonemappnig(vColor.rgb, exp);
 
-	vColor.rgb = tonemappnig(vColor.rgb, vLum);
-
-
-	//vColor.rgb += 0.6f * vBloom;
-	//vColor.a = 1.0f;
 
 	return vColor;
 }

@@ -13,7 +13,7 @@ HDR::~HDR()
 
 void HDR::init()
 {
-	this->set("brightness", { {"type","set"}, {"value",1.0f},{"min","0.1"},{"max","10"},{"interval", "0.1"} });
+	this->set("brightness", { {"type","set"}, {"value",1.0f},{"min","0.1"},{"max","50"},{"interval", "0.1"} });
 	this->set("blurcount", { {"type","set"}, {"value",5},{"min","1"},{"max","5"},{"interval", "1"} });
 	this->set("samplescale", { {"type","set"}, {"value",1},{"min","0.1"},{"max","2"},{"interval", "0.1"} });
 
@@ -40,12 +40,15 @@ void HDR::init()
 		samplelen *= 3;
 	}
 
+	mExposure = r->createRenderTarget(1, 1, DXGI_FORMAT_R32_FLOAT);
+	mCalExposure = r->createPixelShader("hlsl/exposure.hlsl");
+
 	mPoint = r->createSampler("point_wrap", D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
 
 
 	this->set("keyvalue", { {"type","set"}, {"value",0.18f},{"min","0.01"},{"max","1"},{"interval", "0.01"} });
 	this->set("lumMin", { {"type","set"}, {"value",0},{"min","0"},{"max","2"},{"interval", "0.01"} });
-	this->set("lumMax", { {"type","set"}, {"value",10.0f},{"min","0"},{"max","2"},{"interval", "0.01"} });
+	this->set("lumMax", { {"type","set"}, {"value",2.0f},{"min","0"},{"max","2"},{"interval", "0.01"} });
 
 	mConstants = r->createBuffer(sizeof(Constants), D3D11_BIND_CONSTANT_BUFFER, 0, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 
@@ -98,8 +101,20 @@ void HDR::renderLuminance(Renderer::Texture2D::Ptr rt)
 		quad->setTextures({ mLuminance[i] });
 		quad->draw();
 	}
-	//quad->setRenderTarget(rt);
-	//quad->drawTexture(mLuminance[0],false);
+
+	quad->setViewport({ 0,0,1,1,0,1.0f });
+	quad->setRenderTarget(mExposure);
+	quad->setTextures({ mLuminance[0] });
+	quad->setPixelShader(mCalExposure);
+
+	Constants c;
+	c.keyvalue = getValue<float>("keyvalue");
+	c.lumMin = getValue<float>("lumMin");
+	c.lumMax = getValue<float>("lumMax");
+	mConstants.lock()->blit(c);
+	quad->setConstant(mConstants);
+
+	quad->draw();
 }
 
 void HDR::renderHDR(Renderer::Texture2D::Ptr frame)
@@ -109,18 +124,12 @@ void HDR::renderHDR(Renderer::Texture2D::Ptr frame)
 	if (mTarget.expired())
 		mTarget = getRenderer()->createTexture(frame.lock()->getDesc());
 
-	Constants c;
-	c.keyvalue = getValue<float>("keyvalue");
-	c.lumMin = getValue<float>("lumMin");
-	c.lumMax= getValue<float>("lumMax");
 
-	mConstants.lock()->blit(c);
-	quad->setConstant(mConstants);
 	quad->setDefaultViewport();
 	quad->setDefaultBlend(false);
 	quad->setSamplers({ mPoint });
 	quad->setPixelShader(mPS);
-	quad->setTextures({ frame,mLuminance[0] });
+	quad->setTextures({ frame,mExposure });
 	quad->setRenderTarget(mTarget);
 	quad->draw();
 	frame.lock()->swap(mTarget);
@@ -133,7 +142,7 @@ void HDR::renderBrightness(Renderer::Texture2D::Ptr rt)
 		mBloomRT = getRenderer()->createTexture(rt.lock()->getDesc());
 	}
 	auto quad = getQuad();
-	quad->setTextures({ rt });
+	quad->setTextures({ rt , mExposure});
 	quad->setRenderTarget(mBloomRT);
 	quad->setDefaultBlend(false);
 	quad->setDefaultSampler();

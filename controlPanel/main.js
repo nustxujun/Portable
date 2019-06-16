@@ -20,7 +20,7 @@ let dll = ffi.Library('Portable.dll', {
 let mainWindow;
 let callback
 
-var height = 800;
+var height = 1000;
 
 app.disableHardwareAcceleration();
 

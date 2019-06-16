@@ -538,7 +538,7 @@ Renderer::Sampler::Ptr Renderer::createSampler(const std::string& name, D3D11_FI
 	return Sampler::Ptr(ret.first->second);
 }
 
-Renderer::Texture2D::Ptr Renderer::createTexture(const std::string & filename,  D3DX11_IMAGE_LOAD_INFO* loadinfo)
+Renderer::Texture2D::Ptr Renderer::createTexture(const std::string & filename, UINT miplevels )
 {
 	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;
 
@@ -559,12 +559,12 @@ Renderer::Texture2D::Ptr Renderer::createTexture(const std::string & filename,  
 	D3D11_TEXTURE2D_DESC desc = { 0 };
 	desc.Width = width;
 	desc.Height = height;
-	desc.MipLevels = 1;
+	desc.MipLevels = miplevels;
 	desc.Format = format;
 	desc.Usage = D3D11_USAGE_DEFAULT;
-	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
 	desc.CPUAccessFlags = 0;
-	desc.MiscFlags = 0;
+	desc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
 	desc.ArraySize = 1;
 	desc.SampleDesc.Quality = 0;
 	desc.SampleDesc.Count = 1;
@@ -572,25 +572,28 @@ Renderer::Texture2D::Ptr Renderer::createTexture(const std::string & filename,  
 	
 	auto tex = createTexture(desc, data);
 	stbi_image_free(data);
-	return tex;
-	//ID3D11Texture2D* tex;
-	//checkResult(D3DX11CreateTextureFromFileA(mDevice, filename.c_str(), loadinfo, NULL, (ID3D11Resource**)&tex, NULL));
 
-	//auto ptr = std::shared_ptr<Texture2D>(new Texture2D(this, tex));
-	//mTextures.emplace_back(ptr);
-	//return ptr;
+
+	return tex;
+	
 }
 
 Renderer::Texture2D::Ptr Renderer::createTexture( const D3D11_TEXTURE2D_DESC& desc, const void* data, size_t size)
 {
-	D3D11_SUBRESOURCE_DATA initdata = {0};
-	initdata.pSysMem = data;
-	initdata.SysMemPitch = desc.Width * D3D11Helper::sizeof_DXGI_FORMAT(desc.Format);
+	//D3D11_SUBRESOURCE_DATA initdata = {0};
+	//initdata.pSysMem = data;
+	//initdata.SysMemPitch = desc.Width * D3D11Helper::sizeof_DXGI_FORMAT(desc.Format);
 	ID3D11Texture2D* tex;
-	checkResult(mDevice->CreateTexture2D(&desc, data == nullptr ? nullptr : &initdata, &tex));
-
+	//checkResult(mDevice->CreateTexture2D(&desc, data == nullptr ? nullptr : &initdata, &tex));
+	checkResult(mDevice->CreateTexture2D(&desc, NULL, &tex));
 	auto ptr = std::shared_ptr<Texture2D>(new Texture2D(this, tex));
 	mTextures.emplace_back(ptr);
+
+	if (data)
+	{
+		ptr->blit(data, size);
+		mContext->GenerateMips(ptr->ShaderResource::getView());
+	}
 	return ptr;
 }
 
@@ -618,17 +621,14 @@ Renderer::Texture2D::Ptr Renderer::createTextureCube(const std::string& file)
 	return ptr;
 }
 
-Renderer::Texture2D::Ptr Renderer::createTextureCube(const std::array<std::string, 6>& files, D3DX11_IMAGE_LOAD_INFO* loadinfo )
+Renderer::Texture2D::Ptr Renderer::createTextureCube(const std::array<std::string, 6>& files)
 {
 	if (files[1].empty())
 		return createTextureCube(files[0]);
 	Texture2D::Ptr faces[6];
 	for (size_t i = 0; i < 6; ++i)
 	{
-		D3DX11_IMAGE_LOAD_INFO info;
-		if (loadinfo)
-			info = *loadinfo;
-		faces[i] = createTexture(files[i], &info);
+		faces[i] = createTexture(files[i]);
 	}
 	D3D11_TEXTURE2D_DESC facedesc = faces[0].lock()->getDesc();
 	
@@ -1297,7 +1297,7 @@ void Renderer::Texture2D::initTexture()
 
 }
 
-void Renderer::Texture2D::blit(const void * data, size_t size)
+void Renderer::Texture2D::blit(const void * data, size_t size, UINT index )
 {
 	if ((mDesc.CPUAccessFlags & D3D11_CPU_ACCESS_WRITE))
 	{
@@ -1305,7 +1305,7 @@ void Renderer::Texture2D::blit(const void * data, size_t size)
 		D3D11_MAP map;
 		D3D11_MAPPED_SUBRESOURCE subresource;
 		map = (mDesc.Usage & D3D11_USAGE_DYNAMIC) ? D3D11_MAP_WRITE_DISCARD : D3D11_MAP_WRITE;
-		getContext()->Map(mTexture, 0, map, 0, &subresource);
+		getContext()->Map(mTexture, index, map, 0, &subresource);
 
 		//the pitch of mapped memory may be different than the pitch of the texture
 		for (int i = 0; i < mDesc.Height; ++i)
@@ -1317,7 +1317,7 @@ void Renderer::Texture2D::blit(const void * data, size_t size)
 	}
 	else
 	{
-		getContext()->UpdateSubresource(mTexture, 0, NULL, data, 0, 0);
+		getContext()->UpdateSubresource(mTexture, index, NULL, data, D3D11Helper::sizeof_DXGI_FORMAT(mDesc.Format)  * mDesc.Width, 0);
 	}
 }
 

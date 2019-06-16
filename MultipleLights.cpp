@@ -129,7 +129,7 @@ void MultipleLights::initScene()
 			Parameters params;
 			params["geom"] = "sphere";
 			params["radius"] = "1";
-			params["resolution"] = "100";
+			params["resolution"] = "20";
 			params["size"] = "1";
 			std::stringstream ss;
 			ss << "material" << r << m; 
@@ -536,13 +536,8 @@ void MultipleLights::initCDRPipeline()
 	mPipeline->addShaderResource("lighttable", lighttable);
 	mPipeline->addUnorderedAccess("lighttable", lighttable);
 
-	D3DX11_IMAGE_LOAD_INFO loadinfo;
-	loadinfo.Width = 512;
-	loadinfo.Height = 512;
-	loadinfo.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
-	auto envmap = mRenderer->createTextureCube(files, &loadinfo);
-	auto equirect = mRenderer->createTexture("media/Ditch-River_2k.hdr");
-
+	auto envmap = mRenderer->createTextureCube(files);
+	auto equirect = mRenderer->createTexture("media/Ditch-River_2k.hdr", 1);
 	constexpr auto equirectTex = true;
 	Renderer::Texture2D::Ptr ibltex;
 	if (equirectTex)
@@ -560,9 +555,7 @@ void MultipleLights::initCDRPipeline()
 		auto ret = proc->process(ibltex);
 		mPipeline->addShaderResource("prefiltered", ret);
 	}
-	loadinfo = D3DX11_IMAGE_LOAD_INFO();
-	loadinfo.MipLevels = 1;
-	auto lut = mRenderer->createTexture("media/IBL_BRDF_LUT.png", &loadinfo);
+	auto lut = mRenderer->createTexture("media/IBL_BRDF_LUT.png",1);
 	mPipeline->addShaderResource("lut", lut);
 
 	mPipeline->setFrameBuffer(frame);

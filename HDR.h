@@ -28,6 +28,8 @@ private:
 	Renderer::Sampler::Ptr mPoint;
 
 	std::vector<Renderer::Texture2D::Ptr> mLuminance;
+	Renderer::Texture2D::Ptr mExposure;
+	Renderer::PixelShader::Weak mCalExposure;
 	Renderer::Buffer::Ptr mConstants;
 
 	Renderer::Texture2D::Ptr mBloomRT;

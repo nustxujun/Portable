@@ -11,7 +11,7 @@ float3 fresnelSchlick(float cosTheta, float3 F0)
 float DistributionGGX(float3 N, float3 H, float roughness)
 {
 	float a = roughness * roughness;
-	float a2 = a * a;
+	float a2 = max(a * a, MIN_ROUGHNESS);
 	float NdotH = max(dot(N, H), 0.0);
 	float NdotH2 = NdotH * NdotH;
 
@@ -67,7 +67,6 @@ float3 Lambert(float3 kS, float3 albedo, float metallic)
 
 float3 directBRDF(float roughness, float metallic, float3 f0, float3 albedo, float3 normal, float3 tolight, float3 tocam)
 {
-	roughness = max(roughness, MIN_ROUGHNESS);
 	f0 = lerp(f0, albedo, metallic);
 	float3 V = normalize(tocam);
 	float3 L = normalize(tolight);

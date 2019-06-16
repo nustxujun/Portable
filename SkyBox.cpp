@@ -17,7 +17,7 @@ void SkyBox::init(const std::string& tex, bool isCubemap)
 	}
 	else
 	{
-		mSkyTex = getRenderer()->createTexture(tex);
+		mSkyTex = getRenderer()->createTexture(tex,1);
 	}
 }
 

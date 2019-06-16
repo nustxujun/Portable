@@ -332,7 +332,7 @@ extern "C"
 #ifndef _WINDLL
 int main()
 {
-	init(1600,800,1,1,0);
+	init(1600,1000,1,1,0);
 	loop->join();
 	return 0;
 }
