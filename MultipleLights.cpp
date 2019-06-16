@@ -79,22 +79,22 @@ void MultipleLights::initScene()
 
 	auto root = mScene->getRoot();
 
-	{
-		Parameters params;
-		params["geom"] = "room";
-		params["size"] = "100";
-		auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
-		{
-			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		});
-		model->setCastShadow(false);
-		model->attach(root);
-		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-		Material::Ptr mat = Material::create();
-		mat->metallic = 0;
-		mat->roughness = 1.0f;
-		model->setMaterial(mat);
-	}
+	//{
+	//	Parameters params;
+	//	params["geom"] = "room";
+	//	params["size"] = "100";
+	//	auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
+	//	{
+	//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+	//	});
+	//	model->setCastShadow(false);
+	//	model->attach(root);
+	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+	//	Material::Ptr mat = Material::create();
+	//	mat->metallic = 0;
+	//	mat->roughness = 1.0f;
+	//	model->setMaterial(mat);
+	//}
 	//{
 	//	Parameters params;
 	//	params["geom"] = "cube";

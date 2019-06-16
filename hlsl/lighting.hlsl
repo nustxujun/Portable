@@ -157,7 +157,6 @@ float3 travelLights(float roughness, float metallic,uint pointoffset, uint point
 	float3 prefiltered = prefilteredTexture.SampleLevel(sampLinear, reflectcoord, roughness * (PREFILTERED_MIP_LEVEL -1));
 	float3 irradiance = irradianceTexture.Sample(sampLinear, N).rgb;
 	Lo += indirectBRDF(irradiance, prefiltered, lut, roughness, metallic, F0, albedo, N, V);
-	return irradiance;
 	return Lo;
 }
 

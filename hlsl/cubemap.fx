@@ -67,7 +67,9 @@ float4 sampleTex(float3 coords)
 #else
 float4 sampleTex(float3 coords)
 {
-	return diffuseTex.Sample(sampLinear, coords);
+	float4 color = diffuseTex.Sample(sampLinear, coords);
+	color.rgb = pow(color.rgb, 2.2f);
+	return color;
 }
 #endif
 
@@ -76,7 +78,6 @@ PixelShaderOutput ps(VertexShaderOutput input) : SV_TARGET
 {
 	PixelShaderOutput output;
 	output.Color = sampleTex(input.TexCoord);
-	output.Color.rgb = pow(output.Color.rgb, 2.2f);
 	output.Color.a = 1.0f;
 	return output;
 }
@@ -104,7 +105,7 @@ float4 irradianceMap(VertexShaderOutput pin) : SV_TARGET
 			// tangent space to world
 			float3 sampleVec = tangentSample.x * right + tangentSample.y * up + tangentSample.z * normal;
 			
-			float3 albedo = pow(sampleTex(sampleVec).rgb, 2.2f);
+			float3 albedo = sampleTex(sampleVec).rgb;
 			irradiance += albedo * cos(theta) * sin(theta);
 			numSamples++;
 		}
@@ -170,7 +171,7 @@ float4 prefilterMap(VertexShaderOutput pin) : SV_TARGET
 		float NdotL = max(dot(N, L), 0.0f);
 		if (NdotL > 0.f)
 		{
-			float3 albedo = pow(sampleTex(L).rgb, 2.2f);
+			float3 albedo = sampleTex(L).rgb;
 			prefilteredColor += albedo * NdotL;
 			totalWeight += NdotL;
 		}

@@ -540,24 +540,19 @@ Renderer::Sampler::Ptr Renderer::createSampler(const std::string& name, D3D11_FI
 
 Renderer::Texture2D::Ptr Renderer::createTexture(const std::string & filename,  D3DX11_IMAGE_LOAD_INFO* loadinfo)
 {
-		DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	std::regex reg(".+\\.(\\d+)$");
-	std::smatch ret;
+	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;
+
 	void *data = 0;
 	int width, height, nrComponents;
 
-	if (std::regex_match(filename, ret, reg))
+
+	if ( stbi_is_hdr(filename.c_str()))
 	{
-		if (ret[1] == "hdr" || ret[1] == "HDR")
-		{
-			format = DXGI_FORMAT_R16G16B16A16_FLOAT;
-		}
+		format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 		data = stbi_loadf(filename.c_str(), &width, &height, &nrComponents, 4);
 	}
 	else
-	{
 		data = stbi_load(filename.c_str(), &width, &height, &nrComponents, 4);
-	}
 
 	
 

@@ -149,7 +149,7 @@ void CubeMapProcessing::init(bool cube)
 
 	{
 		Parameters params;
-		params["geom"] = "cube";
+		params["geom"] = "sphere";
 		params["size"] = "2";
 		params["raidus"] = "1";
 		params["resolution"] = "300";
@@ -163,19 +163,16 @@ Renderer::Texture2D::Ptr CubeMapProcessing::process(Renderer::Texture2D::Ptr tex
 	using namespace DirectX::SimpleMath;
 
 	auto desc = tex.lock()->getDesc();
-	if (mIsCubemap)
-	{
-		desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
-	}
-	else
+	if (!mIsCubemap)
 	{
 		desc.Width = 512;
 		desc.Height = 512;
 		desc.ArraySize = 6;
 		desc.MipLevels = 1;
 		desc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
-		desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
 	}
+	desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
+
 	auto ret = createOrGet(desc);
 
 	auto e = mEffect.lock();
@@ -201,8 +198,7 @@ Renderer::Texture2D::Ptr CubeMapProcessing::process(Renderer::Texture2D::Ptr tex
 	auto view = e->getVariable("View")->AsMatrix();
 	auto proj = e->getVariable("Projection")->AsMatrix();
 	world->SetMatrix((const float*)&Matrix::Identity);
-	Matrix op = DirectX::XMMatrixOrthographicLH(2, 2, 0, 1.0f);
-	//view->SetMatrix((const float*)&cam->getViewMatrix());
+	Matrix op = DirectX::XMMatrixPerspectiveFovLH(3.14159265358f * 0.5f, 1, 0.1f,2.0f);
 	proj->SetMatrix((const float*)&op);
 	
 	mRenderer->setViewport({ 0.0f, 0.0f, (float)desc.Width, (float)desc.Height, 0.0f, 0.1f });
@@ -256,6 +252,15 @@ Renderer::Texture2D::Ptr PrefilterCubemap::process(Renderer::Texture2D::Ptr tex,
 	using namespace DirectX;
 	using namespace DirectX::SimpleMath;
 	auto desc = tex->getDesc();
+
+	if (!mIsCubemap)
+	{
+		desc.Width = 512;
+		desc.Height = 512;
+		desc.ArraySize = 6;
+		desc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+	}
+
 	desc.MipLevels = 5;
 	desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
 
@@ -263,15 +268,28 @@ Renderer::Texture2D::Ptr PrefilterCubemap::process(Renderer::Texture2D::Ptr tex,
 
 	auto e = mEffect.lock();
 	mRenderer->setDefaultBlendState();
-	mRenderer->setDefaultRasterizer();
 	mRenderer->setDefaultBlendState();
 	mRenderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	D3D11_RASTERIZER_DESC rasterDesc;
+	rasterDesc.AntialiasedLineEnable = false;
+	rasterDesc.CullMode = D3D11_CULL_FRONT;
+	rasterDesc.DepthBias = 0;
+	rasterDesc.DepthBiasClamp = 0.0f;
+	rasterDesc.DepthClipEnable = true;
+	rasterDesc.FillMode = D3D11_FILL_SOLID;
+	rasterDesc.FrontCounterClockwise = false;
+	rasterDesc.MultisampleEnable = false;
+	rasterDesc.ScissorEnable = false;
+	rasterDesc.SlopeScaledDepthBias = 0.0f;
+	mRenderer->setRasterizer(rasterDesc);
 
 	auto world = e->getVariable("World")->AsMatrix();
 	auto view = e->getVariable("View")->AsMatrix();
 	auto proj = e->getVariable("Projection")->AsMatrix();
 	world->SetMatrix((const float*)&Matrix::Identity);
-	Matrix op = DirectX::XMMatrixOrthographicLH(2, 2, 0, 1.0f);
+	//Matrix op = DirectX::XMMatrixOrthographicLH(2, 2, 0, 1.0f);
+	Matrix op = DirectX::XMMatrixPerspectiveFovLH(3.14159265358f * 0.5f, 1, 0.1f, 2.0f);
 	//view->SetMatrix((const float*)&cam->getViewMatrix());
 	proj->SetMatrix((const float*)&op);
 
