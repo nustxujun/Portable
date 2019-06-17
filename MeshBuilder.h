@@ -10,6 +10,8 @@ public:
 		POSITION,
 		NORMAL,
 		TEXCOORD0,
+		TANGENT,
+		BITANGENT,
 	};
 
 	struct Data
@@ -24,7 +26,8 @@ public:
 		};
 
 		struct Material {
-			std::vector<std::string> texture_diffuses;
+			std::string albedo;
+			std::string normal;
 		};
 
 		std::vector<Mesh> meshs;

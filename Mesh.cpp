@@ -20,10 +20,11 @@ Mesh::Mesh(const Parameters& params, Renderer::Ptr r)
 	{
 		auto mraw = data.materials[i];
 		Material* mat = new Material();
-		for (int j = 0; j < mraw.texture_diffuses.size(); ++j)
-		{
-			mat->setTexture(j, r->createTexture( mraw.texture_diffuses[j]));
-		}
+		if (!mraw.albedo.empty())
+			mat->setTexture(Material::TU_ALBEDO, r->createTexture(mraw.albedo));
+		if (!mraw.normal.empty())
+			mat->setTexture(Material::TU_NORMAL, r->createTexture(mraw.albedo));
+
 		materials.emplace_back(mat);
 	}
 
@@ -49,7 +50,10 @@ Mesh::Mesh(const Parameters& params, Renderer::Ptr r)
 			case MeshBuilder::POSITION: d = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offset, D3D11_INPUT_PER_VERTEX_DATA, 0 }; break;
 			case MeshBuilder::NORMAL: d = { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offset, D3D11_INPUT_PER_VERTEX_DATA, 0 }; break;
 			case MeshBuilder::TEXCOORD0: d = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offset, D3D11_INPUT_PER_VERTEX_DATA, 0 }; break;
+			case MeshBuilder::TANGENT: d = { "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offset, D3D11_INPUT_PER_VERTEX_DATA, 0 }; break;
+			case MeshBuilder::BITANGENT: d = { "TANGENT", 1, DXGI_FORMAT_R32G32B32_FLOAT, 0, offset, D3D11_INPUT_PER_VERTEX_DATA, 0 }; break;
 			default:
+				abort();
 				break;
 			};
 
@@ -61,6 +65,11 @@ Mesh::Mesh(const Parameters& params, Renderer::Ptr r)
 		auto layout = r->createLayout(desc.data(), desc.size());
 		DirectX::SimpleMath::Matrix trans = (DirectX::XMFLOAT4X4)(mesh.tranfromation);
 		trans.Transpose(trans);
+		//std::swap(trans._41 ,trans._14);
+		//std::swap(trans._42 , trans._24);
+		//std::swap(trans._43 , trans._34);
+		//tran = DirectX::SimpleMath::Matrix::Identity;
+
 
 		mMeshs.push_back({ vb, ib, mesh.numVertex, mesh.indices.size(),mesh.materialIndex == -1? Material::Ptr(): materials[mesh.materialIndex] , layout , trans });
 	}

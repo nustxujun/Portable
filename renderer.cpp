@@ -9,7 +9,7 @@
 #include "stb_image.h"
 
 
-//#define USE_PROFILE
+#define USE_PROFILE
 
 void Renderer::checkResult(HRESULT hr)
 {
@@ -554,27 +554,38 @@ Renderer::Texture2D::Ptr Renderer::createTexture(const std::string & filename, U
 	else
 		data = stbi_load(filename.c_str(), &width, &height, &nrComponents, 4);
 
-	
+	if (data)
+	{
+		D3D11_TEXTURE2D_DESC desc = { 0 };
+		desc.Width = width;
+		desc.Height = height;
+		desc.MipLevels = miplevels;
+		desc.Format = format;
+		desc.Usage = D3D11_USAGE_DEFAULT;
+		desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+		desc.CPUAccessFlags = 0;
+		desc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
+		desc.ArraySize = 1;
+		desc.SampleDesc.Quality = 0;
+		desc.SampleDesc.Count = 1;
 
-	D3D11_TEXTURE2D_DESC desc = { 0 };
-	desc.Width = width;
-	desc.Height = height;
-	desc.MipLevels = miplevels;
-	desc.Format = format;
-	desc.Usage = D3D11_USAGE_DEFAULT;
-	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
-	desc.CPUAccessFlags = 0;
-	desc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
-	desc.ArraySize = 1;
-	desc.SampleDesc.Quality = 0;
-	desc.SampleDesc.Count = 1;
-
-	
-	auto tex = createTexture(desc, data);
-	stbi_image_free(data);
+		auto tex = createTexture(desc, data);
+		stbi_image_free(data);
+		return tex;
+	}
+	else
+	{
+		D3DX11_IMAGE_LOAD_INFO info;
+		info.MipLevels = miplevels;
+		ID3D11Texture2D* tex;
+		checkResult(D3DX11CreateTextureFromFileA(mDevice, filename.c_str(), &info, NULL, (ID3D11Resource**)&tex,NULL));
+		auto ptr = std::shared_ptr<Texture2D>(new Texture2D(this, tex));
+		mTextures.emplace_back(ptr);
+		return ptr;
+	}
 
 
-	return tex;
+
 	
 }
 

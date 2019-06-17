@@ -19,9 +19,12 @@ public:
 	template<class T>
 	static size_t hash(const T& value)
 	{
-		std::string d;
-		d.resize((sizeof(T)));
-		memcpy(&d[0], &value, d.size());
+		return hash(&value, sizeof(T));
+	}
+
+	static size_t hash(const void* data, size_t size)
+	{
+		std::string d((const char*)data, size);
 		std::hash<std::string> hash;
 		return hash(d);
 	}

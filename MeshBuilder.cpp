@@ -27,7 +27,7 @@ MeshBuilder::Data MeshBuilder::buildByAssimp(const std::string & filename)
 	Data ret;
 	ret.aabb = { FLT_MAX,FLT_MAX,FLT_MAX,FLT_MIN, FLT_MIN,FLT_MIN };
 	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(filename, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_JoinIdenticalVertices);
+	const aiScene* scene = importer.ReadFile(filename, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_JoinIdenticalVertices | aiProcess_CalcTangentSpace);
 	if (!scene)
 	{
 		::MessageBoxA(NULL, importer.GetErrorString(), NULL, NULL);
@@ -50,14 +50,26 @@ MeshBuilder::Data MeshBuilder::buildByAssimp(const std::string & filename)
 		{
 			auto m = scene->mMaterials[i];
 			Data::Material mat;
-			for (int j = 0; j < m->GetTextureCount(aiTextureType_DIFFUSE); ++j)
+
+
+			if (m->GetTextureCount(aiTextureType_DIFFUSE) > 0)
 			{
 				aiString path;
 				aiTextureMapping mapping;
 				UINT index;
-				m->GetTexture(aiTextureType_DIFFUSE, j, &path, &mapping, &index);
+				m->GetTexture(aiTextureType_DIFFUSE, 0, &path, &mapping, &index);
 				std::string realpath = totalpath + path.C_Str();
-				mat.texture_diffuses.push_back(realpath);
+				mat.albedo = realpath;
+			}
+
+			if (m->GetTextureCount(aiTextureType_NORMALS) > 0)
+			{
+				aiString path;
+				aiTextureMapping mapping;
+				UINT index;
+				m->GetTexture(aiTextureType_NORMALS, 0, &path, &mapping, &index);
+				std::string realpath = totalpath + path.C_Str();
+				mat.normal = realpath;
 			}
 
 			ret.materials.push_back(mat);
@@ -99,6 +111,13 @@ MeshBuilder::Data MeshBuilder::buildByAssimp(const std::string & filename)
 				mesh.layout.push_back(TEXCOORD0);
 				size += 4 * 2;
 			}
+			if (m->HasTangentsAndBitangents())
+			{
+				mesh.layout.push_back(TANGENT);
+				mesh.layout.push_back(BITANGENT);
+				size += 4 * 3;
+				size += 4 * 3;
+			}
 
 			mesh.vertices.resize(mesh.numVertex * size);
 			char* begin = mesh.vertices.data();
@@ -129,6 +148,12 @@ MeshBuilder::Data MeshBuilder::buildByAssimp(const std::string & filename)
 				if (m->HasTextureCoords(0))
 				{
 					copy(begin, m->mTextureCoords[0] + j, 4 * 2);
+				}
+
+				if (m->HasTangentsAndBitangents())
+				{
+					copy(begin, m->mTangents + j, sizeof(aiVector3D));
+					copy(begin, m->mBitangents + j, sizeof(aiVector3D));
 				}
 			}
 
@@ -191,7 +216,10 @@ MeshBuilder::Data MeshBuilder::buildByTinyobj(const std::string & filename)
 	{
 		Data::Material m;
 		if (i.diffuse_texname.size() > 0)
-			m.texture_diffuses.push_back(totalpath  + i.diffuse_texname);
+			m.albedo = totalpath  + i.diffuse_texname;
+		if (!i.normal_texname.empty())
+			m.normal = totalpath + i.normal_texname;
+
 		ret.materials.push_back(m);
 	}
 

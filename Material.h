@@ -5,7 +5,6 @@
 #include "renderer.h"
 
 
-
 class Material
 {
 public:
@@ -14,18 +13,36 @@ public:
 	{
 		return Ptr(new Material());
 	}
+
+	enum TextureUnit
+	{
+		TU_ALBEDO,
+		TU_NORMAL,
+		TU_ROUGH,
+		TU_METAL,
+		TU_AO,
+
+
+		TU_MAX
+	};
 public:
 	Material();
 	~Material();
 
 	void setTexture(size_t index, Renderer::Texture2D::Ptr tex);
-	bool hasTexture() { return !mTextures.empty(); }
+	bool hasTexture() { return !textures.empty(); }
 
-	void enableLighting(bool l) { mLighting = l; }
-	bool isLightingEnabled()const { return mLighting; }
+	void enableLighting(bool l) { beLighting = l; }
+	bool isLightingEnabled()const { return beLighting; }
+
+	size_t getShaderID();
+	std::vector<D3D10_SHADER_MACRO> generateShaderID();
 public:
-	std::vector<Renderer::Texture2D::Ptr> mTextures;
-	bool mLighting = true;
-	float metallic = 0.5f;
-	float roughness = 0.5f;
+	std::vector<Renderer::Texture2D::Ptr> textures;
+	bool beLighting = true;
+	float metallic = 1.0f;
+	float roughness = 1.0f;
+
+private:
+	size_t mShaderID = -1;
 };

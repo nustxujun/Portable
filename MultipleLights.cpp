@@ -122,44 +122,47 @@ void MultipleLights::initScene()
 	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
 
 	//}
-	for (int r = 0; r <= 10; ++r)
-	{
-		for (int m = 0; m <= 10; ++m)
-		{
-			Parameters params;
-			params["geom"] = "sphere";
-			params["radius"] = "1";
-			params["resolution"] = "20";
-			params["size"] = "1";
-			std::stringstream ss;
-			ss << "material" << r << m; 
-			auto model = mScene->createModel(ss.str(), params, [this](const Parameters& p)
-			{
-				return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-			});
-			model->setCastShadow(false);
-			model->attach(root);
-			model->getNode()->setPosition(0.0f, 2.0f * r, 2.0f * m);
-			Material::Ptr mat = Material::create();
-			mat->metallic = m * 0.1f;
-			mat->roughness = r * 0.1f;
-			model->setMaterial(mat);
-		}
-	}
-
-
+	//for (int r = 0; r <= 10; ++r)
 	//{
-	//	Parameters params;
-	//	//params["file"] = "tiny.x";
-	//	params["file"] = "media/sponza/sponza.obj";
-	//	auto model = mScene->createModel("test", params, [this](const Parameters& p) {
-	//		return Mesh::Ptr(new Mesh(p, mRenderer));
-	//	});
-
-	//	model->attach(mScene->getRoot());
-	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-	//
+	//	for (int m = 0; m <= 10; ++m)
+	//	{
+	//		Parameters params;
+	//		params["geom"] = "sphere";
+	//		params["radius"] = "1";
+	//		params["resolution"] = "20";
+	//		params["size"] = "1";
+	//		std::stringstream ss;
+	//		ss << "material" << r << m; 
+	//		auto model = mScene->createModel(ss.str(), params, [this](const Parameters& p)
+	//		{
+	//			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+	//		});
+	//		model->setCastShadow(false);
+	//		model->attach(root);
+	//		model->getNode()->setPosition(0.0f, 2.0f * r, 2.0f * m);
+	//		Material::Ptr mat = Material::create();
+	//		mat->metallic = m * 0.1f;
+	//		mat->roughness = r * 0.1f;
+	//		model->setMaterial(mat);
+	//	}
 	//}
+
+
+	{
+		Parameters params;
+		params["file"] = "Helmet/Helmet.fbx";
+		//params["file"] = "media/sponza/sponza.obj";
+		auto model = mScene->createModel("test", params, [this](const Parameters& p) {
+			return Mesh::Ptr(new Mesh(p, mRenderer));
+		});
+
+		model->attach(mScene->getRoot());
+		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+		auto m = model->getMesh()->getMesh(0).material;
+		m->setTexture(0, mRenderer->createTexture("Helmet/Helmet_Albedo.png"));
+		//m->setTexture(1, mRenderer->createTexture("Helmet/Helmet_Normal.png"));
+
+	}
 
 	auto cam = mScene->createOrGetCamera("main");
 	cam->setViewport(0, 0, mRenderer->getWidth(), mRenderer->getHeight());
@@ -580,7 +583,7 @@ void MultipleLights::initCDRPipeline()
 	//std::vector<std::string> files = { "media/uffizi_cross.dds" };
 	mPipeline->pushStage<SkyBox>("media/Ditch-River_2k.hdr", false);
 
-	mPipeline->pushStage<HDR>();
+	//mPipeline->pushStage<HDR>();
 
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);

@@ -17,10 +17,14 @@ public:
 
 	void render(Renderer::Texture2D::Ptr rt)  override final;
 private:
+
+	Renderer::Effect::Ptr getEffect(Material::Ptr mat);
+private:
+
 	Renderer::RenderTarget::Ptr mAlbedo;
 	Renderer::RenderTarget::Ptr mNormal;
 	Renderer::DepthStencil::Ptr mDepth;
 
-	Renderer::Effect::Ptr mEffect;
-	Renderer::Layout::Ptr mLayout;
+
+	std::unordered_map<size_t, Renderer::Effect::Ptr> mEffect;
 };
