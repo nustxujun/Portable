@@ -24,10 +24,9 @@ struct GBufferVertexShaderInput
 {
 	float3 Position : POSITION0;
 	float3 Normal : NORMAL0;
-#if ALBEDO
+#if UV
 	float2 TexCoord : TEXCOORD0;
 #endif
-
 #if NORMAL_MAP
 	float3 Tangent :TANGENT0;
 	float3 Bitangent: TANGENT1;
@@ -38,7 +37,7 @@ struct GBufferVertexShaderOutput
 {
 	float4 Position : SV_POSITION;
 	float3 Normal : NORMAL0;
-#if ALBEDO
+#if UV
 	float2 TexCoord : TEXCOORD0;
 #endif
 #if NORMAL_MAP
@@ -104,7 +103,7 @@ GBufferPixelShaderOutput ps(GBufferVertexShaderOutput input) : SV_TARGET
 
 #if PBR_MAP
 	float r = roughTex.Sample(sampLinear, input.TexCoord).r;
-	float m = roughTex.Sample(sampLinear, input.TexCoord).m;
+	float m = roughTex.Sample(sampLinear, input.TexCoord).r;
 	output.Material = float2(r * roughness, m * metallic);
 #else
 	output.Material = float2(roughness, metallic);

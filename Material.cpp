@@ -29,7 +29,12 @@ std::vector<D3D10_SHADER_MACRO> Material::generateShaderID()
 	auto& texs = textures;
 	if (!texs.empty())
 	{
-		macros.push_back({ "ALBEDO","1" });
+		macros.push_back({ "UV", "1" });
+		if (texs.size() > Material::TU_ALBEDO &&
+			!texs[Material::TU_ALBEDO].expired())
+		{
+			macros.push_back({ "ALBEDO","1" });
+		}
 		if (texs.size() > Material::TU_NORMAL &&
 			!texs[Material::TU_NORMAL].expired())
 		{

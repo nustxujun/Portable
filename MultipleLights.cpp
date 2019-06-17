@@ -95,18 +95,7 @@ void MultipleLights::initScene()
 	//	mat->roughness = 1.0f;
 	//	model->setMaterial(mat);
 	//}
-	//{
-	//	Parameters params;
-	//	params["geom"] = "cube";
-	//	params["size"] = "100";
-	//	auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
-	//	{
-	//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-	//	});
-	//	model->setCastShadow(false);
-	//	model->attach(root);
-	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-	//}
+
 
 	//{
 	//	Parameters params;
@@ -148,21 +137,47 @@ void MultipleLights::initScene()
 	//}
 
 
+	//{
+	//	Parameters params;
+	//	//params["file"] = "Cerberus/Cerberus.fbx";
+	//	params["file"] = "media/sponza/sponza.obj";
+	//	auto model = mScene->createModel("test", params, [this](const Parameters& p) {
+	//		return Mesh::Ptr(new Mesh(p, mRenderer));
+	//	});
+
+	//	model->attach(mScene->getRoot());
+	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+	//	auto m = model->getMesh()->getMesh(0).material;
+
+	//	for (int i = 0; i < model->getMesh()->getNumMesh(); ++i)
+	//	{
+	//		auto m = model->getMesh()->getMesh(i).material;
+	//		m->setTexture(0, {});
+	//	}
+
+	//}
+
 	{
 		Parameters params;
-		params["file"] = "Helmet/Helmet.fbx";
-		//params["file"] = "media/sponza/sponza.obj";
+		params["file"] = "Cerberus/Cerberus.fbx";
 		auto model = mScene->createModel("test", params, [this](const Parameters& p) {
 			return Mesh::Ptr(new Mesh(p, mRenderer));
 		});
 
 		model->attach(mScene->getRoot());
 		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+		model->getNode()->setOrientation(Quaternion::CreateFromYawPitchRoll(0, 3.1415926 * 0.5f, 0));
+
+
 		auto m = model->getMesh()->getMesh(0).material;
-		m->setTexture(0, mRenderer->createTexture("Helmet/Helmet_Albedo.png"));
-		//m->setTexture(1, mRenderer->createTexture("Helmet/Helmet_Normal.png"));
+		//m->setTexture(0, {});
+		m->setTexture(1, mRenderer->createTexture("Cerberus/Textures/Cerberus_N.tga"));
+		m->setTexture(2, mRenderer->createTexture("Cerberus/Textures/Cerberus_R.tga"));
+		m->setTexture(3, mRenderer->createTexture("Cerberus/Textures/Cerberus_M.tga"));
+
 
 	}
+
 
 	auto cam = mScene->createOrGetCamera("main");
 	cam->setViewport(0, 0, mRenderer->getWidth(), mRenderer->getHeight());
@@ -577,13 +592,13 @@ void MultipleLights::initCDRPipeline()
 	
 	mPipeline->pushStage<PBR>(Vector3(bw, bh,0), shadowmaps);
 
-	//mPipeline->pushStage<AO>(20.0f);
+	mPipeline->pushStage<AO>(20.0f);
 
 
 	//std::vector<std::string> files = { "media/uffizi_cross.dds" };
-	mPipeline->pushStage<SkyBox>("media/Ditch-River_2k.hdr", false);
+	//mPipeline->pushStage<SkyBox>("media/Ditch-River_2k.hdr", false);
 
-	//mPipeline->pushStage<HDR>();
+	mPipeline->pushStage<HDR>();
 
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);

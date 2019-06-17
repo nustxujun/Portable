@@ -29,6 +29,7 @@ void SkyBox::init(bool isCubemap)
 		Parameters params;
 		params["geom"] = "sphere";
 		params["size"] = "1000";
+		params["resolution"] = "100";
 		mSkyMesh = GeometryMesh::Ptr(new GeometryMesh(params, getRenderer()));
 	}
 
@@ -97,8 +98,6 @@ void SkyBox::render(Renderer::Texture2D::Ptr rt)
 	{
 		renderer->setTexture(mSkyTex);
 		renderer->setLayout(mLayout.lock()->bind(pass));
-		renderer->getContext()->DrawIndexed(rend.numIndices, 0, 0);
-		renderer->getContext()->DrawIndexed(rend.numIndices, 0, 0);
 		renderer->getContext()->DrawIndexed(rend.numIndices, 0, 0);
 
 	});
