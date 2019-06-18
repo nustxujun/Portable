@@ -60,9 +60,9 @@ void MultipleLights::initPipeline()
 
 
 
-	initDRPipeline();
+	//initDRPipeline();
 	//initTBDRPipeline();
-	//initCDRPipeline();
+	initCDRPipeline();
 }
 
 void MultipleLights::initScene()
@@ -583,7 +583,7 @@ void MultipleLights::initCDRPipeline()
 	auto envmap = mRenderer->createTextureCube(files);
 	std::string hdrenvfile = "media/Ditch-River_2k.hdr";
 	auto equirect = mRenderer->createTexture(hdrenvfile, 1);
-	constexpr auto equirectTex = true;
+	constexpr auto equirectTex = false;
 	Renderer::Texture2D::Ptr ibltex;
 	if (equirectTex)
 		ibltex = equirect;

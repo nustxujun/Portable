@@ -29,8 +29,9 @@ public:
 
 		const Matrix& getTransformation();
 
-		template<class ... Args>
-		void setPosition(const Args& ... args) { dirty(DT_POSITION); mPosition = { args... }; }
+		void setPosition(float x, float y, float z) { dirty(DT_POSITION); mPosition = {x,y,z}; }
+		void setPosition(const Vector3& p) { dirty(DT_POSITION); mPosition = p; }
+
 		const Vector3& getPosition() { return mPosition; }
 		const Vector3& getRealPosition();
 

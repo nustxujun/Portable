@@ -144,6 +144,9 @@
     <ClInclude Include="ImageProcessing.h">
       <Filter>Engine</Filter>
     </ClInclude>
+    <ClInclude Include="PBRMaterial.h">
+      <Filter>Framework</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -274,10 +277,6 @@
     <None Include="hlsl\skybox.fx">
       <Filter>shader</Filter>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="hlsl\tiledlightculling.hlsl">
-      <Filter>shader</Filter>
-    </FxCompile>
+    <None Include="hlsl\tiledlightculling.hlsl" />
   </ItemGroup>
 </Project>

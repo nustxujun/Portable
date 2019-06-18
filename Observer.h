@@ -10,6 +10,7 @@
 #include "VolumetricLighting.h"
 #include "AO.h"
 #include "PostProcessing.h"
+#include <sstream>
 class Observer: public Framework 
 {
 public :
@@ -114,17 +115,20 @@ public :
 
 	virtual void initInput() override
 	{
-		auto cam = mScene->createOrGetCamera("main");
-		auto light = mScene->createOrGetLight("main");
-		auto node = mScene->getRoot();
-		auto aabb = node->getWorldAABB();
-		Vector3 vec = aabb.second - aabb.first;
 
-		auto maxlen = (aabb.second - aabb.first).Length();
-		cam->setNearFar(0.1, maxlen * 2);
-		float com_step = std::max(std::max(vec.x, vec.y), vec.z) * 0.001f;
+		mInput->listen([ this](const Input::Mouse& m, const Input::Keyboard& k) {
+			auto light = mScene->createOrGetLight("main");
+			auto cam = mScene->createOrGetCamera("main");
 
-		mInput->listen([node,cam, com_step,light, maxlen](const Input::Mouse& m, const Input::Keyboard& k) {
+			auto node = mScene->getRoot();
+			auto aabb = node->getWorldAABB();
+			Vector3 vec = aabb.second - aabb.first;
+			auto center = (aabb.second + aabb.first) * 0.5f;
+			auto maxlen = (aabb.second - aabb.first).Length();
+			cam->setNearFar(0.1, maxlen * 4);
+			float com_step = std::max(std::max(vec.x, vec.y), vec.z) * 0.001f;
+
+			
 			static auto lasttime = GetTickCount();
 			auto dtime = GetTickCount() - lasttime;
 			lasttime = GetTickCount();
@@ -156,17 +160,6 @@ public :
 				float r = cos(theta.y) * radius;
 				dir = { cos(theta.x) * r, sin(theta.y) * radius, sin(theta.x) * r };
 				dir.Normalize();
-
-
-				//Quaternion q1 = Quaternion::CreateFromAxisAngle({ 0,1,0 }, -d.x * 0.005);
-				//node->rotate(q1);
-				//Vector3 right = { 1,0,0 };
-				//right = Vector3::Transform(right, node->getRealOrientation());
-
-				//Quaternion q2 = Quaternion::CreateFromAxisAngle(right, d.y * 0.005);
-				//node->rotate(q1 *q2);
-
-			
 			}
 			if (m.rightButton)
 			{
@@ -175,7 +168,7 @@ public :
 				const float degree = 3.14f * 0.5f;
 
 				o.x += d.x * 0.005;
-				o.y -= d.y * 0.005;
+				o.y += d.y * 0.005;
 				o.y = std::max(-degree, std::min(degree, o.y));
 				float r = cos(o.y) * maxlen;
 				ldir = { cos(o.x) * r, sin(o.y) * maxlen, sin(o.x) * r };
@@ -183,21 +176,10 @@ public :
 				light->getNode()->setPosition(ldir);
 				ldir.Normalize();
 				light->setDirection(-ldir);
-
-
-
-				//Vector3 up = Vector3::Transform({0,1,0}, cam->getNode()->getRealOrientation());
-				//Quaternion q1 = Quaternion::CreateFromAxisAngle(up, -d.x * 0.005);
-				////node->rotate(q1);
-				//Vector3 right = { 1,0,0 };
-				//right = Vector3::Transform(right, cam->getNode()->getRealOrientation());
-
-				//Quaternion q2 = Quaternion::CreateFromAxisAngle(right, -d.y * 0.005);
-				//light->getNode()->rotate(q1 *q2);
 	
 			}
-			cam->lookat(dir * radius, { 0,0,0 });
-
+			cam->lookat(dir * radius + center, center);
+			return false;
 		});
 	}
 };

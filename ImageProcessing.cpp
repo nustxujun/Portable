@@ -255,12 +255,12 @@ Renderer::Texture2D::Ptr PrefilterCubemap::process(Renderer::Texture2D::Ptr tex,
 
 	if (!mIsCubemap)
 	{
-		desc.Width = 512;
-		desc.Height = 512;
+
 		desc.ArraySize = 6;
 		desc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
 	}
-
+	desc.Width = 512;
+	desc.Height = 512;
 	desc.MipLevels = 5;
 	desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
 

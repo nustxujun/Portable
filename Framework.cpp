@@ -38,6 +38,7 @@ void Framework::init()
 void Framework::update()
 {
 	mInput->update();
+	framemove();
 	mPipeline->render();
 	showFPS();
 

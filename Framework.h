@@ -23,6 +23,7 @@ protected:
 	virtual void initPipeline();
 	virtual void initScene();
 	virtual void initInput();
+	virtual void framemove() {};
 
 	virtual void onChanged(const std::string& key, const nlohmann::json::value_type& value) {};
 	void showFPS();

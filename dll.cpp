@@ -1,6 +1,7 @@
 
 #include <Windows.h>
 #include "MultipleLights.h"
+#include "PBRMaterial.h"
 #include <thread>
 #include "json.hpp"
 #include <sstream>
@@ -13,7 +14,8 @@ using namespace nlohmann;
 #define EXPORT
 #endif
 
-using Ptr = std::shared_ptr<MultipleLights>;
+using FRAMEWORK = PBRMaterial;
+using Ptr = std::shared_ptr<FRAMEWORK>;
 Ptr framework;
 std::shared_ptr<std::thread> loop;
 HWND parentWnd;
@@ -267,7 +269,7 @@ extern "C"
 		{
 			registerWindow();
 			auto win = createWindow(width, height);
-			framework = Ptr(new MultipleLights(win));
+			framework = Ptr(new FRAMEWORK(win));
 			overlay = ElectronOverlay::Ptr(new ElectronOverlay());
 			overlay->setSetting(framework->getSetting());
 			overlay->window = win;

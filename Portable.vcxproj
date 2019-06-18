@@ -188,6 +188,7 @@
     <ClInclude Include="Observer.h" />
     <ClInclude Include="Overlay.h" />
     <ClInclude Include="PBR.h" />
+    <ClInclude Include="PBRMaterial.h" />
     <ClInclude Include="Pipeline.h" />
     <ClInclude Include="PostProcessing.h" />
     <ClInclude Include="Quad.h" />

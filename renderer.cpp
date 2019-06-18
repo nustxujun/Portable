@@ -863,7 +863,7 @@ Renderer::Buffer::Buffer(Renderer* r, const D3D11_BUFFER_DESC& desc, const D3D11
 
 Renderer::Buffer::Buffer(Renderer * r, int size, int stride, DXGI_FORMAT format, size_t bindflags, D3D11_USAGE usage, size_t cpuaccess) :D3DObject(r)
 {
-	D3D11_BUFFER_DESC mDesc = { 0 };
+	mDesc = { 0 };
 	mDesc.BindFlags = bindflags;
 	mDesc.ByteWidth = size;
 	mDesc.CPUAccessFlags = cpuaccess;
