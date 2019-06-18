@@ -45,8 +45,6 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 			float cosy = cos(degy);
 			float y = cosy * radius;
 			float r = siny * radius;
-			//float r = radius;
-			//float y = resolution - j ;
 			for (int i = 0; i <= resolution; ++i)
 			{
 				float degx = i * 2 * pi / resolution;
@@ -56,15 +54,32 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 				float z = cosx * r;
 				float x = sinx * r;
 
+				// pos
 				vertices.push_back(x);
 				vertices.push_back(y);
 				vertices.push_back(z);
 
+				// normal
 				DirectX::SimpleMath::Vector3 normal = { x,y,z };
 				normal.Normalize();
 				vertices.push_back(normal.x);
 				vertices.push_back(normal.y);
 				vertices.push_back(normal.z);
+
+				//uv
+				vertices.push_back((float)i/(float)resolution);
+				vertices.push_back((float)j / (float)resolution);
+
+				// tangent
+				vertices.push_back(0);
+				vertices.push_back(0);
+				vertices.push_back(0);
+
+				//bitangent
+				vertices.push_back(0);
+				vertices.push_back(0);
+				vertices.push_back(0);
+
 			}
 		}
 
@@ -90,17 +105,17 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 	else if (geom->second == "plane")
 	{
 		int size = 10;
-		int resolution = 10;
+		int resolution = 1;
 
 		if (params.find("size") != end)
 		{
 			size = atoi(params.find("size")->second.c_str());
 		}
 
-		if (params.find("resolution") != end)
-		{
-			resolution = atoi(params.find("resolution")->second.c_str());
-		}
+		//if (params.find("resolution") != end)
+		//{
+		//	resolution = atoi(params.find("resolution")->second.c_str());
+		//}
 
 		trans.Translation({ -size * 0.5f, 0, -size * 0.5f });
 
@@ -118,6 +133,18 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 				vertices.push_back(0);
 				vertices.push_back(1.0f);
 				vertices.push_back(0);
+
+				vertices.push_back((float)i / (float)resolution);
+				vertices.push_back((float)j / (float)resolution);
+
+				vertices.push_back(1.0f);
+				vertices.push_back(0);
+				vertices.push_back(0);
+
+				vertices.push_back(0);
+				vertices.push_back(0);
+				vertices.push_back(1.0f);
+
 			}
 		}
 
@@ -177,36 +204,36 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 		}
 		vertices = {
 			// -z
-			-half,  half, -half,	0,0,-sign,
-			 half,  half, -half,	0,0,-sign,
-			-half, -half, -half,	0,0,-sign,
-			 half, -half, -half,	0,0,-sign,
+			-half,  half, -half,	0,0,-sign,	0, 0,  1,0,0,	0,-1,0,
+			 half,  half, -half,	0,0,-sign,	1, 0,  1,0,0,	0,-1,0,
+			-half, -half, -half,	0,0,-sign,	0, 1,  1,0,0,	0,-1,0,
+			 half, -half, -half,	0,0,-sign,	1, 1,  1,0,0,	0,-1,0,
 			// z
-			 half,  half,  half,	0,0, sign,
-			-half,  half,  half,	0,0, sign,
-			 half, -half,  half,	0,0, sign,
-			-half, -half,  half,	0,0, sign,
+			 half,  half,  half,	0,0, sign,	0, 0,	-1,0,0,	0,-1,0,
+			-half,  half,  half,	0,0, sign,	1, 0,	-1,0,0,	0,-1,0,
+			 half, -half,  half,	0,0, sign,	0, 1,	-1,0,0,	0,-1,0,
+			-half, -half,  half,	0,0, sign,	1, 1,	-1,0,0,	0,-1,0,
 			// -x
-			-half,  half,  half,	-sign,0, 0,
-			-half,  half, -half,	-sign,0, 0,
-			-half, -half,  half,	-sign,0, 0,
-			-half, -half, -half,	-sign,0, 0,
+			-half,  half,  half,	-sign,0, 0,	0, 0,	0,0,-1,	0,-1,0,
+			-half,  half, -half,	-sign,0, 0,	1, 0,	0,0,-1,	0,-1,0,
+			-half, -half,  half,	-sign,0, 0,	0, 1,	0,0,-1,	0,-1,0,
+			-half, -half, -half,	-sign,0, 0,	1, 1,	0,0,-1,	0,-1,0,
 			// x
-			 half,  half, -half,	sign,0, 0,
-			 half,  half,  half,	sign,0, 0,
-			 half, -half, -half,	sign,0, 0,
-			 half, -half,  half,	sign,0, 0,
+			 half,  half, -half,	sign,0, 0,	0, 0,	0,0,1,	0,-1,0,
+			 half,  half,  half,	sign,0, 0,	1, 0,	0,0,1,	0,-1,0,
+			 half, -half, -half,	sign,0, 0,	0, 1,	0,0,1,	0,-1,0,
+			 half, -half,  half,	sign,0, 0,	1, 1,	0,0,1,	0,-1,0,
 
 			 // y
-			 -half,  half,  half,	0,sign, 0,
-			  half,  half,  half,	0,sign, 0,
-			 -half,  half, -half,	0,sign, 0,
-			  half,  half, -half,	0,sign, 0,
+			 -half,  half,  half,	0,sign, 0,	0, 0,	1,0,0,	0,0,-1,
+			  half,  half,  half,	0,sign, 0,	1, 0,	1,0,0,	0,0,-1,
+			 -half,  half, -half,	0,sign, 0,	0, 1,	1,0,0,	0,0,-1,
+			  half,  half, -half,	0,sign, 0,	1, 1,	1,0,0,	0,0,-1,
 			 // -y
-			  half, -half,  half,	0,-sign, 0,
-			 -half, -half,  half,	0,-sign, 0,
-			  half, -half, -half,	0,-sign, 0,
-			 -half, -half, -half,	0,-sign, 0,
+			  half, -half,  half,	0,-sign, 0,	0, 0,	-1,0,0,	0,0,-1,
+			 -half, -half,  half,	0,-sign, 0,	1, 0,	-1,0,0,	0,0,-1,
+			  half, -half, -half,	0,-sign, 0,	0, 1,	-1,0,0,	0,0,-1,
+			 -half, -half, -half,	0,-sign, 0,	1, 1,	-1,0,0,	0,0,-1,
 		};
 
 
@@ -217,12 +244,13 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 	else
 		abort();
 
-	size_t numVertices = vertices.size() / 6;
+	size_t vertex_stride = 3 + 3 + 2 + 3 + 3;
+	size_t numVertices = vertices.size() / vertex_stride;
 	for (size_t i = 0; i < numVertices; ++i)
 	{
-		auto x = vertices[0 + i * 6];
-		auto y = vertices[1 + i * 6];
-		auto z = vertices[2 + i * 6];
+		auto x = vertices[0 + i * vertex_stride];
+		auto y = vertices[1 + i * vertex_stride];
+		auto z = vertices[2 + i * vertex_stride];
 		aabb.min = DirectX::SimpleMath::Vector3::Min(aabb.min, { x,y,z });
 		aabb.max = DirectX::SimpleMath::Vector3::Max(aabb.max, { x,y,z });
 	}
@@ -236,11 +264,14 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 	InitQuadData.pSysMem = indices.data();
 	auto ib = r->createBuffer(indices.size() * sizeof(int), D3D11_BIND_INDEX_BUFFER, &InitQuadData);
 
-	D3D11_INPUT_ELEMENT_DESC layout[] = { 
+	std::vector<D3D11_INPUT_ELEMENT_DESC> layout = { 
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 32, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TANGENT", 1, DXGI_FORMAT_R32G32B32_FLOAT, 0, 44, D3D11_INPUT_PER_VERTEX_DATA, 0 }
 	};
-	auto lo = r->createLayout(layout, 2);
+	auto lo = r->createLayout(layout.data(), layout.size());
 
 	Mesh::Meshs meshs;
 	auto material = Material::create();

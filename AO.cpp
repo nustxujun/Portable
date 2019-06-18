@@ -68,7 +68,8 @@ void AO::init(float radius)
 		noise[i] = { d.x, d.y, d.z,0 };
 	}
 
-	mNoise = r->createTexture(noiseTexDesc, noise.data(), noiseSize * sizeof(DirectX::SimpleMath::Vector4));
+	mNoise = r->createTexture(noiseTexDesc);
+	mNoise->blit(noise.data(), noiseSize * sizeof(DirectX::SimpleMath::Vector4));
 
 	mLinearWrap = r->createSampler("linear_wrap", D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
 	mPointWrap = r->createSampler("point_wrap", D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);

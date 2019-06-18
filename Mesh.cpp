@@ -65,10 +65,7 @@ Mesh::Mesh(const Parameters& params, Renderer::Ptr r)
 		auto layout = r->createLayout(desc.data(), desc.size());
 		DirectX::SimpleMath::Matrix trans = (DirectX::XMFLOAT4X4)(mesh.tranfromation);
 		trans.Transpose(trans);
-		//std::swap(trans._41 ,trans._14);
-		//std::swap(trans._42 , trans._24);
-		//std::swap(trans._43 , trans._34);
-		//tran = DirectX::SimpleMath::Matrix::Identity;
+
 
 
 		mMeshs.push_back({ vb, ib, mesh.numVertex, mesh.indices.size(),mesh.materialIndex == -1? Material::Ptr(): materials[mesh.materialIndex] , layout , trans });

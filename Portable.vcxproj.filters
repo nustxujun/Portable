@@ -117,9 +117,6 @@
     <ClInclude Include="DepthBounding.h">
       <Filter>Pipeline\Stage</Filter>
     </ClInclude>
-    <ClInclude Include="Network.h">
-      <Filter>Framework</Filter>
-    </ClInclude>
     <ClInclude Include="Setting.h">
       <Filter>Framework</Filter>
     </ClInclude>
@@ -227,9 +224,6 @@
     <ClCompile Include="SkyBox.cpp">
       <Filter>Pipeline\Stage</Filter>
     </ClCompile>
-    <ClCompile Include="Network.cpp">
-      <Filter>Framework</Filter>
-    </ClCompile>
     <ClCompile Include="dll.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -277,14 +271,11 @@
     <None Include="hlsl\lightculling.hlsl">
       <Filter>shader</Filter>
     </None>
-    <None Include="hlsl\skybox.fx" />
-    <None Include="main.cpp">
-      <Filter>源文件</Filter>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="hlsl\gbuffer.fx">
+    <None Include="hlsl\gbuffer.fx">
       <Filter>shader</Filter>
-    </FxCompile>
+    </None>
+    <None Include="hlsl\skybox.fx">
+      <Filter>shader</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -569,7 +569,14 @@ Renderer::Texture2D::Ptr Renderer::createTexture(const std::string & filename, U
 		desc.SampleDesc.Quality = 0;
 		desc.SampleDesc.Count = 1;
 
-		auto tex = createTexture(desc, data);
+		auto tex = createTexture(desc);
+
+		if (data)
+		{
+			tex->blit(data,0);
+			mContext->GenerateMips(tex->ShaderResource::getView());
+		}
+
 		stbi_image_free(data);
 		return tex;
 	}
@@ -589,7 +596,7 @@ Renderer::Texture2D::Ptr Renderer::createTexture(const std::string & filename, U
 	
 }
 
-Renderer::Texture2D::Ptr Renderer::createTexture( const D3D11_TEXTURE2D_DESC& desc, const void* data, size_t size)
+Renderer::Texture2D::Ptr Renderer::createTexture( const D3D11_TEXTURE2D_DESC& desc)
 {
 	//D3D11_SUBRESOURCE_DATA initdata = {0};
 	//initdata.pSysMem = data;
@@ -600,11 +607,6 @@ Renderer::Texture2D::Ptr Renderer::createTexture( const D3D11_TEXTURE2D_DESC& de
 	auto ptr = std::shared_ptr<Texture2D>(new Texture2D(this, tex));
 	mTextures.emplace_back(ptr);
 
-	if (data)
-	{
-		ptr->blit(data, size);
-		mContext->GenerateMips(ptr->ShaderResource::getView());
-	}
 	return ptr;
 }
 

@@ -60,7 +60,7 @@ void MultipleLights::initPipeline()
 
 void MultipleLights::initScene()
 {
-	int numpoints = 100;
+	int numpoints = 0;
 	int numspots = 0;
 	int numdirs = 1;
 
@@ -93,6 +93,12 @@ void MultipleLights::initScene()
 	//	Material::Ptr mat = Material::create();
 	//	mat->metallic = 0;
 	//	mat->roughness = 1.0f;
+	//	mat->setTexture(0, mRenderer->createTexture("media/streaked/streaked-metal1-albedo.png"));
+	//	mat->setTexture(1, mRenderer->createTexture("media/streaked/streaked-metal1-normal-dx.png"));
+	//	mat->setTexture(2, mRenderer->createTexture("media/streaked/streaked-metal1-rough.png"));
+	//	mat->setTexture(3, mRenderer->createTexture("media/streaked/streaked-metal1-metalness.png"));
+	//	mat->setTexture(4, mRenderer->createTexture("media/streaked/streaked-metal1-ao.png"));
+
 	//	model->setMaterial(mat);
 	//}
 
@@ -111,6 +117,15 @@ void MultipleLights::initScene()
 	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
 
 	//}
+
+
+	//auto albedo = mRenderer->createTexture("media/rustediron/rustediron2_basecolor.png");
+	////auto normal = mRenderer->createTexture("media/rustediron/streaked-metal1-normal-dx.png");
+	//auto rough = mRenderer->createTexture("media/rustediron/rustediron2_roughness.png");
+	//auto metal = mRenderer->createTexture("media/rustediron/rustediron2_metallic.png");
+	////auto ao = mRenderer->createTexture("media/rustediron/streaked-metal1-ao.png");
+
+
 	//for (int r = 0; r <= 10; ++r)
 	//{
 	//	for (int m = 0; m <= 10; ++m)
@@ -132,6 +147,12 @@ void MultipleLights::initScene()
 	//		Material::Ptr mat = Material::create();
 	//		mat->metallic = m * 0.1f;
 	//		mat->roughness = r * 0.1f;
+	//		mat->setTexture(0, albedo);
+	//		//mat->setTexture(1, normal);
+	//		mat->setTexture(2, rough);
+	//		mat->setTexture(3, metal);
+	//		//mat->setTexture(4, ao);
+
 	//		model->setMaterial(mat);
 	//	}
 	//}
@@ -170,12 +191,10 @@ void MultipleLights::initScene()
 
 
 		auto m = model->getMesh()->getMesh(0).material;
-		//m->setTexture(0, {});
 		m->setTexture(1, mRenderer->createTexture("Cerberus/Textures/Cerberus_N.tga"));
 		m->setTexture(2, mRenderer->createTexture("Cerberus/Textures/Cerberus_R.tga"));
 		m->setTexture(3, mRenderer->createTexture("Cerberus/Textures/Cerberus_M.tga"));
-
-
+		m->setTexture(4, mRenderer->createTexture("Cerberus/Textures/Raw/Cerberus_AO.tga"));
 	}
 
 
@@ -555,7 +574,8 @@ void MultipleLights::initCDRPipeline()
 	mPipeline->addUnorderedAccess("lighttable", lighttable);
 
 	auto envmap = mRenderer->createTextureCube(files);
-	auto equirect = mRenderer->createTexture("media/Ditch-River_2k.hdr", 1);
+	std::string hdrenvfile = "media/Ditch-River_2k.hdr";
+	auto equirect = mRenderer->createTexture(hdrenvfile, 1);
 	constexpr auto equirectTex = true;
 	Renderer::Texture2D::Ptr ibltex;
 	if (equirectTex)
@@ -596,7 +616,7 @@ void MultipleLights::initCDRPipeline()
 
 
 	//std::vector<std::string> files = { "media/uffizi_cross.dds" };
-	//mPipeline->pushStage<SkyBox>("media/Ditch-River_2k.hdr", false);
+	mPipeline->pushStage<SkyBox>(hdrenvfile, false);
 
 	mPipeline->pushStage<HDR>();
 

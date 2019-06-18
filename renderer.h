@@ -458,7 +458,7 @@ public:
 	Sampler::Ptr createSampler(const std::string& name, D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV,
 		D3D11_TEXTURE_ADDRESS_MODE addrW = D3D11_TEXTURE_ADDRESS_WRAP, D3D11_COMPARISON_FUNC cmpfunc = D3D11_COMPARISON_NEVER, float minlod = 0, float maxlod = D3D11_FLOAT32_MAX);
 	Texture2D::Ptr createTexture(const std::string& filename, UINT miplevels = 0);
-	Texture2D::Ptr createTexture( const D3D11_TEXTURE2D_DESC& desc, const void* data = 0, size_t size = 0);
+	Texture2D::Ptr createTexture( const D3D11_TEXTURE2D_DESC& desc);
 	Texture3D::Ptr createTexture3D(const D3D11_TEXTURE3D_DESC& desc, const void* data = 0, size_t size = 0);
 	Texture2D::Ptr createTextureCube(const std::string& file);
 	Texture2D::Ptr createTextureCube(const std::array<std::string, 6>& file);

@@ -1,3 +1,7 @@
+#if !(UV) && (ALBEDO || NORMAL_MAP || AO_MAP)
+#error Need coords for textures(albedo normal roughness metallic ao ...)
+#endif
+
 cbuffer ConstantBuffer: register(b0)
 {
 	matrix World;
@@ -62,7 +66,7 @@ GBufferVertexShaderOutput vs(GBufferVertexShaderInput input)
 	output.Position = mul(viewPosition, Projection);
 
 	output.Normal = mul(float4(input.Normal,0), World).xyz;
-#if ALBEDO
+#if UV
 	output.TexCoord = input.TexCoord;
 #endif
 
@@ -103,7 +107,7 @@ GBufferPixelShaderOutput ps(GBufferVertexShaderOutput input) : SV_TARGET
 
 #if PBR_MAP
 	float r = roughTex.Sample(sampLinear, input.TexCoord).r;
-	float m = roughTex.Sample(sampLinear, input.TexCoord).r;
+	float m = metalTex.Sample(sampLinear, input.TexCoord).r;
 	output.Material = float2(r * roughness, m * metallic);
 #else
 	output.Material = float2(roughness, metallic);

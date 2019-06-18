@@ -185,7 +185,6 @@
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="MeshBuilder.h" />
     <ClInclude Include="MultipleLights.h" />
-    <ClInclude Include="Network.h" />
     <ClInclude Include="Observer.h" />
     <ClInclude Include="Overlay.h" />
     <ClInclude Include="PBR.h" />
@@ -216,14 +215,12 @@
     <ClCompile Include="HDR.cpp" />
     <ClCompile Include="ImageProcessing.cpp" />
     <ClCompile Include="LightCulling.cpp" />
-    <None Include="main.cpp" />
     <ClCompile Include="Framework.cpp" />
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="MeshBuilder.cpp" />
     <ClCompile Include="MultipleLights.cpp" />
-    <ClCompile Include="Network.cpp" />
     <ClCompile Include="Overlay.cpp" />
     <ClCompile Include="PBR.cpp" />
     <ClCompile Include="Pipeline.cpp" />
