@@ -13,25 +13,15 @@ class PBRMaterial :public Observer
 {
 public:
 	using Observer::Observer;
-	virtual void initScene() override
+	
+	void differentMaterials()
 	{
-		int numpoints = 0;
-		int numspots = 0;
-		int numdirs = 1;
-
-		set("numdirs", { {"value", numdirs}, {"min", 0}, {"max", numdirs}, {"interval", 1}, {"type","set"} });
-		set("dirradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
-
-		set("fovy", { {"value", 0.785398185f}, {"min", "0.1"}, {"max", "2"}, {"interval", "0.01"}, {"type","set"} });
-
-		auto root = mScene->getRoot();
-
-
 		Parameters params;
 		params["geom"] = "sphere";
 		params["radius"] = "1";
 		params["resolution"] = "50";
 		params["size"] = "1";
+		auto root = mScene->getRoot();
 
 
 		{
@@ -65,6 +55,74 @@ public:
 			mat->setTexture(4, mRenderer->createTexture("media/streaked/streaked-metal1-ao.png"));
 			model->setMaterial(mat);
 		}
+
+	}
+
+	void roughAndMetal()
+	{
+		auto root = mScene->getRoot();
+
+		for (int r = 0; r <= 10; ++r)
+		{
+			for (int m = 0; m <= 10; ++m)
+			{
+				Parameters params;
+				params["geom"] = "sphere";
+				params["radius"] = "1";
+				params["resolution"] = "20";
+				params["size"] = "1";
+				std::stringstream ss;
+				ss << "material" << r << m;
+				auto model = mScene->createModel(ss.str(), params, [this](const Parameters& p)
+				{
+					return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+				});
+				model->setCastShadow(false);
+				model->attach(root);
+				model->getNode()->setPosition(0.0f, 2.0f * r, 2.0f * m);
+				Material::Ptr mat = Material::create();
+				mat->metallic = m * 0.1f;
+				mat->roughness = r * 0.1f;
+				model->setMaterial(mat);
+			}
+		}
+	}
+
+	void gun()
+	{
+		{
+			Parameters params;
+			params["file"] = "Cerberus/Cerberus.fbx";
+			auto model = mScene->createModel("test", params, [this](const Parameters& p) {
+				return Mesh::Ptr(new Mesh(p, mRenderer));
+			});
+
+			model->attach(mScene->getRoot());
+			model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+			model->getNode()->setOrientation(Quaternion::CreateFromYawPitchRoll(0, 3.1415926 * 0.5f, 0));
+
+
+			auto m = model->getMesh()->getMesh(0).material;
+			m->setTexture(1, mRenderer->createTexture("Cerberus/Textures/Cerberus_N.tga"));
+			m->setTexture(2, mRenderer->createTexture("Cerberus/Textures/Cerberus_R.tga"));
+			m->setTexture(3, mRenderer->createTexture("Cerberus/Textures/Cerberus_M.tga"));
+			m->setTexture(4, mRenderer->createTexture("Cerberus/Textures/Raw/Cerberus_AO.tga"));
+		}
+	}
+	
+	virtual void initScene() override
+	{
+		int numpoints = 0;
+		int numspots = 0;
+		int numdirs = 1;
+
+		set("numdirs", { {"value", numdirs}, {"min", 0}, {"max", numdirs}, {"interval", 1}, {"type","set"} });
+		set("dirradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
+
+		auto root = mScene->getRoot();
+
+		//roughAndMetal();
+		gun();
 
 		auto cam = mScene->createOrGetCamera("main");
 		cam->setViewport(0, 0, mRenderer->getWidth(), mRenderer->getHeight());
