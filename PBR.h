@@ -26,6 +26,7 @@ class PBR:public Pipeline::Stage
 	{
 		Matrix View;
 		Matrix Projection;
+		int stride;
 	};
 public:
 	PBR(
@@ -59,6 +60,5 @@ private:
 	Renderer::VertexShader::Weak mLightVolumeVS;
 	Renderer::Buffer::Ptr mLightVolumeConstants;
 
-	Renderer::Buffer::Ptr mLightsBuffer;
 	Vector3 mCluster;
 };

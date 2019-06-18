@@ -9,7 +9,7 @@ LightCulling::LightCulling(
 	Pipeline::Stage(r, s, q,set, p), mComputer(r)
 {
 	mName = "cull lights";
-	auto blob = r->compileFile("hlsl/lightculling.hlsl", "main", "cs_5_0");
+	auto blob = r->compileFile("hlsl/tiledlightculling.hlsl", "main", "cs_5_0");
 	mCS = r->createComputeShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
 
 	mConstants = r->createBuffer(sizeof(Constants), D3D11_BIND_CONSTANT_BUFFER);
@@ -31,6 +31,7 @@ void LightCulling::render(Renderer::Texture2D::Ptr rt)
 	auto cam = getScene()->createOrGetCamera("main");
 	consts.invertProj = cam->getProjectionMatrix().Invert().Transpose();
 	const Matrix& view = cam->getViewMatrix();
+	consts.view = view.Transpose();
 	consts.numPointLights = getValue<int>("numpoints");
 	consts.numSpotLights = getValue<int>("numspots");
 	consts.texelwidth = 1.0f / (float)mWidth;

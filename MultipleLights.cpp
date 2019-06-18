@@ -53,14 +53,21 @@ void MultipleLights::initPipeline()
 	mPipeline->addShaderResource("dirlights", dirlights);
 	mPipeline->addBuffer("dirlights", dirlights);
 
-	//initDRPipeline();
+	// used in IBL
+	mPipeline->addShaderResource("irradinace", {});
+	mPipeline->addShaderResource("prefiltered", {});
+	mPipeline->addShaderResource("lut", {});
+
+
+
+	initDRPipeline();
 	//initTBDRPipeline();
-	initCDRPipeline();
+	//initCDRPipeline();
 }
 
 void MultipleLights::initScene()
 {
-	int numpoints = 0;
+	int numpoints = 100;
 	int numspots = 0;
 	int numdirs = 1;
 
@@ -79,28 +86,28 @@ void MultipleLights::initScene()
 
 	auto root = mScene->getRoot();
 
-	//{
-	//	Parameters params;
-	//	params["geom"] = "room";
-	//	params["size"] = "100";
-	//	auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
-	//	{
-	//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-	//	});
-	//	model->setCastShadow(false);
-	//	model->attach(root);
-	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-	//	Material::Ptr mat = Material::create();
-	//	mat->metallic = 0;
-	//	mat->roughness = 1.0f;
-	//	mat->setTexture(0, mRenderer->createTexture("media/streaked/streaked-metal1-albedo.png"));
-	//	mat->setTexture(1, mRenderer->createTexture("media/streaked/streaked-metal1-normal-dx.png"));
-	//	mat->setTexture(2, mRenderer->createTexture("media/streaked/streaked-metal1-rough.png"));
-	//	mat->setTexture(3, mRenderer->createTexture("media/streaked/streaked-metal1-metalness.png"));
-	//	mat->setTexture(4, mRenderer->createTexture("media/streaked/streaked-metal1-ao.png"));
+	{
+		Parameters params;
+		params["geom"] = "room";
+		params["size"] = "100";
+		auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
+		{
+			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+		});
+		model->setCastShadow(false);
+		model->attach(root);
+		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+		Material::Ptr mat = Material::create();
+		mat->metallic = 1.0f;
+		mat->roughness = 1.0f;
+		//mat->setTexture(0, mRenderer->createTexture("media/streaked/streaked-metal1-albedo.png"));
+		mat->setTexture(1, mRenderer->createTexture("media/streaked/streaked-metal1-normal-dx.png"));
+		mat->setTexture(2, mRenderer->createTexture("media/streaked/streaked-metal1-rough.png"));
+		mat->setTexture(3, mRenderer->createTexture("media/streaked/streaked-metal1-metalness.png"));
+		mat->setTexture(4, mRenderer->createTexture("media/streaked/streaked-metal1-ao.png"));
 
-	//	model->setMaterial(mat);
-	//}
+		model->setMaterial(mat);
+	}
 
 
 	//{
@@ -119,43 +126,43 @@ void MultipleLights::initScene()
 	//}
 
 
-	//auto albedo = mRenderer->createTexture("media/rustediron/rustediron2_basecolor.png");
-	////auto normal = mRenderer->createTexture("media/rustediron/streaked-metal1-normal-dx.png");
-	//auto rough = mRenderer->createTexture("media/rustediron/rustediron2_roughness.png");
-	//auto metal = mRenderer->createTexture("media/rustediron/rustediron2_metallic.png");
-	////auto ao = mRenderer->createTexture("media/rustediron/streaked-metal1-ao.png");
+	auto albedo = mRenderer->createTexture("media/rustediron/rustediron2_basecolor.png");
+	//auto normal = mRenderer->createTexture("media/rustediron/streaked-metal1-normal-dx.png");
+	auto rough = mRenderer->createTexture("media/rustediron/rustediron2_roughness.png");
+	auto metal = mRenderer->createTexture("media/rustediron/rustediron2_metallic.png");
+	//auto ao = mRenderer->createTexture("media/rustediron/streaked-metal1-ao.png");
 
 
-	//for (int r = 0; r <= 10; ++r)
-	//{
-	//	for (int m = 0; m <= 10; ++m)
-	//	{
-	//		Parameters params;
-	//		params["geom"] = "sphere";
-	//		params["radius"] = "1";
-	//		params["resolution"] = "20";
-	//		params["size"] = "1";
-	//		std::stringstream ss;
-	//		ss << "material" << r << m; 
-	//		auto model = mScene->createModel(ss.str(), params, [this](const Parameters& p)
-	//		{
-	//			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-	//		});
-	//		model->setCastShadow(false);
-	//		model->attach(root);
-	//		model->getNode()->setPosition(0.0f, 2.0f * r, 2.0f * m);
-	//		Material::Ptr mat = Material::create();
-	//		mat->metallic = m * 0.1f;
-	//		mat->roughness = r * 0.1f;
-	//		mat->setTexture(0, albedo);
-	//		//mat->setTexture(1, normal);
-	//		mat->setTexture(2, rough);
-	//		mat->setTexture(3, metal);
-	//		//mat->setTexture(4, ao);
+	for (int r = 0; r <= 10; ++r)
+	{
+		for (int m = 0; m <= 10; ++m)
+		{
+			Parameters params;
+			params["geom"] = "sphere";
+			params["radius"] = "1";
+			params["resolution"] = "20";
+			params["size"] = "1";
+			std::stringstream ss;
+			ss << "material" << r << m; 
+			auto model = mScene->createModel(ss.str(), params, [this](const Parameters& p)
+			{
+				return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+			});
+			model->setCastShadow(false);
+			model->attach(root);
+			model->getNode()->setPosition(0.0f, 2.0f * r, 2.0f * m);
+			Material::Ptr mat = Material::create();
+			mat->metallic = m * 0.1f;
+			mat->roughness = r * 0.1f;
+			mat->setTexture(0, albedo);
+			//mat->setTexture(1, normal);
+			mat->setTexture(2, rough);
+			mat->setTexture(3, metal);
+			//mat->setTexture(4, ao);
 
-	//		model->setMaterial(mat);
-	//	}
-	//}
+			model->setMaterial(mat);
+		}
+	}
 
 
 	//{
@@ -178,24 +185,24 @@ void MultipleLights::initScene()
 
 	//}
 
-	{
-		Parameters params;
-		params["file"] = "Cerberus/Cerberus.fbx";
-		auto model = mScene->createModel("test", params, [this](const Parameters& p) {
-			return Mesh::Ptr(new Mesh(p, mRenderer));
-		});
+	//{
+	//	Parameters params;
+	//	params["file"] = "Cerberus/Cerberus.fbx";
+	//	auto model = mScene->createModel("test", params, [this](const Parameters& p) {
+	//		return Mesh::Ptr(new Mesh(p, mRenderer));
+	//	});
 
-		model->attach(mScene->getRoot());
-		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-		model->getNode()->setOrientation(Quaternion::CreateFromYawPitchRoll(0, 3.1415926 * 0.5f, 0));
+	//	model->attach(mScene->getRoot());
+	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+	//	model->getNode()->setOrientation(Quaternion::CreateFromYawPitchRoll(0, 3.1415926 * 0.5f, 0));
 
 
-		auto m = model->getMesh()->getMesh(0).material;
-		m->setTexture(1, mRenderer->createTexture("Cerberus/Textures/Cerberus_N.tga"));
-		m->setTexture(2, mRenderer->createTexture("Cerberus/Textures/Cerberus_R.tga"));
-		m->setTexture(3, mRenderer->createTexture("Cerberus/Textures/Cerberus_M.tga"));
-		m->setTexture(4, mRenderer->createTexture("Cerberus/Textures/Raw/Cerberus_AO.tga"));
-	}
+	//	auto m = model->getMesh()->getMesh(0).material;
+	//	m->setTexture(1, mRenderer->createTexture("Cerberus/Textures/Cerberus_N.tga"));
+	//	m->setTexture(2, mRenderer->createTexture("Cerberus/Textures/Cerberus_R.tga"));
+	//	m->setTexture(3, mRenderer->createTexture("Cerberus/Textures/Cerberus_M.tga"));
+	//	m->setTexture(4, mRenderer->createTexture("Cerberus/Textures/Raw/Cerberus_AO.tga"));
+	//}
 
 
 	auto cam = mScene->createOrGetCamera("main");

@@ -9,6 +9,7 @@ class LightCulling: public Pipeline::Stage
 	struct Constants
 	{
 		Matrix invertProj;
+		Matrix view;
 		int numPointLights;
 		int numSpotLights;
 		float texelwidth;

@@ -268,14 +268,16 @@
     <None Include="hlsl\lighting.hlsl">
       <Filter>shader</Filter>
     </None>
-    <None Include="hlsl\lightculling.hlsl">
-      <Filter>shader</Filter>
-    </None>
     <None Include="hlsl\gbuffer.fx">
       <Filter>shader</Filter>
     </None>
     <None Include="hlsl\skybox.fx">
       <Filter>shader</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="hlsl\tiledlightculling.hlsl">
+      <Filter>shader</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

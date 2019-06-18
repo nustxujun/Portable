@@ -4,6 +4,7 @@ cbuffer ConstantBuffer: register(b0)
 {
 	matrix View;
 	matrix Projection;
+	int stride;
 }
 struct VS_INPUT
 {
@@ -20,10 +21,10 @@ struct PS_INPUT
 PS_INPUT main(VS_INPUT input)
 {
 	PS_INPUT output = (PS_INPUT)0;
-	float4 pos = lights[input.index * 2];
+	float4 pos = lights[input.index * stride];
 
 	pos = float4(input.Pos.xyz * pos.w + pos.xyz, 1);
-	output.Pos = mul(pos, Projection);
+	output.Pos = mul(mul(pos, View), Projection);
 	output.index = input.index;
 	return output;
 }

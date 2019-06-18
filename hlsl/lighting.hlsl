@@ -53,7 +53,7 @@ cbuffer ConstantBuffer: register(b0)
 struct PS_INPUT
 {
 	float4 Pos : SV_POSITION;
-#if !(TILED || CLUSTERED)
+#if !(TILED || CLUSTERED || DIR)
 	uint index:TEXCOORD0;
 #endif
 };
@@ -91,7 +91,7 @@ float3 spotlight(float dist, float range,  float theta, float phi, float3 color)
 }
 
 
-#if TILED || CLUSTERED
+#if TILED || CLUSTERED || DIR
 float3 travelLights(float roughness, float metallic,uint pointoffset, uint pointnum, uint spotoffset, uint spotnum, float3 N, float3 pos, float3 albedo, float2 uv)
 {
 	float3 F0 = F0_DEFAULT;
@@ -104,6 +104,8 @@ float3 travelLights(float roughness, float metallic,uint pointoffset, uint point
 	{
 		shadowlist[i ] = shadows[i - 1].SampleLevel(sampLinear, uv, 0).r;
 	}
+
+#if (TILED || CLUSTERED)
 	for (uint i = 0; i < pointnum; ++i)
 	{
 		uint index = lightsIndices[pointoffset + i];
@@ -137,6 +139,7 @@ float3 travelLights(float roughness, float metallic,uint pointoffset, uint point
 		float3 radiance = spotlight(dist, lightpos.w, dot(-L, lightdir.xyz), lightdir.w, lightcolor.rgb) ;
 		Lo += directBRDF(roughness, metallic, F0, albedo, N, L, V) * radiance * shadow;
 	}
+#endif
 
 	for (uint i = 0; i < numdirs; ++i)
 	{
@@ -144,7 +147,7 @@ float3 travelLights(float roughness, float metallic,uint pointoffset, uint point
 		float4 lightcolor = dirlights[i * 2 + 1];
 
 		uint shadowindex = lightcolor.w;
-		float shadow = shadowlist[shadowindex];
+		float shadow = 1;
 
 		float3 L = normalize(-lightdir.xyz);
 		float3 radiance = lightcolor.xyz;
@@ -194,7 +197,7 @@ float4 main(PS_INPUT input) : SV_TARGET
 	y /= 16;
 
 	uint4 tile = tiles[uint2(x,y)];
-	Lo += travelLights(roughness* material.x* material.y, metallic, tile.x, tile.y, tile.x + tile.y, tile.z, N, worldpos.xyz, albedo, texcoord);
+	Lo += travelLights(roughness* material.x, metallic * material.y, tile.x, tile.y, tile.x + tile.y, tile.z, N, worldpos.xyz, albedo, texcoord);
 
 #elif CLUSTERED
 
@@ -209,14 +212,16 @@ float4 main(PS_INPUT input) : SV_TARGET
 #else
 
 
+	float3 V = normalize(campos - worldpos.xyz);
 #if POINT
 	float4 lightpos = pointlights[input.index * 2];
 	float3 lightcolor = pointlights[input.index * 2 + 1].rgb;
 
 	float3 L = normalize(lightpos.xyz - worldpos.xyz);
 	float distance = length(lightpos.xyz - worldpos.xyz);
+
 	float3 radiance = pointlight(distance, lightpos.w, lightcolor);
-	Lo += directBRDF(roughness, metallic, F0, albedo, N, L, -worldpos.xyz) * radiance;
+	Lo += directBRDF(roughness * material.x, metallic * material.y, F0, albedo, N, L, V) * radiance;
 
 #elif SPOT
 	float4 lightpos = spotlights[input.index * 3];
@@ -225,11 +230,12 @@ float4 main(PS_INPUT input) : SV_TARGET
 
 	float3 L = normalize(lightpos.xyz - worldpos.xyz);
 	float distance = length(lightpos.xyz - worldpos.xyz);
+
 	float3 radiance = spotlight(distance, lightpos.w, dot(-L, lightdir.xyz), lightdir.w, lightcolor.rgb);
-	Lo += directBRDF(roughness, metallic, F0, albedo, N, L, -worldpos.xyz) * radiance;
+	Lo += directBRDF(roughness * material.x, metallic * material.y ,F0, albedo, N, L, V) * radiance;
 
 #elif DIR
-
+	Lo += travelLights(roughness * material.x, metallic * material.y, 0, 0, 0, 0, N, worldpos.xyz, albedo, texcoord);
 #endif
 	
 #endif

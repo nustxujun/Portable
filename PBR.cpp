@@ -41,7 +41,7 @@ PBR::PBR(
 		Parameters params;
 		params["geom"] = "sphere";
 		params["radius"] = "1";
-		params["resolution"] = "5";
+		params["resolution"] = "10";
 		mLightVolumes[Scene::Light::LT_POINT] = Mesh::Ptr(new GeometryMesh(params, r));
 
 
@@ -186,9 +186,33 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 	renderer->setDefaultRasterizer();
 	renderer->setDefaultDepthStencilState();
 	renderer->setSamplers({ mLinear, mPoint });
-	renderer->setTextures({ mAlbedo, mNormal, mDepthLinear ,mLightsBuffer });
-	ID3D11ShaderResourceView* srvs = *mLightsBuffer.lock();
-	renderer->getContext()->VSSetShaderResources(0, 1, &srvs);
+
+	std::vector<Renderer::ShaderResource::Ptr> srvs = {
+	mAlbedo, mNormal, mDepthLinear ,
+	getShaderResource("material"),
+	getShaderResource("irradinace"),
+	getShaderResource("prefiltered"),
+	getShaderResource("lut"),
+	};
+	srvs.resize(30);
+	srvs[7] = getShaderResource("pointlights");
+	srvs[8] = getShaderResource("spotlights");
+	srvs[9] = getShaderResource("dirlights");
+
+
+	if (has("tiled") || has("clustered"))
+	{
+		srvs[10] = getShaderResource("lightindices");
+		srvs[11] = getShaderResource("lighttable");
+	}
+
+	//srvs[10] = mDefaultShadowTex;
+	for (int i = 0; i < mShadowTextures.size(); ++i)
+		srvs[i + 20] = mShadowTextures[i];
+
+	renderer->setTextures(srvs);
+
+
 
 	D3D11_BLEND_DESC blend = { 0 };
 	blend.RenderTarget[0] = {
@@ -211,8 +235,6 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 	Matrix view = cam->getViewMatrix();
 	consts.View = view.Transpose();
 	consts.Projection = cam->getProjectionMatrix().Transpose();
-	mLightVolumeConstants.lock()->blit(&consts, sizeof(consts));
-	renderer->setVSConstantBuffers({ mLightVolumeConstants });
 
 	Constants constants;
 	constants.invertViewPorj = (cam->getViewMatrix() * cam->getProjectionMatrix()).Invert().Transpose();
@@ -222,14 +244,20 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 	constants.metallic = getValue<float>("metallic");
 	constants.width = renderer->getWidth();
 	constants.height = renderer->getHeight();
+	constants.campos = cam->getNode()->getRealPosition();
+	constants.ambient = getValue<float>("ambient");
+
 	mConstants.lock()->blit(&constants, sizeof(constants));
 	renderer->setPSConstantBuffers({ mConstants });
 	// point
 	{
-		int count = getScene()->getNumLights();
-		if (has("numLights"))
-			count = getValue<int>("numLights");
+		auto srv = getShaderResource("pointlights")->getView();
+		renderer->getContext()->VSSetShaderResources(0, 1,&srv);
+		consts.stride = 2; // pos, color
+		mLightVolumeConstants.lock()->blit(&consts, sizeof(consts));
+		renderer->setVSConstantBuffers({ mLightVolumeConstants });
 
+		int count = getValue<int>("numpoints");
 
 		auto instances = mLightVolumesInstances[Scene::Light::LT_POINT];
 		auto context = renderer->getContext();
@@ -280,12 +308,13 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 			}
 		};
 
+		// 1. draw front face and back face in depth and stencil
 		renderer->clearStencil(mDepth,1);
 		renderer->setDepthStencilState(dsdesc, 1);
 		renderer->setPixelShader({});
 		renderer->setRenderTargets({}, mDepth);
 		context->DrawIndexedInstanced(rend.numIndices, count, 0, 0, 0);
-
+		// 2  render back face and test stencil(only draw pixel in the range of light volume)
 		dsdesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
 		dsdesc.FrontFace.StencilFunc = D3D11_COMPARISON_NOT_EQUAL;
 		dsdesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
@@ -293,7 +322,7 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 		dsdesc.DepthEnable = false;
 		dsdesc.StencilEnable = true;
 		renderer->setDepthStencilState(dsdesc, 1);
-
+		
 		rasterDesc.CullMode = D3D11_CULL_FRONT;
 		renderer->setRasterizer(rasterDesc);
 		renderer->setPixelShader(mPSs[Scene::Light::LT_POINT]);
@@ -302,6 +331,31 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 
 	}
 
+	// dir
+	{
+		auto quad = getQuad();
+		quad->setRenderTarget(rt);
+		quad->setTextures(srvs);
+		quad->setPixelShader(mPSs[Scene::Light::LT_DIR]);
+
+		quad->setSamplers({ mLinear, mPoint });
+		quad->setConstant(mConstants);
+		D3D11_BLEND_DESC blend = { 0 };
+
+		blend.RenderTarget[0] = {
+			TRUE,
+			D3D11_BLEND_ONE,
+			D3D11_BLEND_ONE,
+			D3D11_BLEND_OP_ADD,
+			D3D11_BLEND_ONE,
+			D3D11_BLEND_ONE,
+			D3D11_BLEND_OP_ADD,
+			D3D11_COLOR_WRITE_ENABLE_ALL
+		};
+
+		quad->setBlend(blend);
+		quad->draw();
+	}
 	renderer->removeShaderResourceViews();
 	renderer->removeRenderTargets();
 }

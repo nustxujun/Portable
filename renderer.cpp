@@ -9,7 +9,7 @@
 #include "stb_image.h"
 
 
-#define USE_PROFILE
+//#define USE_PROFILE
 
 void Renderer::checkResult(HRESULT hr)
 {

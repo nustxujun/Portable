@@ -290,17 +290,17 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="hlsl\lightculling.hlsl">
-      <FileType>Document</FileType>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="hlsl\skybox.fx">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>
   <ItemGroup>
     <None Include="hlsl\gbuffer.fx">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="hlsl\tiledlightculling.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>

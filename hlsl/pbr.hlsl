@@ -93,7 +93,7 @@ float3 LUT(float3 normal, float3 viewDir, float roughness, Texture2D lut, Sample
 	float NdotV = dot(normal, viewDir);
 	NdotV = max(NdotV, 0.0f);
 	float2 uv = float2(NdotV, roughness);
-	return lut.Sample(smp, uv);
+	return lut.Sample(smp, uv).rgb;
 }
 
 float3 indirectBRDF(float3 irradiance,float3 prefilter, float3 lut, float roughness, float metallic, float3 f0, float3 albedo, float3 normal, float3 tocam)
