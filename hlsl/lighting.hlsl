@@ -147,7 +147,7 @@ float3 travelLights(float roughness, float metallic,uint pointoffset, uint point
 		float4 lightcolor = dirlights[i * 2 + 1];
 
 		uint shadowindex = lightcolor.w;
-		float shadow = 1;
+		float shadow = shadowlist[shadowindex];
 
 		float3 L = normalize(-lightdir.xyz);
 		float3 radiance = lightcolor.xyz;

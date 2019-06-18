@@ -246,6 +246,7 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 	constants.height = renderer->getHeight();
 	constants.campos = cam->getNode()->getRealPosition();
 	constants.ambient = getValue<float>("ambient");
+	constants.numdirs = getValue<int>("numdirs");
 
 	mConstants.lock()->blit(&constants, sizeof(constants));
 	renderer->setPSConstantBuffers({ mConstants });
@@ -337,9 +338,9 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 		quad->setRenderTarget(rt);
 		quad->setTextures(srvs);
 		quad->setPixelShader(mPSs[Scene::Light::LT_DIR]);
-
+		quad->setDefaultViewport();
 		quad->setSamplers({ mLinear, mPoint });
-		quad->setConstant(mConstants);
+		quad->setConstant(mConstants); 
 		D3D11_BLEND_DESC blend = { 0 };
 
 		blend.RenderTarget[0] = {
