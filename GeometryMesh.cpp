@@ -19,6 +19,59 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 	std::vector<float> vertices;
 	std::vector<unsigned int> indices;
 	AABB aabb = { {FLT_MAX,FLT_MAX,FLT_MAX},{FLT_MIN, FLT_MIN,FLT_MIN} };
+	size_t vertex_stride = 3 + 3 + 2 + 3 + 3;
+
+	auto calTB = [&](UINT p1, UINT p2, UINT p3)
+	{
+		Vector3 v1 = { vertices[p1 * vertex_stride] , vertices[p1 * vertex_stride + 1], vertices[p1 * vertex_stride + 2] };
+		Vector3 v2 = { vertices[p2 * vertex_stride] , vertices[p2 * vertex_stride + 1], vertices[p2 * vertex_stride + 2] };
+		Vector3 v3 = { vertices[p3 * vertex_stride] , vertices[p3 * vertex_stride + 1], vertices[p3 * vertex_stride + 2] };
+
+		Vector2 t1 = { vertices[p1 * vertex_stride + 6] , vertices[p1 * vertex_stride + 7] };
+		Vector2 t2 = { vertices[p2 * vertex_stride + 6] , vertices[p2 * vertex_stride + 7] };
+		Vector2 t3 = { vertices[p3 * vertex_stride + 6] , vertices[p3 * vertex_stride + 7] };
+
+
+
+		auto calOne = [](
+			const Vector3& v1, const Vector3& v2, const Vector3& v3,
+			const Vector2& t1, const Vector2& t2, const Vector2& t3,
+			Vector3& tangent, Vector3& bitangent)
+		{
+			Vector3 e1 = v2 - v1;
+			Vector3 e2 = v3 - v1;
+			Vector2 dt1 = t2 - t1;
+			Vector2 dt2 = t3 - t1;
+
+			float f = 1.0f / (dt1.x * dt2.y - dt2.x * dt1.y);
+			tangent.x = f * (dt2.y * e1.x - dt1.y * e2.x);
+			tangent.y = f * (dt2.y * e1.y - dt1.y * e2.y);
+			tangent.z = f * (dt2.y * e1.z - dt1.y * e2.z);
+			tangent.Normalize();
+			bitangent.x = f * (-dt2.x * e1.x + dt1.x * e2.x);
+			bitangent.y = f * (-dt2.x * e1.y + dt1.x * e2.y);
+			bitangent.z = f * (-dt2.x * e1.z + dt1.x * e2.z);
+			bitangent.Normalize();
+		};
+
+
+		Vector3 T1, B1;
+		calOne(v1, v2, v3, t1, t2, t3, T1, B1);
+		memcpy(vertices.data() + p1 * vertex_stride + 8, &T1, sizeof(Vector3));
+		memcpy(vertices.data() + p1 * vertex_stride + 11, &B1, sizeof(Vector3));
+
+		Vector3 T2, B2;
+		calOne(v2, v1, v3, t2, t1, t3, T2, B2);
+		memcpy(vertices.data() + p2 * vertex_stride + 8, &T2, sizeof(Vector3));
+		memcpy(vertices.data() + p2 * vertex_stride + 11, &B2, sizeof(Vector3));
+
+		Vector3 T3, B3;
+		calOne(v3, v1, v2, t3, t1, t2, T3, B3);
+		memcpy(vertices.data() + p3 * vertex_stride + 8, &T3, sizeof(Vector3));
+		memcpy(vertices.data() + p3 * vertex_stride + 11, &B3, sizeof(Vector3));
+
+	};
+
 
 	DirectX::SimpleMath::Matrix trans = DirectX::SimpleMath::Matrix::Identity;
 	if (geom->second == "sphere")
@@ -90,20 +143,26 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 		}
 
 
+
 		for (int j = 0; j < resolution; ++j)
 		{
 			for (int i = 0; i < resolution; ++i)
 			{
 				unsigned int p1 = j * (resolution + 1) + i;
 				unsigned int p2 = p1 + (resolution + 1);
-
+				unsigned int p3 = p1 + 1;
+				unsigned int p4 = p2 + 1;
 				indices.push_back(p1);
 				indices.push_back(p2);
-				indices.push_back(p1 + 1);
+				indices.push_back(p3);
 
-				indices.push_back(p1 + 1);
+				calTB(p1, p2, p3);
+
+				indices.push_back(p3);
 				indices.push_back(p2);
-				indices.push_back(p2 + 1);
+				indices.push_back(p4);
+				calTB(p3, p2, p4);
+
 			}
 		}
 
@@ -176,6 +235,7 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 	}
 	else if (geom->second == "room" || geom->second == "cube")
 	{
+
 		int size = 10;
 		if (params.find("size") != end)
 		{
@@ -183,65 +243,73 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 		}
 		float half = size *0.5f;
 		float sign = 1.0f;
-		if (geom->second == "room")
-		{
-			sign = -1.0f;
-			for (int i = 0; i < 8; ++i)
-			{
-				indices.push_back(0 + i * 4);
-				indices.push_back(3 + i * 4);
-				indices.push_back(1 + i * 4);
-				indices.push_back(0 + i * 4);
-				indices.push_back(2 + i * 4);
-				indices.push_back(3 + i * 4);
-			}
-		}
-		else
-		{
-			for (int i = 0; i < 8; ++i)
-			{
-				indices.push_back(0 + i * 4);
-				indices.push_back(1 + i * 4);
-				indices.push_back(3 + i * 4);
-				indices.push_back(0 + i * 4);
-				indices.push_back(3 + i * 4);
-				indices.push_back(2 + i * 4);
-			}
-		}
+	
 		vertices = {
 			// -z
 			-half,  half, -half,	0,0,-sign,	0, 0,  1,0,0,	0,-1,0,
 			 half,  half, -half,	0,0,-sign,	1, 0,  1,0,0,	0,-1,0,
 			-half, -half, -half,	0,0,-sign,	0, 1,  1,0,0,	0,-1,0,
 			 half, -half, -half,	0,0,-sign,	1, 1,  1,0,0,	0,-1,0,
-			// z
-			 half,  half,  half,	0,0, sign,	0, 0,	-1,0,0,	0,-1,0,
-			-half,  half,  half,	0,0, sign,	1, 0,	-1,0,0,	0,-1,0,
-			 half, -half,  half,	0,0, sign,	0, 1,	-1,0,0,	0,-1,0,
-			-half, -half,  half,	0,0, sign,	1, 1,	-1,0,0,	0,-1,0,
-			// -x
-			-half,  half,  half,	-sign,0, 0,	0, 0,	0,0,-1,	0,-1,0,
-			-half,  half, -half,	-sign,0, 0,	1, 0,	0,0,-1,	0,-1,0,
-			-half, -half,  half,	-sign,0, 0,	0, 1,	0,0,-1,	0,-1,0,
-			-half, -half, -half,	-sign,0, 0,	1, 1,	0,0,-1,	0,-1,0,
-			// x
-			 half,  half, -half,	sign,0, 0,	0, 0,	0,0,1,	0,-1,0,
-			 half,  half,  half,	sign,0, 0,	1, 0,	0,0,1,	0,-1,0,
-			 half, -half, -half,	sign,0, 0,	0, 1,	0,0,1,	0,-1,0,
-			 half, -half,  half,	sign,0, 0,	1, 1,	0,0,1,	0,-1,0,
+			 // z
+			  half,  half,  half,	0,0, sign,	0, 0,	-1,0,0,	0,-1,0,
+			 -half,  half,  half,	0,0, sign,	1, 0,	-1,0,0,	0,-1,0,
+			  half, -half,  half,	0,0, sign,	0, 1,	-1,0,0,	0,-1,0,
+			 -half, -half,  half,	0,0, sign,	1, 1,	-1,0,0,	0,-1,0,
+			 // -x
+			 -half,  half,  half,	-sign,0, 0,	0, 0,	0,0,-1,	0,-1,0,
+			 -half,  half, -half,	-sign,0, 0,	1, 0,	0,0,-1,	0,-1,0,
+			 -half, -half,  half,	-sign,0, 0,	0, 1,	0,0,-1,	0,-1,0,
+			 -half, -half, -half,	-sign,0, 0,	1, 1,	0,0,-1,	0,-1,0,
+			 // x
+			  half,  half, -half,	sign,0, 0,	0, 0,	0,0,1,	0,-1,0,
+			  half,  half,  half,	sign,0, 0,	1, 0,	0,0,1,	0,-1,0,
+			  half, -half, -half,	sign,0, 0,	0, 1,	0,0,1,	0,-1,0,
+			  half, -half,  half,	sign,0, 0,	1, 1,	0,0,1,	0,-1,0,
 
-			 // y
-			 -half,  half,  half,	0,sign, 0,	0, 0,	1,0,0,	0,0,-1,
-			  half,  half,  half,	0,sign, 0,	1, 0,	1,0,0,	0,0,-1,
-			 -half,  half, -half,	0,sign, 0,	0, 1,	1,0,0,	0,0,-1,
-			  half,  half, -half,	0,sign, 0,	1, 1,	1,0,0,	0,0,-1,
-			 // -y
-			  half, -half,  half,	0,-sign, 0,	0, 0,	-1,0,0,	0,0,-1,
-			 -half, -half,  half,	0,-sign, 0,	1, 0,	-1,0,0,	0,0,-1,
-			  half, -half, -half,	0,-sign, 0,	0, 1,	-1,0,0,	0,0,-1,
-			 -half, -half, -half,	0,-sign, 0,	1, 1,	-1,0,0,	0,0,-1,
+			  // y
+			  -half,  half,  half,	0,sign, 0,	0, 0,	1,0,0,	0,0,1,
+			   half,  half,  half,	0,sign, 0,	1, 0,	1,0,0,	0,0,1,
+			  -half,  half, -half,	0,sign, 0,	0, 1,	1,0,0,	0,0,1,
+			   half,  half, -half,	0,sign, 0,	1, 1,	1,0,0,	0,0,1,
+			   // -y
+				half, -half,  half,	0,-sign, 0,	0, 0,	-1,0,0,	0,0,-1,
+			   -half, -half,  half,	0,-sign, 0,	1, 0,	-1,0,0,	0,0,-1,
+				half, -half, -half,	0,-sign, 0,	0, 1,	-1,0,0,	0,0,-1,
+			   -half, -half, -half,	0,-sign, 0,	1, 1,	-1,0,0,	0,0,-1,
 		};
 
+		
+		if (geom->second == "room")
+		{
+			sign = -1.0f;
+			for (int i = 0; i < 6; ++i)
+			{
+				indices.push_back(0 + i * 4);
+				indices.push_back(3 + i * 4);
+				indices.push_back(1 + i * 4);
+				indices.push_back(0 + i * 4);
+				indices.push_back(2 + i * 4);
+				indices.push_back(3 + i * 4);
+
+			}
+		}
+		else
+		{
+			for (int i = 0; i < 6; ++i)
+			{
+				indices.push_back(0 + i * 4);
+				indices.push_back(1 + i * 4);
+				indices.push_back(3 + i * 4);
+				indices.push_back(0 + i * 4);
+				indices.push_back(3 + i * 4);
+				indices.push_back(2 + i * 4);
+
+
+				calTB(0 + i * 4, 1 + i * 4, 3 + i * 4);
+				calTB(0 + i * 4, 3 + i * 4, 2 + i * 4);
+
+			}
+		}
 
 
 
@@ -250,7 +318,6 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 	else
 		abort();
 
-	size_t vertex_stride = 3 + 3 + 2 + 3 + 3;
 	size_t numVertices = vertices.size() / vertex_stride;
 	for (size_t i = 0; i < numVertices; ++i)
 	{

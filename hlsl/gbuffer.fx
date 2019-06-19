@@ -108,7 +108,8 @@ float2 ParallaxMapping(float2 coord, float3 V, int sampleCount)
 {
 	float2 maxParallaxOffset = -V.xy * heightscale / V.z;
 	float zStep = 1.0f / (float)sampleCount;
-	float2 texStep = maxParallaxOffset * zStep;	float2 dx = ddx(coord);
+	float2 texStep = maxParallaxOffset * zStep;
+	float2 dx = ddx(coord);
 	float2 dy = ddy(coord);
 	int sampleIndex = 0;
 	float2 currTexOffset = 0;
@@ -131,7 +132,7 @@ float2 ParallaxMapping(float2 coord, float3 V, int sampleCount)
 				(prevHeight - currHeight + currRayZ - prevRayZ);
 			finalTexOffset = prevTexOffset + t * texStep;
 			// Exit loop.
-			sampleIndex = sampleCount + 1;
+			break;
 		}
 		else
 		{
