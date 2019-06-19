@@ -10,6 +10,7 @@ GeometryMesh::~GeometryMesh()
 
 std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Parameters & params, Renderer::Ptr r)
 {
+	using namespace DirectX::SimpleMath;
 	auto geom = params.find("geom");
 	auto end = params.end();
 	if (end == geom)
@@ -45,6 +46,7 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 			float cosy = cos(degy);
 			float y = cosy * radius;
 			float r = siny * radius;
+			//float r = radius;
 			for (int i = 0; i <= resolution; ++i)
 			{
 				float degx = i * 2 * pi / resolution;
@@ -60,7 +62,7 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 				vertices.push_back(z);
 
 				// normal
-				DirectX::SimpleMath::Vector3 normal = { x,y,z };
+				Vector3 normal = { x,y,z };
 				normal.Normalize();
 				vertices.push_back(normal.x);
 				vertices.push_back(normal.y);
@@ -71,14 +73,18 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 				vertices.push_back((float)j / (float)resolution);
 
 				// tangent
-				vertices.push_back(0);
-				vertices.push_back(0);
-				vertices.push_back(0);
+				Vector3 tangent = Vector3::UnitY.Cross(normal);
+				tangent.Normalize();
+				vertices.push_back(tangent.x);
+				vertices.push_back(tangent.y);
+				vertices.push_back(tangent.z);
 
 				//bitangent
-				vertices.push_back(0);
-				vertices.push_back(0);
-				vertices.push_back(0);
+				Vector3 bitangent = tangent.Cross(normal);
+				bitangent.Normalize();
+				vertices.push_back(bitangent.x);
+				vertices.push_back(bitangent.y);
+				vertices.push_back(bitangent.z);
 
 			}
 		}
@@ -251,8 +257,9 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 		auto x = vertices[0 + i * vertex_stride];
 		auto y = vertices[1 + i * vertex_stride];
 		auto z = vertices[2 + i * vertex_stride];
-		aabb.min = DirectX::SimpleMath::Vector3::Min(aabb.min, { x,y,z });
-		aabb.max = DirectX::SimpleMath::Vector3::Max(aabb.max, { x,y,z });
+		Vector3 pos = Vector3::Transform({ x,y,z }, trans);
+		aabb.min = DirectX::SimpleMath::Vector3::Min(aabb.min, pos);
+		aabb.max = DirectX::SimpleMath::Vector3::Max(aabb.max, pos);
 	}
 	D3D11_SUBRESOURCE_DATA InitQuadData;
 	ZeroMemory(&InitQuadData, sizeof(InitQuadData));

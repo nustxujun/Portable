@@ -94,6 +94,7 @@ float3 spotlight(float dist, float range,  float theta, float phi, float3 color)
 #if TILED || CLUSTERED || DIR
 float3 travelLights(float roughness, float metallic,uint pointoffset, uint pointnum, uint spotoffset, uint spotnum, float3 N, float3 pos, float3 albedo, float2 uv)
 {
+	return albedo;
 	float3 F0 = F0_DEFAULT;
 	float3 Lo = 0;
 	float3 V = normalize(campos.xyz - pos);

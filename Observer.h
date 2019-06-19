@@ -148,7 +148,7 @@ public :
 			last = cur;
 			if ( d.z != 0)
 			{
-				radius = std::max(0.0f, radius - step - d.z * 0.02f);
+				radius = std::max(0.01f, radius - step - d.z * 0.02f);
 			}
 
 			if (m.leftButton)

@@ -45,6 +45,12 @@ std::vector<D3D10_SHADER_MACRO> Material::generateShaderID()
 			macros.push_back({ "PBR_MAP","1" });
 		}
 
+		if (texs.size() > Material::TU_HEIGHT &&
+			!texs[Material::TU_HEIGHT].expired())
+		{
+			macros.push_back({ "HEIGHT_MAP","1" });
+		}
+
 		if (texs.size() > Material::TU_AO && !texs[Material::TU_AO].expired())
 		{
 			macros.push_back({ "AO_MAP","1" });
