@@ -11,8 +11,8 @@ GBuffer::GBuffer(
 {
 	mName = "gbuffer";
 
-	this->set("heightscale", { {"type","set"}, {"value",0.03f},{"min","0"},{"max",2},{"interval", "0.01"} }); 
-	this->set("minSampleCount", { {"type","set"}, {"value",100},{"min","1"},{"max",1000},{"interval", "1"} });
+	this->set("heightscale", { {"type","set"}, {"value",0.05f},{"min","0"},{"max",2},{"interval", "0.01"} }); 
+	this->set("minSampleCount", { {"type","set"}, {"value",8},{"min","1"},{"max",1000},{"interval", "1"} });
 	this->set("maxSampleCount", { {"type","set"}, {"value",100},{"min","1"},{"max",1000},{"interval", "1"} });
 
 

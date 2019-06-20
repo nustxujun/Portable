@@ -95,8 +95,9 @@ GBufferVertexShaderOutput vs(GBufferVertexShaderInput input)
 
 #if HEIGHT_MAP
 	float3x3 TBN = float3x3(tangent, bitangent, output.Normal);
-	output.PosInTangent = mul(worldPosition.xyz, TBN);
-	output.CamInTangent = mul(campos, TBN);
+	float3x3 toTBN = transpose(TBN);
+	output.PosInTangent = mul(worldPosition.xyz, toTBN);
+	output.CamInTangent = mul(campos, toTBN);
 	output.WorldPosition = worldPosition.xyz;
 #endif
 	return output;

@@ -156,12 +156,10 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 				indices.push_back(p2);
 				indices.push_back(p3);
 
-				calTB(p1, p2, p3);
 
 				indices.push_back(p3);
 				indices.push_back(p2);
 				indices.push_back(p4);
-				calTB(p3, p2, p4);
 
 			}
 		}
@@ -169,12 +167,14 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 	}
 	else if (geom->second == "plane")
 	{
-		int size = 10;
+		float size = 10;
 		int resolution = 1;
 
 		if (params.find("size") != end)
 		{
-			size = atoi(params.find("size")->second.c_str());
+			std::stringstream ss;
+			ss << params.find("size")->second;
+			ss >> size;
 		}
 
 		//if (params.find("resolution") != end)
@@ -182,56 +182,22 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 		//	resolution = atoi(params.find("resolution")->second.c_str());
 		//}
 
-		trans.Translation({ -size * 0.5f, 0, -size * 0.5f });
+		float half = size*0.5f;
+		vertices = {
+			-half, 0, -half, 0,1,0, 0,0, 1,0,0, 0,0,1,
+			-half, 0, half, 0,1,0, 0,1, 1,0,0, 0,0,1,
+			half, 0, half, 0,1,0, 1,1, 1,0,0, 0,0,1,
+			half, 0, -half, 0,1,0, 1,0, 1,0,0, 0,0,1,
+		};
 
-		float tilesize = (float)size / (float)resolution;
-		for (int j = 0; j <= resolution; ++j)
-		{
-			for (int i = 0; i <= resolution; ++i)
-			{
-				float x = i * tilesize;
-				float z = j * tilesize;
-				vertices.push_back(x );
-				vertices.push_back(0);
-				vertices.push_back(z);
+		indices = {
+			0,1,2,
+			0,2,3
+		};
 
-				vertices.push_back(0);
-				vertices.push_back(1.0f);
-				vertices.push_back(0);
-
-				vertices.push_back((float)i / (float)resolution);
-				vertices.push_back((float)j / (float)resolution);
-
-				vertices.push_back(1.0f);
-				vertices.push_back(0);
-				vertices.push_back(0);
-
-				vertices.push_back(0);
-				vertices.push_back(0);
-				vertices.push_back(1.0f);
-
-			}
-		}
-
-
-		for (int j = 0; j < resolution; ++j)
-		{
-			for (int i = 0; i < resolution; ++i)
-			{
-				unsigned int p1 = j * (resolution + 1) + i;
-				unsigned int p2 = p1 + (resolution + 1);
-
-				indices.push_back(p1);
-				indices.push_back(p2);
-				indices.push_back(p2 + 1);
-
-				indices.push_back(p1 );
-				indices.push_back(p2 + 1);
-				indices.push_back(p1 + 1);
-			}
-		}
-		aabb.min.y = -0.1;
-		aabb.max.y = 0.1;
+		
+		aabb.min.y = -half;
+		aabb.max.y = half;
 	}
 	else if (geom->second == "room" || geom->second == "cube")
 	{
@@ -303,10 +269,6 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 				indices.push_back(0 + i * 4);
 				indices.push_back(3 + i * 4);
 				indices.push_back(2 + i * 4);
-
-
-				calTB(0 + i * 4, 1 + i * 4, 3 + i * 4);
-				calTB(0 + i * 4, 3 + i * 4, 2 + i * 4);
 
 			}
 		}

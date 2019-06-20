@@ -28,7 +28,6 @@ public:
 				"media/rustediron/rustediron2_roughness.png",
 				"media/rustediron/rustediron2_metallic.png",
 				"",
-				"media/rustediron/rustediron2_normal.png",
 			},
 			{
 				"media/streaked/streaked-metal1-albedo.png",
@@ -94,7 +93,7 @@ public:
 		};
 
 		Parameters params;
-		params["geom"] = "cube";
+		params["geom"] = "sphere";
 		params["radius"] = "1";
 		params["resolution"] = "50";
 		params["size"] = "1";
@@ -168,8 +167,8 @@ public:
 			"media/rock/holey-rock1-roughness.png",
 			"media/rock/holey-rock1-metalness.png",
 			"media/rock/holey-rock1-ao.png",
-			//"media/rock/holey-rock1-height.png"
-				"media/rustediron/rustediron2_normal.png",
+			"media/rock/holey-rock1-height.png"
+				//"media/rustediron/rustediron2_normal.png",
 
 		};
 
@@ -320,7 +319,7 @@ public:
 		mPipeline->pushStage<PBR>();
 		//mPipeline->pushStage<AO>(3.0f);
 		mPipeline->pushStage<SkyBox>(hdrenvfile, false);
-		//mPipeline->pushStage<HDR>();
+		mPipeline->pushStage<HDR>();
 		mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 		Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
 		mPipeline->pushStage("draw to backbuffer", [bb, quad](Renderer::Texture2D::Ptr rt)
