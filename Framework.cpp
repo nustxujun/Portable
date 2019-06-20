@@ -8,6 +8,9 @@
 #include "HDR.h"
 #include "GeometryMesh.h"
 #include "PostProcessing.h"
+#include "DepthLinearing.h"
+#include "SkyBox.h"
+
 Framework::Framework(HWND win)
 {
 	mRenderer = std::make_shared<Renderer>();
@@ -61,43 +64,83 @@ void Framework::setOverlay(Overlay::Ptr overlay)
 
 void Framework::initPipeline()
 {
-	//Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
-	//auto w = mRenderer->getWidth();
-	//auto h = mRenderer->getHeight();
-	//auto albedo = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
-	//auto normal = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
-	//auto worldpos = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
-	//auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R32_TYPELESS, true);
-	//auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 
-	//mPipeline->setFrameBuffer(frame);
-	//auto bb = mRenderer->getBackbuffer();
-	//mPipeline->pushStage("clear rt", [bb](Renderer::Texture2D::Ptr rt)
-	//{
-	//	bb.lock()->clear({ 1,1,1,0 });
-	//	rt.lock()->clear({ 0,0,0,0 });
-	//});
+	auto w = mRenderer->getWidth();
+	auto h = mRenderer->getHeight();
+	auto albedo = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
+	mPipeline->addShaderResource("albedo", albedo);
+	mPipeline->addRenderTarget("albedo", albedo);
+	auto normal = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
+	mPipeline->addShaderResource("normal", normal);
+	mPipeline->addRenderTarget("normal", normal);
+	auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R32_TYPELESS, true);
+	mPipeline->addShaderResource("depth", depth);
+	mPipeline->addDepthStencil("depth", depth);
+	auto depthLinear = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32_FLOAT);
+	mPipeline->addShaderResource("depthlinear", depthLinear);
+	mPipeline->addRenderTarget("depthlinear", depthLinear);
+	auto material = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32_FLOAT);
+	mPipeline->addShaderResource("material", material);
+	mPipeline->addRenderTarget("material", material);
 
+	constexpr auto MAX_NUM_LIGHTS = 1024;
+	auto pointlights = mRenderer->createRWBuffer(sizeof(Vector4) * 2 * MAX_NUM_LIGHTS, sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+	mPipeline->addShaderResource("pointlights", pointlights);
+	mPipeline->addBuffer("pointlights", pointlights);
 
+	auto spotlights = mRenderer->createRWBuffer(sizeof(Vector4) * 3 * MAX_NUM_LIGHTS, sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+	mPipeline->addShaderResource("spotlights", spotlights);
+	mPipeline->addBuffer("spotlights", spotlights);
 
-	//mPipeline->pushStage<GBuffer>(albedo, normal, worldpos, depth);
-	////mPipeline->pushStage<PBR>(albedo, normal, depth);
-	////mPipeline->pushStage<AO>(normal, depth,10.0f);
-	////mPipeline->pushStage<ShadowMap>(worldpos, depth, 2048, 8);
-	////mPipeline->pushStage<VolumetricLighting>();
+	auto dirlights = mRenderer->createRWBuffer(sizeof(Vector4) * 2 * MAX_NUM_LIGHTS, sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+	mPipeline->addShaderResource("dirlights", dirlights);
+	mPipeline->addBuffer("dirlights", dirlights);
 
+	auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	mPipeline->setFrameBuffer(frame);
+
+	mPipeline->addShaderResource("irradinace", {});
+	mPipeline->addShaderResource("prefiltered", {});
+	mPipeline->addShaderResource("lut", {});
+
+	constexpr auto MAX_SHADOWMAPS = 1;
+	std::vector<Renderer::Texture2D::Ptr> shadowmaps;
+	for (int i = 0; i < MAX_SHADOWMAPS; ++i)
+		shadowmaps.push_back(mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32_FLOAT));
+
+	auto bb = mRenderer->getBackbuffer();
+	mPipeline->pushStage("clear rt", [bb, this](Renderer::Texture2D::Ptr rt)
+	{
+		mRenderer->clearRenderTarget(rt, { 0,0,0,0 });
+	});
+
+	mPipeline->pushStage<GBuffer>();
+	mPipeline->pushStage<DepthLinearing>();
+	mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
+	mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
+	//mPipeline->pushStage<AO>(3.0f);
+	mPipeline->pushStage<SkyBox>("media/Ditch-River_2k.hdr", false);
 	//mPipeline->pushStage<HDR>();
-	//mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
-
-	//mPipeline->pushStage("draw to backbuffer", [bb, quad](Renderer::Texture2D::Ptr rt)
-	//{
-	//	quad->setRenderTarget(bb);
-	//	quad->drawTexture(rt, false);
-	//});
+	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
+	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
+	mPipeline->pushStage("draw to backbuffer", [bb, quad](Renderer::Texture2D::Ptr rt)
+	{
+		quad->setRenderTarget(bb);
+		quad->drawTexture(rt, false);
+	});
 }
 
 void Framework::initScene()
 {
+
+	int numdirs = 1;
+
+	set("time", { {"value", 3.14f}, {"min", "1.57"}, {"max", "4.71"}, {"interval", "0.001"}, {"type","set"} });
+	set("numdirs", { {"value", numdirs}, {"min", 0}, {"max", numdirs}, {"interval", 1}, {"type","set"} });
+	set("dirradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
+
+
+
 	Parameters params;
 	//params["file"] = "tiny.x";
 	params["file"] = "media/sponza/sponza.obj";
@@ -105,6 +148,7 @@ void Framework::initScene()
 		return Mesh::Ptr(new Mesh(p, mRenderer));
 	});
 
+	model->setCastShadow(true);
 	model->attach(mScene->getRoot());
 	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
 	Matrix mat = Matrix::CreateFromYawPitchRoll(0, -3.14 / 2, 0);
@@ -125,7 +169,22 @@ void Framework::initScene()
 
 
 	auto light = mScene->createOrGetLight("main");
-	light->setDirection({ 0.2,-1,0.2 });
+	light->setDirection({0,-1,0 });
+	light->setCastingShadow(true);
+}
+
+void Framework::framemove()
+{
+	auto lightbuffer = mPipeline->getBuffer("dirlights");
+	Vector4 lightinfo[2];
+	auto l = mScene->createOrGetLight("main");
+	float rad = getValue<float>("time");
+	l->setDirection({ 0.1f, cos(rad), sin(rad) });
+	auto dir = l->getDirection();
+	lightinfo[0] = { dir.x, dir.y,dir.z , 0 };
+	auto color = l->getColor() * getValue<float>("dirradiance");
+	lightinfo[1] = { color.x, color.y, color.z , 1 };
+	lightbuffer.lock()->blit(lightinfo, sizeof(lightinfo));
 }
 
 

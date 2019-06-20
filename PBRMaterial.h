@@ -249,7 +249,7 @@ public:
 		auto lightbuffer = mPipeline->getBuffer("dirlights");
 		Vector4 lightinfo[2];
 		auto l = mScene->createOrGetLight("main");
-		auto pos = l->getNode()->getRealPosition();
+		auto pos = l->getDirection();
 		lightinfo[0] = { pos.x, pos.y, pos.z, 0 };
 		auto color = l->getColor() * getValue<float>("dirradiance");
 		lightinfo[1] = { color.x, color.y, color.z , 0};

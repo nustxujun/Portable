@@ -155,8 +155,9 @@ float2 ParallaxMapping(float2 coord, float3 V, int sampleCount)
 GBufferPixelShaderOutput ps(GBufferVertexShaderOutput input) : SV_TARGET
 {
 	GBufferPixelShaderOutput output;
+#if UV
 	float2 coord = input.TexCoord;
-
+#endif
 #if HEIGHT_MAP
 	float3 V = normalize(input.CamInTangent - input.PosInTangent);
 	uint sampleCount = lerp(minsamplecount, maxsamplecount, dot(input.Normal, normalize(campos - input.WorldPosition)));
