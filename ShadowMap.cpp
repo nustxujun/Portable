@@ -31,7 +31,7 @@ void ShadowMap::init(int mapsize, int numlevels, const std::vector<Renderer::Tex
 	D3D10_SHADER_MACRO macros[] = { {"NUM_SHADOWMAPS", ss.str().c_str()} ,{ NULL,NULL} };
 	auto blob = getRenderer()->compileFile("hlsl/receiveshadow.hlsl", "ps", "ps_5_0");
 	mReceiveShadowPS = getRenderer()->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
-	blob = r->compileFile("hlsl/castshadow.hlsl", "vs", "vs_5_0", macros);
+	blob = r->compileFile("hlsl/simple_vs.hlsl", "main", "vs_5_0", macros);
 	mShadowVS = r->createVertexShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
 	//blob = r->compileFile("hlsl/castshadow.hlsl", "ps", "ps_5_0", macros);
 	//mShadowPS = r->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());

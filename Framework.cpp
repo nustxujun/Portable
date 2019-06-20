@@ -10,6 +10,7 @@
 #include "PostProcessing.h"
 #include "DepthLinearing.h"
 #include "SkyBox.h"
+#include "SSR.h"
 
 Framework::Framework(HWND win)
 {
@@ -118,6 +119,7 @@ void Framework::initPipeline()
 	mPipeline->pushStage<DepthLinearing>();
 	mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
 	mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
+	mPipeline->pushStage<SSR>();
 	//mPipeline->pushStage<AO>(3.0f);
 	mPipeline->pushStage<SkyBox>("media/Ditch-River_2k.hdr", false);
 	//mPipeline->pushStage<HDR>();
@@ -139,22 +141,47 @@ void Framework::initScene()
 	set("numdirs", { {"value", numdirs}, {"min", 0}, {"max", numdirs}, {"interval", 1}, {"type","set"} });
 	set("dirradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
 
+	auto root = mScene->getRoot();
+	{
+		Parameters params;
+		params["geom"] = "plane";
+		params["size"] = "10";
+		auto model = mScene->createModel("plane", params, [this](const Parameters& p)
+		{
+			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+		});
+		model->setCastShadow(false);
+		model->attach(root);
+	}
+	{
+		Parameters params;
+		params["geom"] = "sphere";
+		params["radius"] = "1";
+		auto model = mScene->createModel("sphere", params, [this](const Parameters& p)
+		{
+			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+		});
+		model->getNode()->setPosition({ 0, 2, 0 });
+		model->setCastShadow(false);
+		model->attach(root);
+	}
 
 
-	Parameters params;
-	//params["file"] = "tiny.x";
-	params["file"] = "media/sponza/sponza.obj";
-	auto model = mScene->createModel("test", params, [this](const Parameters& p) {
-		return Mesh::Ptr(new Mesh(p, mRenderer));
-	});
+	//{
+	//	Parameters params;
+	//	//params["file"] = "tiny.x";
+	//	params["file"] = "media/sponza/sponza.obj";
+	//	auto model = mScene->createModel("test", params, [this](const Parameters& p) {
+	//		return Mesh::Ptr(new Mesh(p, mRenderer));
+	//	});
 
-	model->setCastShadow(true);
-	model->attach(mScene->getRoot());
-	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-	Matrix mat = Matrix::CreateFromYawPitchRoll(0, -3.14 / 2, 0);
-	//model->getNode()->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
-
-	auto aabb = model->getWorldAABB();
+	//	model->setCastShadow(true);
+	//	model->attach(mScene->getRoot());
+	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+	//	Matrix mat = Matrix::CreateFromYawPitchRoll(0, -3.14 / 2, 0);
+	//	//model->getNode()->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
+	//}
+	auto aabb = root->getWorldAABB();
 
 	Vector3 vec = aabb.second - aabb.first;
 
@@ -162,7 +189,7 @@ void Framework::initScene()
 	DirectX::XMFLOAT3 eye(aabb.second);
 	DirectX::XMFLOAT3 at(aabb.first);
 	//cam->lookat(eye, at);
-	cam->lookat({ 0,0,-20 }, { 0,0,0 });
+	cam->lookat({ 0,10,0 }, { 0,0,0 });
 	cam->setViewport(0, 0, mRenderer->getWidth(), mRenderer->getHeight());
 	cam->setNearFar(1, vec.Length() + 1);
 	cam->setFOVy(0.785398185);

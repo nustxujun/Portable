@@ -151,3 +151,23 @@ void Quad::setBlendColorMul()
 	};
 }
 
+void Quad::setBlendColorAdd()
+{
+	D3D11_BLEND_DESC desc = { 0 };
+
+	desc.RenderTarget[0] = {
+		TRUE,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_OP_ADD,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_OP_ADD,
+		D3D11_COLOR_WRITE_ENABLE_ALL
+	};
+	mBlendState = {
+		desc,
+		{1,1,1,1},
+		0xffffffff,
+	};
+}

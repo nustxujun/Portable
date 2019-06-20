@@ -4,6 +4,7 @@
 #include <fstream>
 #include "D3D11Helper.h"
 #include <regex>
+#include <iostream>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -57,7 +58,7 @@ void Renderer::init(HWND win, int width, int height)
 	};
 
 	UINT flags = 0;
-#ifdef _DEBUG
+#if (defined _DEBUG ) || (defined RELEASE_WITH_DEBUGINFO)
 	flags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 	checkResult(D3D11CreateDeviceAndSwapChain(
@@ -713,13 +714,17 @@ Renderer::Buffer::Ptr Renderer::createRWBuffer(int size, int stride, DXGI_FORMAT
 Renderer::SharedCompiledData Renderer::compileFile(const std::string& filename, const std::string& entryPoint, const std::string& shaderModel, const D3D10_SHADER_MACRO* macro)
 {
 	int flags = D3DCOMPILE_ENABLE_STRICTNESS;
-#ifdef _DEBUG
+#if (defined _DEBUG ) || (defined RELEASE_WITH_DEBUGINFO)
 	flags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION ;
 #endif
 
 	ID3D10Blob* blob;
 	ID3D10Blob* err;
+	std::cout << "compile " << filename << " "<< entryPoint << " " << shaderModel << " ... ";
+	auto curtime = GetTickCount();
 	HRESULT hr = D3DX11CompileFromFileA(filename.c_str(), macro, NULL, entryPoint.c_str(), shaderModel.c_str(), flags, 0, NULL, &blob, &err, NULL);
+	std::cout << GetTickCount() - curtime << "ms." << std::endl;
+	
 	if (hr != S_OK)
 	{
 		if (err)
@@ -752,6 +757,12 @@ Renderer::VertexShader::Weak Renderer::createVertexShader(const void * data, siz
 	checkResult(mDevice->CreateVertexShader(data, size, NULL, &vs));
 	mVSs.emplace_back(new VertexShader(vs, data, size));
 	return mVSs.back();
+}
+
+Renderer::VertexShader::Weak Renderer::createVertexShader(const std::string & file, const std::string & entry, const D3D10_SHADER_MACRO * macro)
+{
+	auto blob = compileFile(file, entry, "vs_5_0", macro);
+	return createVertexShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
 }
 
 Renderer::PixelShader::Weak Renderer::createPixelShader(const void * data, size_t size)

@@ -8,8 +8,8 @@ SamplerState pointWrap : register(s1);
 
 cbuffer ConstantBuffer: register(b0)
 {
-	matrix proj;
 	matrix view;
+	matrix proj;
 	matrix invertProj;
 	float raylength;
 	float width;
@@ -37,12 +37,12 @@ const static uint MAX_STEPS = 100;
 
 float4 main(PS_INPUT Input) : SV_TARGET
 {
-	float3 normal = normalTex.Sample(linearWrap, input.Tex).xyz;
+	float3 normal = normalTex.Sample(linearWrap, Input.Tex).xyz;
 	normal = normalize(mul(normal, (float3x3)view));
-	float depth = depthTex.Sample(linearWrap, input.Tex).r;
+	float depth = depthTex.Sample(linearWrap, Input.Tex).r;
 	float4 pos;
-	pos.x = input.Tex.x * 2.0f - 1.0f;
-	pos.y = -(input.Tex.y * 2.0f - 1.0f);
+	pos.x = Input.Tex.x * 2.0f - 1.0f;
+	pos.y = -(Input.Tex.y * 2.0f - 1.0f);
 	pos.z = depth;
 	pos.w = 1.0f;
 
@@ -50,7 +50,7 @@ float4 main(PS_INPUT Input) : SV_TARGET
 	pos /= pos.w;
 
 
-	float3 V = normalize( pos);
+	float3 V = normalize( pos.xyz);
 	float3 R = reflect(V, normal);
 	
 	float4 endpos = float4(pos.xyz + R * raylength, 1);
@@ -70,8 +70,9 @@ float4 main(PS_INPUT Input) : SV_TARGET
 	float3 ov = V * ko;
 	float3 ev = endpos.xyz * ke;
 
-	float ls = length(es - os);
-	float2 delta /= ls;
+	float2 ds = es - os;
+	float ls = length(ds);
+	float2 delta = ds / ls;
 
 	float steplen = min(1.0f / delta.x, 1.0f / delta.y);// make to sample one pixel at least
 	float numsteps = ls / steplen;
@@ -79,7 +80,7 @@ float4 main(PS_INPUT Input) : SV_TARGET
 
 	float4 dvk = float4(ev - ov, ke - ko) / numsteps;
 
-	uint step = 1;
+	int step = 1;
 	while (step++ < maxsteps)
 	{
 		float stepsize = step * steplen;
@@ -87,7 +88,7 @@ float4 main(PS_INPUT Input) : SV_TARGET
 		if (coord.x > width || coord.x < 0 || coord.y > height || coord.y < 0)
 			return 0;
 
-		float samplepos = (ov + dvk.xyz * step);
+		float3 samplepos = (ov + dvk.xyz * step);
 		float k = ko + dvk.w * step;
 		samplepos /= k;
 
@@ -97,9 +98,9 @@ float4 main(PS_INPUT Input) : SV_TARGET
 		fdepth = toView(fdepth);
 		float bdepth = depthbackTex.Sample(linearWrap, coord).r;
 		bdepth = toView(bdepth);
-		if (samplepos.z >= fdepth && sampepos.z <= bdepth)
+		if (samplepos.z >= fdepth && samplepos.z <= bdepth)
 		{
-			return colorTex.Sample(linearWrap, uv) * 0.5f;
+			return 1;//colorTex.Sample(linearWrap, coord) * 0.5f;
 		}
 	}
 

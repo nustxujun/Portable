@@ -147,6 +147,9 @@
     <ClInclude Include="PBRMaterial.h">
       <Filter>Framework</Filter>
     </ClInclude>
+    <ClInclude Include="SSR.h">
+      <Filter>Pipeline\Stage</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -236,6 +239,9 @@
     <ClCompile Include="ImageProcessing.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="SSR.cpp">
+      <Filter>Pipeline\Stage</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="deferredRendering.rc">
@@ -252,9 +258,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-    <None Include="hlsl\castshadow.hlsl">
-      <Filter>shader</Filter>
-    </None>
     <None Include="hlsl\depth.fx">
       <Filter>shader</Filter>
     </None>
@@ -278,5 +281,13 @@
       <Filter>shader</Filter>
     </None>
     <None Include="hlsl\tiledlightculling.hlsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="hlsl\ssr.hlsl">
+      <Filter>shader</Filter>
+    </FxCompile>
+    <FxCompile Include="hlsl\simple_vs.hlsl">
+      <Filter>shader</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

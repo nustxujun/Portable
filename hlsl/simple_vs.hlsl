@@ -19,7 +19,7 @@ struct PS_INPUT
 };
 
 
-PS_INPUT vs(VS_INPUT input)
+PS_INPUT main(VS_INPUT input)
 {
 	PS_INPUT output = (PS_INPUT)0;
 	output.Pos = float4(input.Pos.xyz, 1.0f);
