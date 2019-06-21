@@ -2,6 +2,9 @@
 
 void SSR::init()
 {
+
+	set("raylength", { {"value", 100}, {"min", "0"}, {"max", "1000"}, {"interval", "1"}, {"type","set"} });
+
 	mName = "ssr";
 	mVS = getRenderer()->createVertexShader("hlsl/simple_vs.hlsl");
 	mPS = getRenderer()->createPixelShader("hlsl/ssr.hlsl");
@@ -25,7 +28,7 @@ void SSR::render(Renderer::Texture2D::Ptr rt)
 	c.view = cam->getViewMatrix().Transpose();
 	c.proj = cam->getProjectionMatrix().Transpose();
 	c.invertProj = cam->getProjectionMatrix().Invert().Transpose();
-	c.raylength = 100;
+	c.raylength = getValue<int>("raylength");
 	c.width = getRenderer()->getWidth();
 	c.height = getRenderer()->getHeight();
 	mConstants.lock()->blit(c);

@@ -154,6 +154,16 @@ void Framework::initScene()
 		model->attach(root);
 	}
 	{
+		std::vector<std::string> textures = {
+			"media/rock/holey-rock1-albedo.png",
+			{},
+			//"media/rock/holey-rock1-normal-ue.png",
+			"media/rock/holey-rock1-roughness.png",
+			"media/rock/holey-rock1-metalness.png",
+			"media/rock/holey-rock1-ao.png",
+			//"media/rock/holey-rock1-height.png"
+		};
+
 		Parameters params;
 		params["geom"] = "sphere";
 		params["radius"] = "1";
@@ -164,6 +174,11 @@ void Framework::initScene()
 		model->getNode()->setPosition({ 0, 2, 0 });
 		model->setCastShadow(false);
 		model->attach(root);
+		Material::Ptr mat = Material::create();
+		for (int i = 0; i < textures.size(); ++i)
+			if (!textures[i].empty())
+				mat->setTexture(i, mRenderer->createTexture(textures[i]));
+		model->setMaterial(mat);
 	}
 
 

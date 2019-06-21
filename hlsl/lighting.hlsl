@@ -154,11 +154,11 @@ float3 travelLights(float roughness, float metallic,uint pointoffset, uint point
 		Lo += directBRDF(roughness, metallic, F0, albedo, N, L, V) * radiance * shadow;
 	}
 
-	float3 reflectcoord = reflect(-V, N);
+	float3 reflectcoord = normalize(reflect(-V, N));
 
 	float3 lut = LUT(N, V, roughness, lutTexture, sampLinear);
 	float3 prefiltered = prefilteredTexture.SampleLevel(sampLinear, reflectcoord, roughness * (PREFILTERED_MIP_LEVEL -1));
-	float3 irradiance = irradianceTexture.Sample(sampLinear, N).rgb;
+	float3 irradiance = irradianceTexture.SampleLevel(sampLinear, N, 0).rgb;
 	Lo += indirectBRDF(irradiance, prefiltered, lut, roughness, metallic, F0, albedo, N, V);
 	return Lo;
 }
@@ -169,12 +169,12 @@ float3 travelLights(float roughness, float metallic,uint pointoffset, uint point
 float4 main(PS_INPUT input) : SV_TARGET
 {
 	float2 texcoord = float2(input.Pos.x / width, input.Pos.y / height);
-	float3 albedo = albedoTexture.Sample(sampLinear, texcoord).rgb;
-	float2 material = materialTexture.Sample(sampPoint, texcoord).rg;
+	float3 albedo = albedoTexture.SampleLevel(sampLinear, texcoord, 0).rgb;
+	float2 material = materialTexture.SampleLevel(sampPoint, texcoord, 0).rg;
 
-	float4 normalData = normalTexture.Sample(sampLinear, texcoord);
+	float4 normalData = normalTexture.SampleLevel(sampLinear, texcoord, 0);
 	float3 N = normalize(normalData.xyz);
-	float depthVal = depthTexture.Sample(sampLinear, texcoord).g;
+	float depthVal = depthTexture.SampleLevel(sampLinear, texcoord, 0).g;
 	float4 worldpos;
 	worldpos.x = texcoord.x * 2.0f - 1.0f;
 	worldpos.y = -(texcoord.y * 2.0f - 1.0f);
