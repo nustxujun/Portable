@@ -4,7 +4,7 @@ Texture2D depthTex:register(t2);
 Texture2D depthbackTex:register(t3);
 
 SamplerState linearWrap: register(s0);
-SamplerState pointWrap : register(s1);
+SamplerState pointClamp : register(s1);
 
 cbuffer ConstantBuffer: register(b0)
 {
@@ -14,6 +14,7 @@ cbuffer ConstantBuffer: register(b0)
 	float raylength;
 	float width;
 	float height;
+	float stepstride;
 };
 
 struct PS_INPUT
@@ -33,13 +34,13 @@ float2 toScreen(float4 pos)
 	return float2((pos.x *0.5 + 0.5) * width, (0.5 - pos.y * 0.5) * height);
 }
 
-const static uint MAX_STEPS = 1000;
+const static uint MAX_STEPS = 2000;
 
 float4 main(PS_INPUT Input) : SV_TARGET
 {
-	float3 normal = normalTex.Sample(linearWrap, Input.Tex).xyz;
+	float3 normal = normalTex.Sample(pointClamp, Input.Tex).xyz;
 	normal = normalize(mul(normal, (float3x3)view));
-	float depth = depthTex.Sample(linearWrap, Input.Tex).r;
+	float depth = depthTex.Sample(pointClamp, Input.Tex).r;
 	float4 projpos;
 	projpos.x = Input.Tex.x * 2.0f - 1.0f;
 	projpos.y = -(Input.Tex.y * 2.0f - 1.0f);
@@ -80,8 +81,9 @@ float4 main(PS_INPUT Input) : SV_TARGET
 
 	float2 steponpixel = 1.0f / abs(delta);
 	float steplen = min(steponpixel.x, steponpixel.y);// make to sample one pixel at least
+	steplen *= stepstride;
 	float numsteps = ls / steplen;
-	float maxsteps = numsteps;
+	float maxsteps = min(MAX_STEPS, numsteps);
 
 	float4 dvk = float4(ev - ov, ke - ko) / maxsteps;
 
@@ -99,13 +101,13 @@ float4 main(PS_INPUT Input) : SV_TARGET
 
 		coord /= float2(width, height);
 
-		float fdepth = depthTex.SampleLevel(linearWrap, coord,0).r;
+		float fdepth = depthTex.SampleLevel(pointClamp, coord,0).r;
 		fdepth = toView(fdepth);
-		float bdepth = depthbackTex.SampleLevel(linearWrap, coord,0).r;
+		float bdepth = depthbackTex.SampleLevel(pointClamp, coord,0).r;
 		bdepth = toView(bdepth);
-		if (samplepos.z > fdepth + 0.0001 && samplepos.z < bdepth - 0.0001)
+		if (samplepos.z > fdepth  && samplepos.z < bdepth )
 		{
-			return normalTex.SampleLevel(linearWrap, coord,0) ;
+			return colorTex.SampleLevel(pointClamp, coord,0) ;
 		}
 		step++;
 	}

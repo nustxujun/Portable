@@ -3,7 +3,8 @@
 void SSR::init()
 {
 
-	set("raylength", { {"value", 100}, {"min", "0"}, {"max", "1000"}, {"interval", "1"}, {"type","set"} });
+	set("raylength", { {"value", 100}, {"min", "0"}, {"max", "2000"}, {"interval", "1"}, {"type","set"} });
+	set("stepstride", { {"value", 1}, {"min", "1"}, {"max", "32"}, {"interval", "0.1"}, {"type","set"} });
 
 	mName = "ssr";
 	mVS = getRenderer()->createVertexShader("hlsl/simple_vs.hlsl");
@@ -14,6 +15,9 @@ void SSR::init()
 	int h = getRenderer()->getHeight();
 	mDepthBack = getRenderer()->createDepthStencil(w, h, DXGI_FORMAT_R32_TYPELESS, true);
 	mMatrixConst = getRenderer()->createBuffer(sizeof(MatrixConstants), D3D11_BIND_CONSTANT_BUFFER, 0, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+	mLinear = getRenderer()->createSampler("linear_clamp", D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
+	mPoint = getRenderer()->createSampler("point_clamp", D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
+
 }
 
 void SSR::render(Renderer::Texture2D::Ptr rt)
@@ -31,6 +35,7 @@ void SSR::render(Renderer::Texture2D::Ptr rt)
 	c.raylength = getValue<int>("raylength");
 	c.width = getRenderer()->getWidth();
 	c.height = getRenderer()->getHeight();
+	c.stepstride = getValue<float>("stepstride");
 	mConstants.lock()->blit(c);
 
 	auto quad = getQuad();
@@ -38,7 +43,7 @@ void SSR::render(Renderer::Texture2D::Ptr rt)
 	quad->setRenderTarget(mFrame);
 	quad->setTextures({ rt,getShaderResource("normal"), getShaderResource("depth"), mDepthBack });
 	quad->setPixelShader(mPS);
-	quad->setDefaultSampler();
+	quad->setSamplers({ mLinear, mPoint });
 	quad->setDefaultViewport();
 	quad->setDefaultBlend(false);
 	quad->draw();

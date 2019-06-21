@@ -142,60 +142,60 @@ void Framework::initScene()
 	set("dirradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
 
 	auto root = mScene->getRoot();
-	{
-		Parameters params;
-		params["geom"] = "plane";
-		params["size"] = "10";
-		auto model = mScene->createModel("plane", params, [this](const Parameters& p)
-		{
-			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		});
-		model->setCastShadow(false);
-		model->attach(root);
-	}
-	{
-		std::vector<std::string> textures = {
-			"media/rock/holey-rock1-albedo.png",
-			{},
-			//"media/rock/holey-rock1-normal-ue.png",
-			"media/rock/holey-rock1-roughness.png",
-			"media/rock/holey-rock1-metalness.png",
-			"media/rock/holey-rock1-ao.png",
-			//"media/rock/holey-rock1-height.png"
-		};
-
-		Parameters params;
-		params["geom"] = "sphere";
-		params["radius"] = "1";
-		auto model = mScene->createModel("sphere", params, [this](const Parameters& p)
-		{
-			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		});
-		model->getNode()->setPosition({ 0, 2, 0 });
-		model->setCastShadow(false);
-		model->attach(root);
-		Material::Ptr mat = Material::create();
-		for (int i = 0; i < textures.size(); ++i)
-			if (!textures[i].empty())
-				mat->setTexture(i, mRenderer->createTexture(textures[i]));
-		model->setMaterial(mat);
-	}
-
-
 	//{
 	//	Parameters params;
-	//	//params["file"] = "tiny.x";
-	//	params["file"] = "media/sponza/sponza.obj";
-	//	auto model = mScene->createModel("test", params, [this](const Parameters& p) {
-	//		return Mesh::Ptr(new Mesh(p, mRenderer));
+	//	params["geom"] = "plane";
+	//	params["size"] = "10";
+	//	auto model = mScene->createModel("plane", params, [this](const Parameters& p)
+	//	{
+	//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
 	//	});
-
-	//	model->setCastShadow(true);
-	//	model->attach(mScene->getRoot());
-	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-	//	Matrix mat = Matrix::CreateFromYawPitchRoll(0, -3.14 / 2, 0);
-	//	//model->getNode()->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
+	//	model->setCastShadow(false);
+	//	model->attach(root);
 	//}
+	//{
+	//	std::vector<std::string> textures = {
+	//		"media/rock/holey-rock1-albedo.png",
+	//		{},
+	//		//"media/rock/holey-rock1-normal-ue.png",
+	//		"media/rock/holey-rock1-roughness.png",
+	//		"media/rock/holey-rock1-metalness.png",
+	//		"media/rock/holey-rock1-ao.png",
+	//		//"media/rock/holey-rock1-height.png"
+	//	};
+
+	//	Parameters params;
+	//	params["geom"] = "sphere";
+	//	params["radius"] = "1";
+	//	auto model = mScene->createModel("sphere", params, [this](const Parameters& p)
+	//	{
+	//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+	//	});
+	//	model->getNode()->setPosition({ 0, 2, 0 });
+	//	model->setCastShadow(false);
+	//	model->attach(root);
+	//	Material::Ptr mat = Material::create();
+	//	for (int i = 0; i < textures.size(); ++i)
+	//		if (!textures[i].empty())
+	//			mat->setTexture(i, mRenderer->createTexture(textures[i]));
+	//	model->setMaterial(mat);
+	//}
+
+
+	{
+		Parameters params;
+		//params["file"] = "tiny.x";
+		params["file"] = "media/sponza/sponza.obj";
+		auto model = mScene->createModel("test", params, [this](const Parameters& p) {
+			return Mesh::Ptr(new Mesh(p, mRenderer));
+		});
+
+		model->setCastShadow(true);
+		model->attach(mScene->getRoot());
+		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+		Matrix mat = Matrix::CreateFromYawPitchRoll(0, -3.14 / 2, 0);
+		//model->getNode()->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
+	}
 	auto aabb = root->getWorldAABB();
 
 	Vector3 vec = aabb.second - aabb.first;

@@ -14,6 +14,7 @@ class SSR :public Pipeline::Stage
 		float raylength;
 		float width;
 		float height;
+		float stepstride;
 	};
 
 	struct MatrixConstants
@@ -35,5 +36,6 @@ private:
 	Renderer::Texture2D::Ptr mDepthBack;
 	Renderer::Buffer::Ptr mConstants;
 	Renderer::Buffer::Ptr mMatrixConst;
-
+	Renderer::Sampler::Ptr mLinear;
+	Renderer::Sampler::Ptr mPoint;
 };
