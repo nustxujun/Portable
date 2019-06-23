@@ -72,6 +72,8 @@ void GBuffer::render(Renderer::Texture2D::Ptr rt)
 		e->getVariable("Projection")->AsMatrix()->SetMatrix((const float*)&cam->getProjectionMatrix());
 		e->getVariable("roughness")->AsScalar()->SetFloat(r.material->roughness);
 		e->getVariable("metallic")->AsScalar()->SetFloat(r.material->metallic);
+		e->getVariable("reflection")->AsScalar()->SetFloat(r.material->reflection);
+
 		e->getVariable("campos")->AsVector()->SetFloatVector((const float*)&cam->getNode()->getRealPosition());
 		e->getVariable("heightscale")->AsScalar()->SetFloat(getValue<float>("heightscale"));
 		e->getVariable("minsamplecount")->AsScalar()->SetInt(getValue<int>("minSampleCount"));

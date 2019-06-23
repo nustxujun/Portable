@@ -9,6 +9,7 @@ cbuffer ConstantBuffer: register(b0)
 	matrix Projection;
 	float roughness;
 	float metallic;
+	float reflection;
 };
 
 cbuffer ParallaxConstants:register(b1)
@@ -67,7 +68,7 @@ struct GBufferPixelShaderOutput
 {
 	float4 Color : COLOR0;
 	float4 Normal : COLOR1;
-	float2 Material: COLOR2;
+	float4 Material: COLOR2;
 };
 
 GBufferVertexShaderOutput vs(GBufferVertexShaderInput input)
@@ -189,9 +190,9 @@ GBufferPixelShaderOutput ps(GBufferVertexShaderOutput input) : SV_TARGET
 #if PBR_MAP
 	float r = roughTex.Sample(sampLinear, coord).r;
 	float m = metalTex.Sample(sampLinear, coord).r;
-	output.Material = float2(r * roughness, m * metallic);
+	output.Material = float4(r * roughness, m * metallic, reflection, 0);
 #else
-	output.Material = float2(roughness, metallic);
+	output.Material = float4(roughness, metallic, reflection, 0);
 #endif
 	return output;
 }

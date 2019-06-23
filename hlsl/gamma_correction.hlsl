@@ -25,9 +25,9 @@ float3 LinearTosRGB(in float3 color)
 float4 main(PS_INPUT Input) : SV_TARGET
 {
 	float4 color = frameTex.Sample(PointWrap, Input.Tex);
-	//return pow(color, 1.0f / 2.2f);
-	color.rgb = LinearTosRGB(color.rgb);
-	return color;
+	return pow(color, 1.0f / 2.2f);
+	//color.rgb = LinearTosRGB(color.rgb);
+	//return color;
 }
 
 

@@ -42,6 +42,7 @@ public:
 	bool beLighting = true;
 	float metallic = 1.0f;
 	float roughness = 1.0f;
+	float reflection = 1.0f;
 
 private:
 	size_t mShaderID = -1;

@@ -2,12 +2,12 @@
 
 #include "Observer.h"
 #include <sstream>
-#include "DepthLinearing.h"
 #include "AO.h"
 #include "HDR.h"
 #include "PBR.h"
 #include "GBuffer.h"
 #include "SkyBox.h"
+#include "SSR.h"
 
 class PBRMaterial :public Observer
 {
@@ -266,13 +266,10 @@ public:
 		auto normal = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
 		mPipeline->addShaderResource("normal", normal);
 		mPipeline->addRenderTarget("normal", normal);
-		auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R32_TYPELESS, true);
+		auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R24G8_TYPELESS, true);
 		mPipeline->addShaderResource("depth", depth);
 		mPipeline->addDepthStencil("depth", depth);
-		auto depthLinear = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32_FLOAT);
-		mPipeline->addShaderResource("depthlinear", depthLinear);
-		mPipeline->addRenderTarget("depthlinear", depthLinear);
-		auto material = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32_FLOAT);
+		auto material = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
 		mPipeline->addShaderResource("material", material);
 		mPipeline->addRenderTarget("material", material);
 
@@ -315,9 +312,9 @@ public:
 		});
 
 		mPipeline->pushStage<GBuffer>();
-		mPipeline->pushStage<DepthLinearing>();
 		mPipeline->pushStage<PBR>();
 		//mPipeline->pushStage<AO>(3.0f);
+		mPipeline->pushStage<SSR>();
 		mPipeline->pushStage<SkyBox>(hdrenvfile, false);
 		mPipeline->pushStage<HDR>();
 		mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");

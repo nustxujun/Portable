@@ -65,7 +65,21 @@ PBR::PBR(
 	mAlbedo = getShaderResource("albedo");
 	mNormal = getShaderResource("normal");
 	mDepth = getDepthStencil("depth");
-	mDepthLinear = getShaderResource("depthlinear");
+
+
+	D3D11_TEXTURE2D_DESC desc;
+	desc.Width = getRenderer()->getWidth();
+	desc.Height = getRenderer()->getHeight();
+	desc.MipLevels = 1;
+	desc.ArraySize = 1;
+	desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	desc.SampleDesc.Count = 1;
+	desc.SampleDesc.Quality = 0;
+	desc.Usage = D3D11_USAGE_DEFAULT;
+	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	desc.CPUAccessFlags = 0;
+	desc.MiscFlags = 0;
+	mDepthCopy = getRenderer()->createTexture(desc);
 
 
 }
@@ -122,7 +136,8 @@ void PBR::renderNormal(Renderer::Texture2D::Ptr rt)
 	auto quad = getQuad();
 	quad->setRenderTarget(rt);
 	std::vector<Renderer::ShaderResource::Ptr> srvs = {
-		mAlbedo, mNormal, mDepthLinear , 
+		mAlbedo, mNormal, 
+		getShaderResource("depth"),
 		getShaderResource("material"),
 		getShaderResource("irradinace"),
 		getShaderResource("prefiltered"),
@@ -187,8 +202,12 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 	renderer->setDefaultDepthStencilState();
 	renderer->setSamplers({ mLinear, mPoint });
 
+	ID3D11Resource* res;
+	mDepth->getView()->GetResource(&res);
+	getRenderer()->getContext()->CopySubresourceRegion(mDepthCopy->getTexture(), 0, 0, 0, 0, res, 0, NULL);
+
 	std::vector<Renderer::ShaderResource::Ptr> srvs = {
-	mAlbedo, mNormal, mDepthLinear ,
+	mAlbedo, mNormal, mDepthCopy ,
 	getShaderResource("material"),
 	getShaderResource("irradinace"),
 	getShaderResource("prefiltered"),
@@ -332,6 +351,7 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 
 	}
 
+	srvs[2] = getShaderResource("depth");
 	// dir
 	{
 		auto quad = getQuad();

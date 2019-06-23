@@ -209,7 +209,9 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 		}
 		float half = size *0.5f;
 		float sign = 1.0f;
-	
+		if (geom->second == "room")
+			sign = -1.0f;
+
 		vertices = {
 			// -z
 			-half,  half, -half,	0,0,-sign,	0, 0,  1,0,0,	0,-1,0,
@@ -247,7 +249,6 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 		
 		if (geom->second == "room")
 		{
-			sign = -1.0f;
 			for (int i = 0; i < 6; ++i)
 			{
 				indices.push_back(0 + i * 4);
@@ -272,7 +273,6 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 
 			}
 		}
-
 
 
 		trans = DirectX::SimpleMath::Matrix::CreateFromAxisAngle({ 1,0,0 },0);

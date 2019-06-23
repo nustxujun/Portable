@@ -62,12 +62,12 @@ float4 sampleTex(float3 coords)
 	float2 uv = float2(atan2(coords.z, coords.x), asin(-coords.y));
 	uv *= float2(0.1591f, 0.3183f);
 	uv += 0.5;
-	return diffuseTex.Sample(sampLinear, uv);
+	return diffuseTex.SampleLevel(sampLinear, uv, 0);
 }
 #else
 float4 sampleTex(float3 coords)
 {
-	float4 color = diffuseTex.Sample(sampLinear, coords);
+	float4 color = diffuseTex.SampleLevel(sampLinear, coords,0);
 	color.rgb = pow(color.rgb, 2.2f);
 	return color;
 }

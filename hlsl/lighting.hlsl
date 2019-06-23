@@ -174,12 +174,13 @@ float4 main(PS_INPUT input) : SV_TARGET
 
 	float4 normalData = normalTexture.SampleLevel(sampPoint, texcoord, 0);
 	float3 N = normalize(normalData.xyz);
-	float depthVal = depthTexture.SampleLevel(sampPoint, texcoord, 0).g;
+	float depthVal = depthTexture.SampleLevel(sampPoint, texcoord, 0).r;
 	float4 worldpos;
 	worldpos.x = texcoord.x * 2.0f - 1.0f;
 	worldpos.y = -(texcoord.y * 2.0f - 1.0f);
 	worldpos.z = depthVal;
 	worldpos.w = 1.0f;
+
 	worldpos = mul(worldpos, invertViewProj);
 	worldpos /= worldpos.w;
 

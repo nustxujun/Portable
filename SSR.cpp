@@ -3,8 +3,10 @@
 void SSR::init()
 {
 
-	set("raylength", { {"value", 100}, {"min", "0"}, {"max", "2000"}, {"interval", "1"}, {"type","set"} });
-	set("stepstride", { {"value", 1}, {"min", "1"}, {"max", "32"}, {"interval", "0.1"}, {"type","set"} });
+	set("raylength", { {"value", 1}, {"min", "0.1"}, {"max", "10"}, {"interval", "0.1"}, {"type","set"} });
+	set("stepstride", { {"value", 32}, {"min", "1"}, {"max", "32"}, {"interval", "1"}, {"type","set"} });
+	set("stridescale", { {"value", 1}, {"min", "0"}, {"max", "0.1"}, {"interval", "0.0001"}, {"type","set"} });
+	set("reflection", { {"value", 1}, {"min", "0"}, {"max", "1"}, {"interval", "0.1"}, {"type","set"} });
 
 	mName = "ssr";
 	mVS = getRenderer()->createVertexShader("hlsl/simple_vs.hlsl");
@@ -17,6 +19,9 @@ void SSR::init()
 	mMatrixConst = getRenderer()->createBuffer(sizeof(MatrixConstants), D3D11_BIND_CONSTANT_BUFFER, 0, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 	mLinear = getRenderer()->createSampler("linear_clamp", D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
 	mPoint = getRenderer()->createSampler("point_clamp", D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
+
+	mSample = ImageProcessing::create<SamplingBox>(getRenderer(), ImageProcessing::RT_TEMP);
+	mGaussian = ImageProcessing::create<Gaussian>(getRenderer(), ImageProcessing::RT_TEMP);
 
 }
 
@@ -32,25 +37,44 @@ void SSR::render(Renderer::Texture2D::Ptr rt)
 	c.view = cam->getViewMatrix().Transpose();
 	c.proj = cam->getProjectionMatrix().Transpose();
 	c.invertProj = cam->getProjectionMatrix().Invert().Transpose();
-	c.raylength = getValue<int>("raylength");
+	c.reflection = getValue<float>("reflection");
+	c.raylength = getValue<float>("raylength");
 	c.width = getRenderer()->getWidth();
 	c.height = getRenderer()->getHeight();
 	c.stepstride = getValue<float>("stepstride");
+	c.stridescale = getValue<float>("stridescale");
+	c.nearZ = cam->getNear();
 	mConstants.lock()->blit(c);
 
 	auto quad = getQuad();
 	quad->setConstant(mConstants);
 	quad->setRenderTarget(mFrame);
-	quad->setTextures({ rt,getShaderResource("normal"), getShaderResource("depth"), mDepthBack });
+	quad->setTextures({ 
+		rt,
+		getShaderResource("normal"), 
+		getShaderResource("depth"), 
+		mDepthBack ,
+		getShaderResource("material")});
 	quad->setPixelShader(mPS);
 	quad->setSamplers({ mLinear, mPoint });
 	quad->setDefaultViewport();
 	quad->setDefaultBlend(false);
 	quad->draw();
 
+	auto ret = mFrame;
+	int count = 0;
+	for (int i = 0; i < count; ++i)
+	{
+		ret = mSample->process(ret, ImageProcessing::DOWN);
+		ret = mGaussian->process(ret);
+	}
 
+	for (int i = 0; i < count; ++i)
+	{
+		ret = mSample->process(ret, ImageProcessing::UP);
+	}
 
-	quad->setTextures({ mFrame });
+	quad->setTextures({ ret });
 	quad->setRenderTarget(rt);
 	quad->setDefaultPixelShader();
 	quad->setBlendColorAdd();

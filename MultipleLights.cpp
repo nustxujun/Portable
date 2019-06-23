@@ -8,7 +8,6 @@
 #include "DepthBounding.h"
 #include "LightCulling.h"
 #include "AO.h"
-#include "DepthLinearing.h"
 #include "ClusteredLightCulling.h"
 #include "ShadowMap.h"
 #include "SkyBox.h"
@@ -30,13 +29,10 @@ void MultipleLights::initPipeline()
 	auto normal = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	mPipeline->addShaderResource("normal", normal);
 	mPipeline->addRenderTarget("normal", normal);
-	auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R32_TYPELESS, true);
+	auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R24G8_TYPELESS, true);
 	mPipeline->addShaderResource("depth", depth);
 	mPipeline->addDepthStencil("depth", depth);
-	auto depthLinear = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32_FLOAT);
-	mPipeline->addShaderResource("depthlinear", depthLinear);
-	mPipeline->addRenderTarget("depthlinear", depthLinear);
-	auto material = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32_FLOAT);
+	auto material = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	mPipeline->addShaderResource("material", material);
 	mPipeline->addRenderTarget("material", material);
 
@@ -60,9 +56,9 @@ void MultipleLights::initPipeline()
 
 
 
-	//initDRPipeline();
+	initDRPipeline();
 	//initTBDRPipeline();
-	initCDRPipeline();
+	//initCDRPipeline();
 }
 
 void MultipleLights::initScene()
@@ -106,7 +102,7 @@ void MultipleLights::initScene()
 		mat->setTexture(3, mRenderer->createTexture("media/streaked/streaked-metal1-metalness.png"));
 		mat->setTexture(4, mRenderer->createTexture("media/streaked/streaked-metal1-ao.png"));
 
-		model->setMaterial(mat);
+		//model->setMaterial(mat);
 	}
 
 
@@ -430,9 +426,10 @@ void MultipleLights::initDRPipeline()
 	});
 
 	mPipeline->pushStage<GBuffer>();
-	mPipeline->pushStage<DepthLinearing>();
 	mPipeline->pushStage<PBR>();
-	mPipeline->pushStage<HDR>();
+	//mPipeline->pushStage<HDR>();
+	mPipeline->pushStage<SkyBox>("media/Ditch-River_2k.hdr", false);
+
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 
 	mPipeline->pushStage("draw to backbuffer",[bb, quad](Renderer::Texture2D::Ptr rt)
@@ -501,7 +498,6 @@ void MultipleLights::initTBDRPipeline()
 	});
 
 	mPipeline->pushStage<GBuffer>();
-	mPipeline->pushStage<DepthLinearing>();
 	mPipeline->pushStage<DepthBounding>(bw, bh);
 	mPipeline->pushStage<LightCulling>(bw, bh);
 
@@ -611,7 +607,6 @@ void MultipleLights::initCDRPipeline()
 	});
 
 	mPipeline->pushStage<GBuffer>();
-	mPipeline->pushStage<DepthLinearing>();
 
 	mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
 

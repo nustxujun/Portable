@@ -2,7 +2,7 @@
 
 
 #include "Pipeline.h"
-
+#include "ImageProcessing.h"
 class SSR :public Pipeline::Stage
 {
 	__declspec(align(16))
@@ -11,10 +11,13 @@ class SSR :public Pipeline::Stage
 		Matrix view;
 		Matrix proj;
 		Matrix invertProj;
+		float reflection;
 		float raylength;
 		float width;
 		float height;
 		float stepstride;
+		float stridescale;
+		float nearZ;
 	};
 
 	struct MatrixConstants
@@ -38,4 +41,7 @@ private:
 	Renderer::Buffer::Ptr mMatrixConst;
 	Renderer::Sampler::Ptr mLinear;
 	Renderer::Sampler::Ptr mPoint;
+
+	SamplingBox::Ptr mSample;
+	Gaussian::Ptr mGaussian;
 };

@@ -46,7 +46,7 @@ private:
 	Renderer::ShaderResource::Ptr mAlbedo;
 	Renderer::ShaderResource::Ptr mNormal;
 	Renderer::DepthStencil::Ptr mDepth;
-	Renderer::ShaderResource::Ptr mDepthLinear;
+	Renderer::Texture2D::Ptr mDepthCopy;
 	Renderer::ShaderResource::Ptr mLightsIndex;
 	std::vector<Renderer::Texture2D::Ptr> mShadowTextures;
 
