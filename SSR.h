@@ -18,6 +18,7 @@ class SSR :public Pipeline::Stage
 		float stepstride;
 		float stridescale;
 		float nearZ;
+		float jitter;
 	};
 
 	struct MatrixConstants
@@ -32,10 +33,16 @@ public:
 	void render(Renderer::Texture2D::Ptr rt) override;
 private:
 	void renderDepthBack();
+	void renderRaytrace(Renderer::Texture2D::Ptr rt);
+	void renderColor(Renderer::Texture2D::Ptr rt);
 private:
-	Renderer::PixelShader::Weak mPS;
+	Renderer::PixelShader::Weak mRayTracing;
+	Renderer::PixelShader::Weak mLighting;
+
 	Renderer::VertexShader::Weak mVS;
+	Renderer::Texture2D::Ptr mHitmap;
 	Renderer::Texture2D::Ptr mFrame;
+
 	Renderer::Texture2D::Ptr mDepthBack;
 	Renderer::Buffer::Ptr mConstants;
 	Renderer::Buffer::Ptr mMatrixConst;

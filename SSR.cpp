@@ -7,10 +7,13 @@ void SSR::init()
 	set("stepstride", { {"value", 32}, {"min", "1"}, {"max", "32"}, {"interval", "1"}, {"type","set"} });
 	set("stridescale", { {"value", 1}, {"min", "0"}, {"max", "0.1"}, {"interval", "0.0001"}, {"type","set"} });
 	set("reflection", { {"value", 1}, {"min", "0"}, {"max", "1"}, {"interval", "0.1"}, {"type","set"} });
+	set("jitter", { {"value", 0}, {"min", "0"}, {"max", "1"}, {"interval", "0.01"}, {"type","set"} });
+
 
 	mName = "ssr";
 	mVS = getRenderer()->createVertexShader("hlsl/simple_vs.hlsl");
-	mPS = getRenderer()->createPixelShader("hlsl/ssr.hlsl");
+	mRayTracing = getRenderer()->createPixelShader("hlsl/ssr.hlsl", "raytracing");
+	mLighting = getRenderer()->createPixelShader("hlsl/ssr.hlsl", "filter");
 	mConstants = getRenderer()->createBuffer(sizeof(Constants), D3D11_BIND_CONSTANT_BUFFER, 0, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 
 	int w = getRenderer()->getWidth();
@@ -23,15 +26,62 @@ void SSR::init()
 	mSample = ImageProcessing::create<SamplingBox>(getRenderer(), ImageProcessing::RT_TEMP);
 	mGaussian = ImageProcessing::create<Gaussian>(getRenderer(), ImageProcessing::RT_TEMP);
 
+
+	mHitmap = getRenderer()->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
+
 }
 
 void SSR::render(Renderer::Texture2D::Ptr rt)
 {
+
+	renderDepthBack();
+	renderRaytrace(rt);
+	renderColor(rt);
+	//auto ret = mFrame;
+	//int count = 0;
+	//for (int i = 0; i < count; ++i)
+	//{
+	//	ret = mSample->process(ret, ImageProcessing::DOWN);
+	//	ret = mGaussian->process(ret);
+	//}
+
+	//for (int i = 0; i < count; ++i)
+	//{
+	//	ret = mSample->process(ret, ImageProcessing::UP);
+	//}
+
+	auto quad = getQuad();
+	quad->setTextures({mFrame});
+	quad->setRenderTarget(rt);
+	quad->setDefaultPixelShader();
+	quad->setBlendColorAdd();
+	quad->draw();
+}
+
+void SSR::renderColor(Renderer::Texture2D::Ptr rt)
+{
 	if (mFrame.expired())
 		mFrame = getRenderer()->createTexture(rt->getDesc());
 
-	renderDepthBack();
+	auto quad = getQuad();
+	quad->setTextures({
+		rt,
+		getShaderResource("normal"),
+		getShaderResource("depth"),
+		{} ,
+		getShaderResource("material"),
+		mHitmap });
+	
+	quad->setPixelShader(mLighting);
+	quad->setRenderTarget(mFrame);
+	quad->setDefaultBlend(false);
+	quad->draw();
 
+}
+
+
+void SSR::renderRaytrace(Renderer::Texture2D::Ptr rt)
+{
 	auto cam = getScene()->createOrGetCamera("main");
 	Constants c;
 	c.view = cam->getViewMatrix().Transpose();
@@ -44,41 +94,24 @@ void SSR::render(Renderer::Texture2D::Ptr rt)
 	c.stepstride = getValue<float>("stepstride");
 	c.stridescale = getValue<float>("stridescale");
 	c.nearZ = cam->getNear();
+	c.jitter = getValue<float>("jitter");
 	mConstants.lock()->blit(c);
 
 	auto quad = getQuad();
 	quad->setConstant(mConstants);
-	quad->setRenderTarget(mFrame);
-	quad->setTextures({ 
+	quad->setRenderTarget(mHitmap);
+	quad->setTextures({
 		rt,
-		getShaderResource("normal"), 
-		getShaderResource("depth"), 
+		getShaderResource("normal"),
+		getShaderResource("depth"),
 		mDepthBack ,
-		getShaderResource("material")});
-	quad->setPixelShader(mPS);
+		getShaderResource("material") });
+	quad->setPixelShader(mRayTracing);
 	quad->setSamplers({ mLinear, mPoint });
 	quad->setDefaultViewport();
 	quad->setDefaultBlend(false);
 	quad->draw();
 
-	auto ret = mFrame;
-	int count = 0;
-	for (int i = 0; i < count; ++i)
-	{
-		ret = mSample->process(ret, ImageProcessing::DOWN);
-		ret = mGaussian->process(ret);
-	}
-
-	for (int i = 0; i < count; ++i)
-	{
-		ret = mSample->process(ret, ImageProcessing::UP);
-	}
-
-	quad->setTextures({ ret });
-	quad->setRenderTarget(rt);
-	quad->setDefaultPixelShader();
-	quad->setBlendColorAdd();
-	quad->draw();
 }
 
 void SSR::renderDepthBack()
