@@ -116,7 +116,7 @@ void Framework::initPipeline()
 	mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
 	mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
 	mPipeline->pushStage<SSR>();
-	mPipeline->pushStage<AO>(3.0f);
+	//mPipeline->pushStage<AO>(3.0f);
 	mPipeline->pushStage<SkyBox>("media/Ditch-River_2k.hdr", false);
 	//mPipeline->pushStage<HDR>();
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
@@ -159,7 +159,7 @@ void Framework::initScene()
 		for (int i = 0; i < textures.size(); ++i)
 			if (!textures[i].empty())
 				mat->setTexture(i, mRenderer->createTexture(textures[i]));
-		model->setMaterial(mat);
+		//model->setMaterial(mat);
 	}
 	{
 		std::vector<std::string> textures = {
@@ -180,10 +180,12 @@ void Framework::initScene()
 		model->setCastShadow(false);
 		model->attach(root);
 		Material::Ptr mat = Material::create();
-		for (int i = 0; i < textures.size(); ++i)
-			if (!textures[i].empty())
-				mat->setTexture(i, mRenderer->createTexture(textures[i]));
-		//model->setMaterial(mat);
+		mat->roughness = 0.2;
+
+		//for (int i = 0; i < textures.size(); ++i)
+			//if (!textures[i].empty())
+				//mat->setTexture(i, mRenderer->createTexture(textures[i]));
+		model->setMaterial(mat);
 	}
 
 

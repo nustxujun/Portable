@@ -205,7 +205,7 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 	ID3D11Resource* res;
 	mDepth->getView()->GetResource(&res);
 	getRenderer()->getContext()->CopySubresourceRegion(mDepthCopy->getTexture(), 0, 0, 0, 0, res, 0, NULL);
-
+	res->Release();
 	std::vector<Renderer::ShaderResource::Ptr> srvs = {
 	mAlbedo, mNormal, mDepthCopy ,
 	getShaderResource("material"),

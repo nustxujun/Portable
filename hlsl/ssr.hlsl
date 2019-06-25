@@ -6,7 +6,8 @@ Texture2D normalTex: register(t1);
 Texture2D depthTex:register(t2);
 Texture2D depthbackTex:register(t3);
 Texture2D materialTex:register(t4);
-Texture2D hitTex:register(t5);
+Texture2D noiseTex:register(t5);
+Texture2D hitTex:register(t6);
 
 SamplerState linearClamp: register(s0);
 SamplerState pointClamp : register(s1);
@@ -53,12 +54,14 @@ const static float MAX_STEPS = 1024 ;
 
 float4 raytracing(PS_INPUT Input) : SV_TARGET
 {
-	float reflectable = materialTex.SampleLevel(pointClamp, Input.Tex, 0).b * reflection;
-	if (reflectable == 0)
+	float4 material = materialTex.SampleLevel(pointClamp, Input.Tex, 0);
+	if (material.b * reflection == 0)
 		return 0;
 
+	float roughness = material.r;
 	float3 normal = normalTex.SampleLevel(pointClamp, Input.Tex,0).xyz;
 	normal = normalize(mul(normal, (float3x3)view));
+	
 	float depth = depthTex.SampleLevel(pointClamp, Input.Tex,0).r;
 	float4 projpos;
 	projpos.x = Input.Tex.x * 2.0f - 1.0f;
@@ -113,24 +116,24 @@ float4 raytracing(PS_INPUT Input) : SV_TARGET
 	float scale = 1.0f - min(1.0f, posInView.z * stridescale);
 	float stride = 1 + stepstride * scale;
 	float step = stride;
-	float4 pqk = float4(os, ov.z, ko);
-	float4 dpqk = (float4(es, ev.z, ke) - pqk) / numsteps;
+	float4 pqk = float4(ov, ko);
+	float4 dpqk = (float4(ev, ke) - pqk) / numsteps;
 
 
 	//float jitter = stride > 1 ? float(int(Input.Pos.x + Input.Pos.y) & 1) * 0.5f : 0;
-	pqk += dpqk * jitter;
+	//pqk += dpqk * jitter;
 
 
 	float maxsteps = min(numsteps, MAX_STEPS * stride);
 	while (step < maxsteps)
 	{
 		float stepsize = step * steplen ;
-		float2 coord = pqk.xy + delta * stepsize;
+		float2 coord = Input.Pos.xy + delta * stepsize;
 		if (coord.x > width || coord.x < 0 || coord.y > height || coord.y < 0)
 			return 0;
 
-		float2 sampledepth = (pqk.zw + dpqk.zw * step);
-		sampledepth.x /= sampledepth.y;
+		float4 samplepos = (pqk + dpqk * step);
+		samplepos.xyz /= samplepos.w;
 
 		uint3 intcoord = uint3(coord, 0);
 
@@ -139,12 +142,13 @@ float4 raytracing(PS_INPUT Input) : SV_TARGET
 		fdepth = toView(fdepth);
 		float bdepth = depthbackTex.Load(intcoord).r;
 		bdepth = toView(bdepth);
-		if (sampledepth.x > fdepth  && sampledepth.x < bdepth )
+		if (samplepos.z > fdepth  && samplepos.z < bdepth )
 		{
 			if (stride == 1)
 			{
 				coord /= float2(width, height);
-				float mask = 1;
+				float mask = pow( 1 - max(2* step / numsteps - 1 ,0)  ,2);
+				mask *= saturate(raylen - dot(samplepos.xyz - posInView.xyz, R));
 				float3 hitnormal = normalTex.Load(intcoord).xyz;
 				hitnormal = mul(hitnormal, (float3x3)view);
 				if (dot(hitnormal, R) > 0)
@@ -197,20 +201,21 @@ float4 filter(PS_INPUT Input):SV_TARGET
 	float4 color = 0;
 
 	float numweight = 0;
-	int size = 2;
+	int size = 1;
 	for (int x = -size ; x <= size ; ++x)
 	{
 		for (int y = -size; y <= size; ++y)
 		{
 			float4 hit = hitTex.SampleLevel(linearClamp, Input.Tex, 0, int2(x, y));
-			float3 hitPosinVS = toView(float3(hit.xyz));
+			float3 hitndc = float3(hit.x * 2 - 1, 1 - hit.y * 2, hit.z);
+			float3 hitPosinVS = toView(hitndc);
 
 			float3 V = normalize(-posInView.xyz);
 			float3 L = normalize(hitPosinVS - posInView.xyz);
 			float weight = SSR_BRDF(V,L, normal, roughness);
 
-			//color += colorTex.SampleLevel(linearClamp, hit.xy, 0) *  hit.w * weight;
-			color += dot(normal, L);
+			color += colorTex.SampleLevel(linearClamp, hit.xy, 0) *  hit.w * weight;
+			//color += dot(normal, L);
 			numweight += weight;
 		}
 	}

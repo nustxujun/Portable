@@ -28,7 +28,7 @@ void SSR::init()
 
 
 	mHitmap = getRenderer()->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
-
+	mBlueNoise = getRenderer()->createTexture("media/BlueNoise.tga", 1);
 }
 
 void SSR::render(Renderer::Texture2D::Ptr rt)
@@ -70,6 +70,7 @@ void SSR::renderColor(Renderer::Texture2D::Ptr rt)
 		getShaderResource("depth"),
 		{} ,
 		getShaderResource("material"),
+		mBlueNoise,
 		mHitmap });
 	
 	quad->setPixelShader(mLighting);
@@ -105,7 +106,8 @@ void SSR::renderRaytrace(Renderer::Texture2D::Ptr rt)
 		getShaderResource("normal"),
 		getShaderResource("depth"),
 		mDepthBack ,
-		getShaderResource("material") });
+		getShaderResource("material"),
+		mBlueNoise});
 	quad->setPixelShader(mRayTracing);
 	quad->setSamplers({ mLinear, mPoint });
 	quad->setDefaultViewport();
