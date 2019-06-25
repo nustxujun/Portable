@@ -3,16 +3,17 @@
 void SSR::init()
 {
 
-	set("raylength", { {"value", 1}, {"min", "0.1"}, {"max", "10"}, {"interval", "0.1"}, {"type","set"} });
-	set("stepstride", { {"value", 32}, {"min", "1"}, {"max", "32"}, {"interval", "1"}, {"type","set"} });
+	set("raylength", { {"value", 10}, {"min", "1"}, {"max", "1000"}, {"interval", "1"}, {"type","set"} });
+	set("stepstride", { {"value", 1}, {"min", "1"}, {"max", "32"}, {"interval", "1"}, {"type","set"} });
 	set("stridescale", { {"value", 1}, {"min", "0"}, {"max", "0.1"}, {"interval", "0.0001"}, {"type","set"} });
 	set("reflection", { {"value", 1}, {"min", "0"}, {"max", "1"}, {"interval", "0.1"}, {"type","set"} });
 	set("jitter", { {"value", 0}, {"min", "0"}, {"max", "1"}, {"interval", "0.01"}, {"type","set"} });
+	set("brdfBias", { {"value", 0}, {"min", "0"}, {"max", "1"}, {"interval", "0.01"}, {"type","set"} });
 
 
 	mName = "ssr";
 	mVS = getRenderer()->createVertexShader("hlsl/simple_vs.hlsl");
-	mRayTracing = getRenderer()->createPixelShader("hlsl/ssr.hlsl", "raytracing");
+	mRayTracing = getRenderer()->createPixelShader("hlsl/ssr.hlsl", "raymarch");
 	mLighting = getRenderer()->createPixelShader("hlsl/ssr.hlsl", "filter");
 	mConstants = getRenderer()->createBuffer(sizeof(Constants), D3D11_BIND_CONSTANT_BUFFER, 0, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 
@@ -90,12 +91,13 @@ void SSR::renderRaytrace(Renderer::Texture2D::Ptr rt)
 	c.invertProj = cam->getProjectionMatrix().Invert().Transpose();
 	c.reflection = getValue<float>("reflection");
 	c.raylength = getValue<float>("raylength");
-	c.width = getRenderer()->getWidth();
-	c.height = getRenderer()->getHeight();
+	c.screenSize = { (float)getRenderer()->getWidth(), (float)getRenderer()->getHeight() };
+	c.noiseSize = {(float) mBlueNoise->getDesc().Width, (float)mBlueNoise->getDesc().Height };
+	c.jitter = { 0,0 };
 	c.stepstride = getValue<float>("stepstride");
 	c.stridescale = getValue<float>("stridescale");
 	c.nearZ = cam->getNear();
-	c.jitter = getValue<float>("jitter");
+	c.brdfBias = getValue<float>("brdfBias");
 	mConstants.lock()->blit(c);
 
 	auto quad = getQuad();

@@ -11,14 +11,15 @@ class SSR :public Pipeline::Stage
 		Matrix view;
 		Matrix proj;
 		Matrix invertProj;
+		Vector2 jitter;
+		Vector2 screenSize;
+		Vector2 noiseSize;
 		float reflection;
 		float raylength;
-		float width;
-		float height;
 		float stepstride;
 		float stridescale;
 		float nearZ;
-		float jitter;
+		float brdfBias;
 	};
 
 	struct MatrixConstants
