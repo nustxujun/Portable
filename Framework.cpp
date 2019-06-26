@@ -159,7 +159,7 @@ void Framework::initScene()
 		for (int i = 0; i < textures.size(); ++i)
 			if (!textures[i].empty())
 				mat->setTexture(i, mRenderer->createTexture(textures[i]));
-		model->setMaterial(mat);
+		//model->setMaterial(mat);
 	}
 	{
 		std::vector<std::string> textures = {
@@ -185,7 +185,7 @@ void Framework::initScene()
 		for (int i = 0; i < textures.size(); ++i)
 			if (!textures[i].empty())
 				mat->setTexture(i, mRenderer->createTexture(textures[i]));
-		model->setMaterial(mat);
+		//model->setMaterial(mat);
 	}
 
 

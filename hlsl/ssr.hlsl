@@ -237,14 +237,10 @@ void raymarch(PS_INPUT Input, out float4 hitResult: SV_Target0/*, out float4 mas
 		if (dot(hitnormal, ray_dir_vs) > 0)
 			return ;
 
-		hitResult = float4(hituv.xy, hitmask, H.a);
-	}
-	else
-	{
-		hitResult = 0;
 	}
 
-	//mask = hitmask;
+	hitResult = float4(hituv.xy, hitmask, H.a);
+
 }
 
 
@@ -257,8 +253,16 @@ float SSR_BRDF(float3 V, float3 L, float3 N, float Roughness)
 	float D = DistributionGGX(N,H,Roughness);
 	float G = GeometrySmith(N,V,L, Roughness);
 
-	return max(0, D * G);
+	return D * G;
 }
+static const int2 offset[5] = { 
+	int2(0, 0),
+	int2(0 ,-1),
+	int2(1, 0),
+	int2(-1,0),
+	int2(0,1),
+	
+};
 
 float4 filter(PS_INPUT Input) :SV_TARGET
 {
@@ -279,29 +283,27 @@ float4 filter(PS_INPUT Input) :SV_TARGET
 	float4 color = 0;
 
 	float numweight = 0;
-	int size = 2;
-	for (int x = -size ; x <= size ; ++x)
+	int size = 0;
+	
+	for (int i = 0; i < 5; ++i)
 	{
-		for (int y = -size; y <= size; ++y)
-		{
-			float4 hit = hitTex.SampleLevel(pointClamp, Input.Tex, 0, int2(x, y));
-			float2 uv = hit.xy / screenSize;
-			float depth = depthTex.Load(uint3(hit.xy, 0)).r;
-			float3 hitndc = float3(uv.x * 2 - 1, 1 - uv.y * 2, depth);
-			float3 hitPosinVS = toView(hitndc);
+		int x = offset[i].x;
+		int y = offset[i].y;
+		float4 hit = hitTex.SampleLevel(pointClamp, Input.Tex, 0, int2(x, y));
+		float2 uv = hit.xy / screenSize;
+		float depth = depthTex.Load(uint3(hit.xy, 0)).r;
+		float3 hitndc = float3(uv.x * 2 - 1, 1 - uv.y * 2, depth);
+		float3 hitPosinVS = toView(hitndc);
 
-			float3 V = normalize(-posInView.xyz);
-			float3 L = normalize(hitPosinVS - posInView.xyz);
-			float weight = SSR_BRDF(V,L, normal, roughness) / max(1e-5, hit.a);
-			weight = 1;
+		float3 V = normalize(-posInView.xyz);
+		float3 L = normalize(hitPosinVS - posInView.xyz);
+		float weight = SSR_BRDF(V, L, normal, roughness) / max(1e-5, hit.a);
 
-			color.rgb += colorTex.SampleLevel(pointClamp, uv, 0).rgb  * weight;
-			color.a += hit.z * weight;
-			//color += dot(normal, L);
-			numweight += weight;
-		}
+		color.rgb += colorTex.SampleLevel(pointClamp, uv, 0).rgb * weight;
+		color.a += hit.z * weight;
+		//color += dot(normal, L);
+		numweight += weight;
 	}
-
 	if (numweight == 0)
 		return 0;
 	color /= numweight;

@@ -70,8 +70,8 @@ void GBuffer::render(Renderer::Texture2D::Ptr rt)
 		e->getVariable("World")->AsMatrix()->SetMatrix((const float*)&r.tranformation);
 		e->getVariable("View")->AsMatrix()->SetMatrix((const float*)&cam->getViewMatrix());
 		e->getVariable("Projection")->AsMatrix()->SetMatrix((const float*)&cam->getProjectionMatrix());
-		e->getVariable("roughness")->AsScalar()->SetFloat(r.material->roughness);
-		e->getVariable("metallic")->AsScalar()->SetFloat(r.material->metallic);
+		e->getVariable("roughness")->AsScalar()->SetFloat(r.material->roughness * getValue<float>("roughness"));
+		e->getVariable("metallic")->AsScalar()->SetFloat(r.material->metallic * getValue<float>("metallic"));
 		e->getVariable("reflection")->AsScalar()->SetFloat(r.material->reflection);
 
 		e->getVariable("campos")->AsVector()->SetFloatVector((const float*)&cam->getNode()->getRealPosition());

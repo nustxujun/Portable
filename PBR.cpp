@@ -10,7 +10,7 @@ PBR::PBR(
 	Pipeline::Stage(r, s, q,set, p)
 {
 	mName = "pbr lighting";
-	this->set("roughness", { {"type","set"}, {"value",1.0f},{"min","0.01"},{"max",1.0f},{"interval", "0.01"} });
+	this->set("roughness", { {"type","set"}, {"value",0},{"min","0.01"},{"max",1.0f},{"interval", "0.01"} });
 	this->set("metallic", { {"type","set"}, {"value",0.9f},{"min","0"},{"max",1.0f},{"interval", "0.01"} });
 	this->set("ambient", { {"type","set"}, {"value",0.5},{"min","0"},{"max","1"},{"interval", "0.001"} });
 
@@ -259,8 +259,8 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 	constants.invertViewPorj = (cam->getViewMatrix() * cam->getProjectionMatrix()).Invert().Transpose();
 	constants.view = cam->getViewMatrix().Invert().Transpose();
 
-	constants.roughness = getValue<float>("roughness");
-	constants.metallic = getValue<float>("metallic");
+	constants.roughness = 1;
+	constants.metallic = 1;
 	constants.width = renderer->getWidth();
 	constants.height = renderer->getHeight();
 	constants.campos = cam->getNode()->getRealPosition();
