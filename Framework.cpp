@@ -159,7 +159,7 @@ void Framework::initScene()
 		for (int i = 0; i < textures.size(); ++i)
 			if (!textures[i].empty())
 				mat->setTexture(i, mRenderer->createTexture(textures[i]));
-		//model->setMaterial(mat);
+		model->setMaterial(mat);
 	}
 	{
 		std::vector<std::string> textures = {
@@ -180,11 +180,11 @@ void Framework::initScene()
 		model->setCastShadow(false);
 		model->attach(root);
 		Material::Ptr mat = Material::create();
-		mat->roughness = 0.2;
+		//mat->roughness = 0.2;
 
-		//for (int i = 0; i < textures.size(); ++i)
-			//if (!textures[i].empty())
-				//mat->setTexture(i, mRenderer->createTexture(textures[i]));
+		for (int i = 0; i < textures.size(); ++i)
+			if (!textures[i].empty())
+				mat->setTexture(i, mRenderer->createTexture(textures[i]));
 		model->setMaterial(mat);
 	}
 

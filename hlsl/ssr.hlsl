@@ -81,7 +81,7 @@ const static float MAX_STEPS = 1024 ;
 
 bool trace(float3 origin, float3 dir, float jitter, out float3 hituv, out float numsteps, out float3 hitpoint)
 {
-	float raylen = (origin.z + dir.z * raylength) > nearZ ? ((nearZ - origin.z) / dir.z) : raylength;
+	float raylen = (origin.z + dir.z * raylength) < nearZ ? ((nearZ - origin.z) / dir.z) : raylength;
 	float3 endpoint = dir * raylen + origin;
 	float4 H0 = mul(float4(origin, 1), proj);
 	float4 H1 = mul(float4(endpoint, 1), proj);
@@ -91,8 +91,8 @@ bool trace(float3 origin, float3 dir, float jitter, out float3 hituv, out float 
 	H0.xy = float2(H0.x * k0 *0.5 + 0.5, 0.5 - H0.y* k0 * 0.5) * screenSize;
 	H1.xy = float2(H1.x * k1 *0.5 + 0.5, 0.5 - H1.y* k1 * 0.5) * screenSize;
 
-	float2 P0 = H0.xy * k0;
-	float2 P1 = H1.xy * k1;
+	float2 P0 = H0.xy ;
+	float2 P1 = H1.xy ;
 	float3 Q0 = origin * k0;
 	float3 Q1 = endpoint * k1;
 
@@ -155,8 +155,13 @@ bool trace(float3 origin, float3 dir, float jitter, out float3 hituv, out float 
 	numsteps = 0;
 	hituv = 0;
 	bool stop = false;
-	for (; (P.x * stepdir) <= end && numsteps < MAX_STEPS && !stop; P += dP, Q.z += dQ.z, k += dk, numsteps += 1)
+	for (; (P.x * stepdir) <= end && numsteps < MAX_STEPS && !stop;/* P += dP, Q.z += dQ.z, k +=dk, numsteps += 1*/ )
 	{
+		numsteps += 1;
+
+		P = P0 + dP * numsteps;
+		Q.z = Q0.z + dQ.z * numsteps;
+		k = k0 + dk * numsteps; 
 		rayZMin = prevZMaxEstimate;
 		rayZMax = (dQ.z * 0.5 + Q.z) / (dk * 0.5 + k);
 		prevZMaxEstimate = rayZMax;
@@ -167,13 +172,13 @@ bool trace(float3 origin, float3 dir, float jitter, out float3 hituv, out float 
 			rayZMax = temp;
 		}
 
-		hituv.xy = permute ? P.yx : P;
-		float fdepth = depthTex.Load(uint3(hituv.xy,0)).r;
+		hituv.xy = (permute ? P.yx : P)  ;
+		float fdepth = depthTex.Load(int3(hituv.xy,0)).r;
 		fdepth = toView(fdepth);
-		float bdepth = depthbackTex.Load(uint3(hituv.xy, 0)).r;
+		float bdepth = depthbackTex.Load(int3(hituv.xy, 0)).r;
 		bdepth = toView(bdepth);
 
-		stop = rayZMax >= fdepth && rayZMax <= bdepth;
+		stop = rayZMax > fdepth + 0.1f && rayZMax < bdepth;
 	}
 	P -= dP, Q.z -= dQ.z, k -= dk;
 	Q.xy += dQ.xy * numsteps;
@@ -200,39 +205,45 @@ void raymarch(PS_INPUT Input, out float4 hitResult: SV_Target0/*, out float4 mas
 	
 	float3 ray_origin_vs = toView(float3(uv.x * 2.0f - 1.0f, 1.0f - uv.y * 2.0f, depth));
 	float ray_bump = max(-0.01f * ray_origin_vs.z, 0.001f);
-	float2 Xi = noiseTex.SampleLevel(pointClamp, float2(uv + jitter) * screenSize / noiseSize, 0).rg;
+	int2 noiseuv = int2((uv + jitter) * screenSize) % int2(noiseSize);
+	float2 Xi = noiseTex.Load( int3(noiseuv, 0)).rg;
+
 	Xi.y = lerp(Xi.y, 0.0f, brdfBias);
 
 	float4 H = ImportanceSampleGGX(Xi, roughness);
 	H.xyz = mulTBN(H.xyz, N);
-	H = float4(N, 1);
+	//H = float4(N, 1);
 	
-	float3 ray_dir_vs = reflect(normalize(ray_origin_vs), H.xyz);
+	float3 ray_dir_vs = normalize(reflect(normalize(ray_origin_vs), H.xyz));
 
-	if (ray_dir_vs.z > 0)
-	{
-		return ;
-	}
+	//if (ray_dir_vs.z > 0)
+	//{
+	//	return ;
+	//}
 
 	float3 hitpoint = 0;
 	float3 hituv = 0;
 	float numsteps = 0;
 	float jitterValue = Xi.x + Xi.y;
-	bool hit = trace(ray_origin_vs /*+ N * ray_bump*/, ray_dir_vs, jitterValue,hituv, numsteps, hitpoint);
+	bool hit = trace(ray_origin_vs + N * ray_bump, ray_dir_vs, jitterValue,hituv, numsteps, hitpoint);
 	float hitmask = 0;
 	if (hit)
 	{ 
 		hitmask = pow(1 - max(2 * numsteps / MAX_STEPS - 1, 0), 2); //attenuate half part
 		hitmask *= saturate(raylength - dot(hitpoint - ray_origin_vs, ray_dir_vs));// attenuate the end
 	
-		float3 hitnormal = normalTex.SampleLevel(pointClamp, hituv.xy, 0).xyz;
+		float3 hitnormal = normalTex.Load(int3(hituv.xy, 0)).xyz;
 		hitnormal = normalize(mul(hitnormal, (float3x3)view));
 		if (dot(hitnormal, ray_dir_vs) > 0)
 			return ;
+
+		hitResult = float4(hituv.xy, hitmask, H.a);
+	}
+	else
+	{
+		hitResult = 0;
 	}
 
-
-	hitResult = float4(hituv.xy, hitmask, H.a);
 	//mask = hitmask;
 }
 
@@ -249,8 +260,9 @@ float SSR_BRDF(float3 V, float3 L, float3 N, float Roughness)
 	return max(0, D * G);
 }
 
-float4 filter(PS_INPUT Input):SV_TARGET
+float4 filter(PS_INPUT Input) :SV_TARGET
 {
+
 	float3 normal = normalTex.SampleLevel(pointClamp, Input.Tex,0).xyz;
 	normal = normalize(mul(normal, (float3x3)view));
 	float depth = depthTex.SampleLevel(pointClamp, Input.Tex,0).r;
@@ -267,26 +279,31 @@ float4 filter(PS_INPUT Input):SV_TARGET
 	float4 color = 0;
 
 	float numweight = 0;
-	int size = 1;
+	int size = 2;
 	for (int x = -size ; x <= size ; ++x)
 	{
 		for (int y = -size; y <= size; ++y)
 		{
-			float4 hit = hitTex.SampleLevel(linearClamp, Input.Tex, 0, int2(x, y));
+			float4 hit = hitTex.SampleLevel(pointClamp, Input.Tex, 0, int2(x, y));
+			float2 uv = hit.xy / screenSize;
 			float depth = depthTex.Load(uint3(hit.xy, 0)).r;
-			float3 hitndc = float3(hit.x * 2 - 1, 1 - hit.y * 2, depth);
+			float3 hitndc = float3(uv.x * 2 - 1, 1 - uv.y * 2, depth);
 			float3 hitPosinVS = toView(hitndc);
 
 			float3 V = normalize(-posInView.xyz);
 			float3 L = normalize(hitPosinVS - posInView.xyz);
 			float weight = SSR_BRDF(V,L, normal, roughness) / max(1e-5, hit.a);
+			weight = 1;
 
-			color += colorTex.SampleLevel(linearClamp, hit.xy, 0) *  hit.z * weight;
+			color.rgb += colorTex.SampleLevel(pointClamp, uv, 0).rgb  * weight;
+			color.a += hit.z * weight;
 			//color += dot(normal, L);
 			numweight += weight;
 		}
 	}
 
+	if (numweight == 0)
+		return 0;
 	color /= numweight;
 	return color;
 }
