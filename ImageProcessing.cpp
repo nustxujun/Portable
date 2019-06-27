@@ -27,6 +27,20 @@ Renderer::Texture2D::Ptr ImageProcessing::createOrGet(Renderer::Texture2D::Ptr p
 
 	desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
 
+	if (desc.BindFlags & D3D11_BIND_DEPTH_STENCIL)
+	{
+		switch (desc.Format)
+		{
+		case DXGI_FORMAT_R32_TYPELESS: desc.Format = DXGI_FORMAT_R32_FLOAT; break;
+		case DXGI_FORMAT_R24G8_TYPELESS: desc.Format = DXGI_FORMAT_R32_FLOAT; break;
+		case DXGI_FORMAT_R16_TYPELESS: desc.Format = DXGI_FORMAT_R16_FLOAT; break;
+		case DXGI_FORMAT_R8_TYPELESS: desc.Format = DXGI_FORMAT_R8_UNORM; break;
+		default:
+			abort();
+			break;
+		}
+		desc.BindFlags &= ~D3D11_BIND_DEPTH_STENCIL;
+	}
 	if (mType == RT_TEMP)
 	{
 		size_t hash = Common::hash(desc);

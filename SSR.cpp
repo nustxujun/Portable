@@ -4,7 +4,7 @@ void SSR::init()
 {
 
 	set("raylength", { {"value", 10}, {"min", "1"}, {"max", "1000"}, {"interval", "1"}, {"type","set"} });
-	set("stepstride", { {"value", 1}, {"min", "1"}, {"max", "32"}, {"interval", "1"}, {"type","set"} });
+	set("stepstride", { {"value", 32}, {"min", "1"}, {"max", "32"}, {"interval", "1"}, {"type","set"} });
 	set("stridescale", { {"value", 1}, {"min", "0"}, {"max", "0.1"}, {"interval", "0.0001"}, {"type","set"} });
 	set("reflection", { {"value", 1}, {"min", "0"}, {"max", "1"}, {"interval", "0.1"}, {"type","set"} });
 	set("jitter", { {"value", 0}, {"min", "0"}, {"max", "1"}, {"interval", "0.01"}, {"type","set"} });
@@ -120,7 +120,7 @@ void SSR::renderRaytrace(Renderer::Texture2D::Ptr rt)
 	quad->setTextures({
 		rt,
 		getShaderResource("normal"),
-		getShaderResource("depth"),
+		mSample->process(getTexture2D("depth"),ImageProcessing::DOWN),
 		mDepthBack ,
 		getShaderResource("material"),
 		mBlueNoise});

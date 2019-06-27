@@ -41,6 +41,8 @@ public:
 		VIEW_METHOD(DepthStencil);
 		VIEW_METHOD(UnorderedAccess);
 		VIEW_METHOD(Buffer);
+		VIEW_METHOD(Texture2D);
+
 	protected:
 		std::string mName = "Default Stage";
 	private:
@@ -98,14 +100,14 @@ public:
 	void addDepthStencil(const std::string& name, Renderer::DepthStencil::Ptr ptr);
 	void addUnorderedAccess(const std::string& name, Renderer::UnorderedAccess::Ptr ptr);
 	void addBuffer(const std::string& name, Renderer::Buffer::Ptr ptr);
-
+	void addTexture2D(const std::string& name, Renderer::Texture2D::Ptr ptr);
 
 	Renderer::ShaderResource::Ptr getShaderResource(const std::string& name);
 	Renderer::RenderTarget::Ptr getRenderTarget(const std::string& name);
 	Renderer::DepthStencil::Ptr getDepthStencil(const std::string& name);
 	Renderer::UnorderedAccess::Ptr getUnorderedAccess(const std::string& name);
 	Renderer::Buffer::Ptr getBuffer(const std::string& name);
-
+	Renderer::Texture2D::Ptr getTexture2D(const std::string& name);
 private:
 	static void report(const std::string& msg);
 private:
@@ -122,5 +124,6 @@ private:
 	std::unordered_map<std::string, Renderer::DepthStencil::Ptr> mDepthStencils;
 	std::unordered_map<std::string, Renderer::UnorderedAccess::Ptr> mUnorderedAccesses;
 	std::unordered_map<std::string, Renderer::Buffer::Ptr> mBuffers;
+	std::unordered_map<std::string, Renderer::Texture2D::Ptr> mTexture2Ds;
 
 };

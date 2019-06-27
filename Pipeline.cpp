@@ -86,6 +86,11 @@ void Pipeline::addBuffer(const std::string & name, Renderer::Buffer::Ptr ptr)
 	mBuffers[name] = ptr;
 }
 
+void Pipeline::addTexture2D(const std::string & name, Renderer::Texture2D::Ptr ptr)
+{
+	mTexture2Ds[name] = ptr;
+}
+
 #define CHECK_EXISTED(C) if (C.find(name) == C.end()) report( name + " is not existed in "#C); 
 
 
@@ -121,6 +126,13 @@ Renderer::Buffer::Ptr Pipeline::getBuffer(const std::string& name)
 	CHECK_EXISTED(mBuffers)
 
 	return mBuffers[name];
+}
+
+Renderer::Texture2D::Ptr Pipeline::getTexture2D(const std::string & name)
+{
+	CHECK_EXISTED(mTexture2Ds)
+
+	return mTexture2Ds[name];
 }
 
 void Pipeline::report(const std::string & msg)

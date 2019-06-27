@@ -243,32 +243,29 @@ bool trace(float3 origin, float3 dir, float jitter, out float3 hituv, out float 
 	hituv = 0;
 	hitpoint = 0;
 	float stride = stepstride;
+	float2 invsize = 1.0f / screenSize;
 	while (numsteps < maxsteps)
 	{
 		float curstep = numsteps + stride;
 		hituv.xy = P0 + dP * curstep;
 		hitpoint = (Q0 + dQ * curstep) / (k0 + dk * curstep);
 		float depth = hitpoint.z;
-		float fdepth = depthTex.Load(int3(hituv.xy,0)).r;
+		float fdepth = depthTex.SampleLevel(pointClamp, hituv * invsize,0).r;
 		fdepth = toView(fdepth);
-		float bdepth = depthbackTex.Load(int3(hituv.xy, 0)).r;
+		float bdepth = depthbackTex.SampleLevel(pointClamp, hituv* invsize,0).r;
 		bdepth = toView(bdepth);
 
 		if (depth > fdepth )
 		{
+			if (depth < bdepth)
+			{
+				numsteps += stride;
+				return true;
+			}
 			if (stride <= 1)
-			{
-				if (depth < bdepth)
-				{
-					numsteps += 1;
-					return true;
-				}
 				numsteps = curstep;
-			}
 			else
-			{
 				stride = max(1, stride / 2);
-			}
 		}
 		else
 		{

@@ -76,7 +76,7 @@ void Framework::initPipeline()
 	auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R24G8_TYPELESS, true);
 	mPipeline->addShaderResource("depth", depth);
 	mPipeline->addDepthStencil("depth", depth);
-
+	mPipeline->addTexture2D("depth", depth);
 	auto material = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	mPipeline->addShaderResource("material", material);
 	mPipeline->addRenderTarget("material", material);
