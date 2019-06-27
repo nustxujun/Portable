@@ -10,8 +10,8 @@ PBR::PBR(
 	Pipeline::Stage(r, s, q,set, p)
 {
 	mName = "pbr lighting";
-	this->set("roughness", { {"type","set"}, {"value",0},{"min","0.01"},{"max",1.0f},{"interval", "0.01"} });
-	this->set("metallic", { {"type","set"}, {"value",0.9f},{"min","0"},{"max",1.0f},{"interval", "0.01"} });
+	this->set("roughness", { {"type","set"}, {"value",0.5},{"min","0.01"},{"max",1.0f},{"interval", "0.01"} });
+	this->set("metallic", { {"type","set"}, {"value",0.5f},{"min","0"},{"max",1.0f},{"interval", "0.01"} });
 	this->set("ambient", { {"type","set"}, {"value",0.5},{"min","0"},{"max","1"},{"interval", "0.001"} });
 
 

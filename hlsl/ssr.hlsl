@@ -79,6 +79,114 @@ float4 ImportanceSampleGGX(float2 E, float Roughness) {
 
 const static float MAX_STEPS = 1024 ;
 
+//bool trace(float3 origin, float3 dir, float jitter, out float3 hituv, out float numsteps, out float3 hitpoint)
+//{
+//	float raylen = (origin.z + dir.z * raylength) < nearZ ? ((nearZ - origin.z) / dir.z) : raylength;
+//	float3 endpoint = dir * raylen + origin;
+//	float4 H0 = mul(float4(origin, 1), proj);
+//	float4 H1 = mul(float4(endpoint, 1), proj);
+//
+//	float k0 = 1 / H0.w;
+//	float k1 = 1 / H1.w;
+//	H0.xy = float2(H0.x * k0 *0.5 + 0.5, 0.5 - H0.y* k0 * 0.5) * screenSize;
+//	H1.xy = float2(H1.x * k1 *0.5 + 0.5, 0.5 - H1.y* k1 * 0.5) * screenSize;
+//
+//	float2 P0 = H0.xy ;
+//	float2 P1 = H1.xy ;
+//	float3 Q0 = origin * k0;
+//	float3 Q1 = endpoint * k1;
+//
+//
+//	float yMax = screenSize.y - 0.5;
+//	float yMin = 0.5;
+//	float xMax = screenSize.x - 0.5;
+//	float xMin = 0.5;
+//	float alpha = 0;
+//
+//	if (P1.y > yMax || P1.y < yMin)
+//	{
+//		float yClip = (P1.y > yMax) ? yMax : yMin;
+//		float yAlpha = (P1.y - yClip) / (P1.y - P0.y);
+//		alpha = yAlpha;
+//	}
+//	if (P1.x > xMax || P1.x < xMin)
+//	{
+//		float xClip = (P1.x > xMax) ? xMax : xMin;
+//		float xAlpha = (P1.x - xClip) / (P1.x - P0.x);
+//		alpha = max(alpha, xAlpha);
+//	}
+//
+//	P1 = lerp(P1, P0, alpha);
+//	k1 = lerp(k1, k0, alpha);
+//	Q1 = lerp(Q1, Q0, alpha);
+//
+//
+//	P1 = dot(P1 - P0, P1 - P0) < 0.0001 ? P0 + 0.01 : P1;
+//
+//	float2 delta = P1 - P0;
+//	bool permute = false;
+//	if (abs(delta.x) < abs(delta.y))
+//	{
+//		permute = true;
+//		delta = delta.yx;
+//		P1 = P1.yx;
+//		P0 = P0.yx;
+//	}
+//
+//	float stepdir = sign(delta.x);
+//	float invdx = stepdir / delta.x;
+//	float2 dP = float2(stepdir, invdx * delta.y);
+//	float3 dQ = (Q1 - Q0) * invdx;
+//	float dk = (k1 - k0) * invdx;
+//
+//	dP *= stepstride;
+//	dQ *= stepstride;
+//	dk *= stepstride;
+//	P0 += dP * jitter;
+//	Q0 += dQ * jitter;
+//	k0 += dk * jitter;
+//
+//	float3 Q = Q0;
+//	float k = k0;
+//	float prevZMaxEstimate = origin.z;
+//	float rayZMax = prevZMaxEstimate, rayZMin = prevZMaxEstimate;
+//	float end = P1.x * stepdir;
+//	float2 P = P0;
+//	numsteps = 0;
+//	hituv = 0;
+//	bool stop = false;
+//	for (; (P.x * stepdir) <= end && numsteps < MAX_STEPS && !stop;/* P += dP, Q.z += dQ.z, k +=dk, numsteps += 1*/ )
+//	{
+//		numsteps += 1;
+//
+//		P = P0 + dP * numsteps;
+//		Q.z = Q0.z + dQ.z * numsteps;
+//		k = k0 + dk * numsteps; 
+//		rayZMin = prevZMaxEstimate;
+//		rayZMax = (dQ.z * 0.5 + Q.z) / (dk * 0.5 + k);
+//		//rayZMax = (Q.z + dQ.z) / (k + dk);
+//		prevZMaxEstimate = rayZMax;
+//
+//		if (rayZMin > rayZMax) {
+//			float temp = rayZMin;
+//			rayZMin = rayZMax;
+//			rayZMax = temp;
+//		}
+//
+//		hituv.xy = (permute ? P.yx : P)  ;
+//		float fdepth = depthTex.Load(int3(hituv.xy,0)).r;
+//		fdepth = toView(fdepth);
+//		float bdepth = depthbackTex.Load(int3(hituv.xy, 0)).r;
+//		bdepth = toView(bdepth);
+//
+//		stop = rayZMin > fdepth  && rayZMin < bdepth && rayZMin  < (fdepth + 1);
+//	}
+//	P -= dP, Q.z -= dQ.z, k -= dk;
+//	Q.xy += dQ.xy * numsteps;
+//	hitpoint = Q * (1 / k);
+//	return stop;
+//}
+
 bool trace(float3 origin, float3 dir, float jitter, out float3 hituv, out float numsteps, out float3 hitpoint)
 {
 	float raylen = (origin.z + dir.z * raylength) < nearZ ? ((nearZ - origin.z) / dir.z) : raylength;
@@ -88,11 +196,9 @@ bool trace(float3 origin, float3 dir, float jitter, out float3 hituv, out float 
 
 	float k0 = 1 / H0.w;
 	float k1 = 1 / H1.w;
-	H0.xy = float2(H0.x * k0 *0.5 + 0.5, 0.5 - H0.y* k0 * 0.5) * screenSize;
-	H1.xy = float2(H1.x * k1 *0.5 + 0.5, 0.5 - H1.y* k1 * 0.5) * screenSize;
 
-	float2 P0 = H0.xy ;
-	float2 P1 = H1.xy ;
+	float2 P0 = toScreen(H0 * k0);
+	float2 P1 = toScreen(H1 * k1);
 	float3 Q0 = origin * k0;
 	float3 Q1 = endpoint * k1;
 
@@ -120,70 +226,58 @@ bool trace(float3 origin, float3 dir, float jitter, out float3 hituv, out float 
 	k1 = lerp(k1, k0, alpha);
 	Q1 = lerp(Q1, Q0, alpha);
 
-
 	P1 = dot(P1 - P0, P1 - P0) < 0.0001 ? P0 + 0.01 : P1;
 
+
 	float2 delta = P1 - P0;
-	bool permute = false;
-	if (abs(delta.x) < abs(delta.y))
-	{
-		permute = true;
-		delta = delta.yx;
-		P1 = P1.yx;
-		P0 = P0.yx;
-	}
-
-	float stepdir = sign(delta.x);
-	float invdx = stepdir / delta.x;
-	float2 dP = float2(stepdir, invdx * delta.y);
-	float3 dQ = (Q1 - Q0) * invdx;
-	float dk = (k1 - k0) * invdx;
-
-	dP *= stepstride;
-	dQ *= stepstride;
-	dk *= stepstride;
-	P0 += dP * jitter;
-	Q0 += dQ * jitter;
-	k0 += dk * jitter;
-
-	float3 Q = Q0;
-	float k = k0;
-	float prevZMaxEstimate = origin.z;
-	float rayZMax = prevZMaxEstimate, rayZMin = prevZMaxEstimate;
-	float end = P1.x * stepdir;
-	float2 P = P0;
+	float2 stepdir = normalize(delta);
+	float steplen = min(abs(1 / stepdir.x), abs(1 / stepdir.y));
+	delta /= steplen;
+	float maxsteps = max(abs(delta.x), abs(delta.y));
+	float invsteps = 1 / maxsteps;
+	float2 dP = (P1 - P0)  * invsteps;
+	float3 dQ = (Q1 - Q0) * invsteps;
+	float dk = (k1 - k0) * invsteps;
 	numsteps = 0;
+	maxsteps = min(maxsteps, MAX_STEPS);
 	hituv = 0;
-	bool stop = false;
-	for (; (P.x * stepdir) <= end && numsteps < MAX_STEPS && !stop;/* P += dP, Q.z += dQ.z, k +=dk, numsteps += 1*/ )
+	hitpoint = 0;
+	float stride = stepstride;
+	while (numsteps < maxsteps)
 	{
-		numsteps += 1;
-
-		P = P0 + dP * numsteps;
-		Q.z = Q0.z + dQ.z * numsteps;
-		k = k0 + dk * numsteps; 
-		rayZMin = prevZMaxEstimate;
-		rayZMax = (dQ.z * 0.5 + Q.z) / (dk * 0.5 + k);
-		prevZMaxEstimate = rayZMax;
-
-		if (rayZMin > rayZMax) {
-			float temp = rayZMin;
-			rayZMin = rayZMax;
-			rayZMax = temp;
-		}
-
-		hituv.xy = (permute ? P.yx : P)  ;
+		float curstep = numsteps + stride;
+		hituv.xy = P0 + dP * curstep;
+		hitpoint = (Q0 + dQ * curstep) / (k0 + dk * curstep);
+		float depth = hitpoint.z;
 		float fdepth = depthTex.Load(int3(hituv.xy,0)).r;
 		fdepth = toView(fdepth);
 		float bdepth = depthbackTex.Load(int3(hituv.xy, 0)).r;
 		bdepth = toView(bdepth);
 
-		stop = rayZMax > fdepth + 0.1f && rayZMax < bdepth;
+		if (depth > fdepth )
+		{
+			if (stride <= 1)
+			{
+				if (depth < bdepth)
+				{
+					numsteps += 1;
+					return true;
+				}
+				numsteps = curstep;
+			}
+			else
+			{
+				stride = max(1, stride / 2);
+			}
+		}
+		else
+		{
+			numsteps = curstep;
+			stride = min(stepstride, stride * 2);
+		}
 	}
-	P -= dP, Q.z -= dQ.z, k -= dk;
-	Q.xy += dQ.xy * numsteps;
-	hitpoint = Q * (1 / k);
-	return stop;
+
+	return false;
 }
 
 
@@ -205,14 +299,14 @@ void raymarch(PS_INPUT Input, out float4 hitResult: SV_Target0/*, out float4 mas
 	
 	float3 ray_origin_vs = toView(float3(uv.x * 2.0f - 1.0f, 1.0f - uv.y * 2.0f, depth));
 	float ray_bump = max(-0.01f * ray_origin_vs.z, 0.001f);
-	int2 noiseuv = int2((uv + jitter) * screenSize) % int2(noiseSize);
+	int2 noiseuv = uint2((uv + jitter) * screenSize) % uint2(noiseSize);
 	float2 Xi = noiseTex.Load( int3(noiseuv, 0)).rg;
 
 	Xi.y = lerp(Xi.y, 0.0f, brdfBias);
 
 	float4 H = ImportanceSampleGGX(Xi, roughness);
 	H.xyz = mulTBN(H.xyz, N);
-	//H = float4(N, 1);
+	//H = float4(N, 0);
 	
 	float3 ray_dir_vs = normalize(reflect(normalize(ray_origin_vs), H.xyz));
 
@@ -225,7 +319,7 @@ void raymarch(PS_INPUT Input, out float4 hitResult: SV_Target0/*, out float4 mas
 	float3 hituv = 0;
 	float numsteps = 0;
 	float jitterValue = Xi.x + Xi.y;
-	bool hit = trace(ray_origin_vs + N * ray_bump, ray_dir_vs, jitterValue,hituv, numsteps, hitpoint);
+	bool hit = trace(ray_origin_vs/* + N * ray_bump*/, ray_dir_vs, jitterValue,hituv, numsteps, hitpoint);
 	float hitmask = 0;
 	if (hit)
 	{ 
@@ -255,13 +349,11 @@ float SSR_BRDF(float3 V, float3 L, float3 N, float Roughness)
 
 	return D * G;
 }
-static const int2 offset[5] = { 
-	int2(0, 0),
-	int2(0 ,-1),
-	int2(1, 0),
-	int2(-1,0),
-	int2(0,1),
-	
+static const float2 offset[4] = { 
+	float2(0, 0),
+	float2(2, -2),
+	float2(-2, -2),
+	float2(0, 2)
 };
 
 float4 filter(PS_INPUT Input) :SV_TARGET
@@ -279,17 +371,21 @@ float4 filter(PS_INPUT Input) :SV_TARGET
 	float4 posInView = mul(projpos, invertProj);
 	posInView /= posInView.w;
 
+	int2 noiseuv = int2((Input.Tex + jitter) * screenSize) % int2(noiseSize);
+	float2 Xi = noiseTex.Load(int3(noiseuv, 0)).rg;
+	float2x2 offsetRotMat = float2x2(Xi.x, Xi.y, -Xi.y, -Xi.x);
+
 	float roughness = materialTex.SampleLevel(pointClamp, Input.Tex, 0).r;
 	float4 color = 0;
 
 	float numweight = 0;
 	int size = 0;
 	
-	for (int i = 0; i < 5; ++i)
+	for (int i = 0; i < 4; ++i)
 	{
-		int x = offset[i].x;
-		int y = offset[i].y;
-		float4 hit = hitTex.SampleLevel(pointClamp, Input.Tex, 0, int2(x, y));
+		float2 offsetuv = mul(offset[i], offsetRotMat) * (1 / screenSize);
+		offsetuv += Input.Tex;
+		float4 hit = hitTex.SampleLevel(pointClamp, offsetuv, 0);
 		float2 uv = hit.xy / screenSize;
 		float depth = depthTex.Load(uint3(hit.xy, 0)).r;
 		float3 hitndc = float3(uv.x * 2 - 1, 1 - uv.y * 2, depth);
@@ -298,9 +394,9 @@ float4 filter(PS_INPUT Input) :SV_TARGET
 		float3 V = normalize(-posInView.xyz);
 		float3 L = normalize(hitPosinVS - posInView.xyz);
 		float weight = SSR_BRDF(V, L, normal, roughness) / max(1e-5, hit.a);
-
-		color.rgb += colorTex.SampleLevel(pointClamp, uv, 0).rgb * weight;
-		color.a += hit.z * weight;
+		//weight = 1;
+		color.rgb += colorTex.SampleLevel(pointClamp, uv, 0).rgb * weight * hit.z;
+		color.a +=  weight;
 		//color += dot(normal, L);
 		numweight += weight;
 	}
