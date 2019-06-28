@@ -46,10 +46,27 @@ float3 toView(float3 pos)
 	return (p / p.w).xyz;
 }
 
+float3 toNDC(float2 pos_ss, float depth)
+{
+	pos_ss /= screenSize;
+	pos_ss = float2(pos_ss.x * 2 - 1, 1 - pos_ss.y * 2);
+	return float3(pos_ss, depth);
+}
+
+
+float3 toView(float2 pos_ss, float depth)
+{
+
+	return toView(toNDC(pos_ss, depth));
+}
+
+
+
 float2 toScreen(float4 pos)
 {
 	return float2((pos.x *0.5 + 0.5) * screenSize.x, (0.5 - pos.y * 0.5) * screenSize.y);
 }
+
 
 float3 mulTBN(float3 vec, float3 N)
 {
@@ -250,9 +267,9 @@ bool trace(float3 origin, float3 dir, float jitter, out float3 hituv, out float 
 		hituv.xy = P0 + dP * curstep;
 		hitpoint = (Q0 + dQ * curstep) / (k0 + dk * curstep);
 		float depth = hitpoint.z;
-		float fdepth = depthTex.SampleLevel(pointClamp, hituv * invsize,0).r;
+		float fdepth = depthTex.SampleLevel(pointClamp, hituv.xy * invsize,0).r;
 		fdepth = toView(fdepth);
-		float bdepth = depthbackTex.SampleLevel(pointClamp, hituv* invsize,0).r;
+		float bdepth = depthbackTex.SampleLevel(pointClamp, hituv.xy* invsize,0).r;
 		bdepth = toView(bdepth);
 
 		if (depth > fdepth )
@@ -303,7 +320,7 @@ void raymarch(PS_INPUT Input, out float4 hitResult: SV_Target0/*, out float4 mas
 
 	float4 H = ImportanceSampleGGX(Xi, roughness);
 	H.xyz = mulTBN(H.xyz, N);
-	//H = float4(N, 0);
+	H = float4(N, 0);
 	
 	float3 ray_dir_vs = normalize(reflect(normalize(ray_origin_vs), H.xyz));
 
@@ -320,8 +337,9 @@ void raymarch(PS_INPUT Input, out float4 hitResult: SV_Target0/*, out float4 mas
 	float hitmask = 0;
 	if (hit)
 	{ 
-		hitmask = pow(1 - max(2 * numsteps / MAX_STEPS - 1, 0), 2); //attenuate half part
-		hitmask *= saturate(raylength - dot(hitpoint - ray_origin_vs, ray_dir_vs));// attenuate the end
+		//hitmask = pow(1 - max(2 * numsteps / MAX_STEPS - 1, 0), 2); //attenuate half part
+		//hitmask *= saturate(raylength - dot(hitpoint - ray_origin_vs, ray_dir_vs));// attenuate the end
+		hitmask = pow (1 - numsteps / MAX_STEPS, 2);
 	
 		float3 hitnormal = normalTex.Load(int3(hituv.xy, 0)).xyz;
 		hitnormal = normalize(mul(hitnormal, (float3x3)view));
@@ -353,7 +371,7 @@ static const float2 offset[4] = {
 	float2(0, 2)
 };
 
-float4 filter(PS_INPUT Input) :SV_TARGET
+float4 resolve(PS_INPUT Input) :SV_TARGET
 {
 
 	float3 normal = normalTex.SampleLevel(pointClamp, Input.Tex,0).xyz;
@@ -377,8 +395,11 @@ float4 filter(PS_INPUT Input) :SV_TARGET
 
 	float numweight = 0;
 	int size = 0;
-	
-	for (int i = 0; i < 4; ++i)
+	float3 V = normalize(-posInView.xyz);
+	float NdotV = saturate(dot(normal, V));
+	float coneTangent = lerp(0.0, roughness * (1.0 - brdfBias), NdotV * sqrt(roughness));
+
+	for (int i = 0; i < 1; ++i)
 	{
 		float2 offsetuv = mul(offset[i], offsetRotMat) * (1 / screenSize);
 		offsetuv += Input.Tex;
@@ -387,12 +408,14 @@ float4 filter(PS_INPUT Input) :SV_TARGET
 		float depth = depthTex.Load(uint3(hit.xy, 0)).r;
 		float3 hitndc = float3(uv.x * 2 - 1, 1 - uv.y * 2, depth);
 		float3 hitPosinVS = toView(hitndc);
-
-		float3 V = normalize(-posInView.xyz);
 		float3 L = normalize(hitPosinVS - posInView.xyz);
+
+		float intersectionCircleRadius = coneTangent * length(uv.xy - Input.Tex.xy);
+		float mip = clamp(log2(intersectionCircleRadius * max(screenSize.x, screenSize.y)), 0.0, 10);
+
 		float weight = SSR_BRDF(V, L, normal, roughness) / max(1e-5, hit.a);
-		//weight = 1;
-		color.rgb += colorTex.SampleLevel(pointClamp, uv, 0).rgb * weight * hit.z;
+		//weight = 1.0;
+		color.rgb += colorTex.SampleLevel(linearClamp, uv, mip).rgb * weight * hit.z;
 		color.a +=  weight;
 		//color += dot(normal, L);
 		numweight += weight;
@@ -402,3 +425,115 @@ float4 filter(PS_INPUT Input) :SV_TARGET
 	color /= numweight;
 	return color;
 }
+
+
+float isoscelesTriangleOpposite(float adjacentLength, float theta)
+{
+	// simple trig and algebra - soh, cah, toa - tan(theta) = opp/adj, opp = tan(theta) * adj, then multiply * 2.0f for isosceles triangle base
+	return 2.0f *tan(theta)* adjacentLength;
+}
+
+float isoscelesTriangleInRadius(float a, float h)
+{
+	float a2 = a * a;
+	float fh2 = 4.0f * h * h;
+	return (a * (sqrt(a2 + fh2) - a)) / (4.0f * h);
+}
+
+float4 coneSampleWeightedColor(float2 samplePos, float mipChannel, float gloss)
+{
+	float3 sampleColor = colorTex.SampleLevel(linearClamp, samplePos, mipChannel).rgb;
+	return float4(sampleColor * gloss, gloss);
+}
+
+float isoscelesTriangleNextAdjacent(float adjacentLength, float incircleRadius)
+{
+	// subtract the diameter of the incircle to get the adjacent side of the next level on the cone
+	return adjacentLength - (incircleRadius * 2.0f);
+}
+
+
+float specularPowerToConeAngle(float specularPower)
+{
+	// based on phong distribution model
+	//if (specularPower >= exp2(CNST_MAX_SPECULAR_EXP))
+	//{
+	//	return 0.0f;
+	//}
+	const float xi = 0.244f;
+	float exponent = 1.0f / (specularPower + 1.0f);
+	return acos(pow(xi, exponent));
+}
+
+float4 conetrace(PS_INPUT Input) :SV_TARGET
+{
+	int3 index = int3(Input.Pos.xy, 0);
+	float4 hit = hitTex.Load(index);
+	if (hit.z == 0)
+		return 0;
+
+	float roughness = materialTex.Load(index).r;
+	float depth = depthTex.Load(index).r;
+	float2 pos_ss = Input.Tex;
+	float3 pos_vs = toView(Input.Pos.xy, depth);
+	
+	float3 V = normalize(pos_vs);
+	float3 N = normalTex.Load(index).xyz;
+	N = normalize(mul(N, (float3x3)view));
+
+
+	float NdotV = saturate(dot(N, -V));
+	float coneTheta = specularPowerToConeAngle(roughness) * 0.5f;
+
+	float2 deltaP = (hit.xy) / screenSize - pos_ss.xy;
+	float adjacentLength = length(deltaP);
+	float2 adjacentUnit = normalize(deltaP);
+
+	float4 totalColor = 0;
+	float remainingAlpha = 1;
+	float maxMipLevel = 4;
+
+
+	float gloss = 1.0f - roughness;
+	float glossMult = gloss;
+
+	float coneTangent = lerp(0.0, roughness * 10 * (1.0 - brdfBias), NdotV * sqrt(roughness));
+	float intersectionCircleRadius = coneTangent * length(hit.xy / screenSize - pos_ss.xy);
+	float mip = clamp(log2(intersectionCircleRadius * max(screenSize.x, screenSize.y)), 0.0, 14);
+	float4 color = colorTex.SampleLevel(linearClamp, hit.xy / screenSize, mip );
+	color.a =  (1 - mip / 14)* hit.z;
+	return color;
+	//for (int i = 0; i < 14; ++i)
+	//{
+	//	float oppositeLength = isoscelesTriangleOpposite(adjacentLength, roughness);
+
+	//	float incircleSize = isoscelesTriangleInRadius(oppositeLength, adjacentLength);
+
+	//	float2 samplePos = pos_ss.xy + adjacentUnit * (adjacentLength - incircleSize);
+
+	//	float mipChannel = clamp(log2(incircleSize * max(screenSize.x, screenSize.y)), 0.0f, maxMipLevel);
+
+	//	float4 newColor = coneSampleWeightedColor(hit.xy / screenSize, mipChannel, glossMult);
+	//	return float4(newColor.rgb, 1);
+	//	//remainingAlpha -= newColor.a;
+	//	//if (remainingAlpha < 0.0f)
+	//	//{
+	//	//	newColor.rgb *= (1.0f - abs(remainingAlpha));
+	//	//}
+	//	//totalColor += newColor;
+
+	//	//if (totalColor.a >= 1.0f)
+	//	//{
+	//	//	break;
+	//	//}
+
+	//	//adjacentLength = isoscelesTriangleNextAdjacent(adjacentLength, incircleSize);
+	//	//glossMult *= gloss;
+	//}
+
+
+	//return float4(totalColor.rgb, 1);
+}
+
+
+

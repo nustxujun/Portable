@@ -44,7 +44,7 @@ private:
 	Renderer::Texture2D::Ptr mHitmap;
 	Renderer::Texture2D::Ptr mFrame;
 	Renderer::Texture2D::Ptr mBlueNoise;
-
+	Renderer::Texture2D::Ptr mColor;
 
 	Renderer::Texture2D::Ptr mDepthBack;
 	Renderer::Buffer::Ptr mConstants;

@@ -4,17 +4,17 @@ void SSR::init()
 {
 
 	set("raylength", { {"value", 10}, {"min", "1"}, {"max", "1000"}, {"interval", "1"}, {"type","set"} });
-	set("stepstride", { {"value", 32}, {"min", "1"}, {"max", "32"}, {"interval", "1"}, {"type","set"} });
+	set("stepstride", { {"value", 4}, {"min", "1"}, {"max", "32"}, {"interval", "1"}, {"type","set"} });
 	set("stridescale", { {"value", 1}, {"min", "0"}, {"max", "0.1"}, {"interval", "0.0001"}, {"type","set"} });
 	set("reflection", { {"value", 1}, {"min", "0"}, {"max", "1"}, {"interval", "0.1"}, {"type","set"} });
 	set("jitter", { {"value", 0}, {"min", "0"}, {"max", "1"}, {"interval", "0.01"}, {"type","set"} });
-	set("brdfBias", { {"value", 1}, {"min", "0"}, {"max", "1"}, {"interval", "0.01"}, {"type","set"} });
+	set("brdfBias", { {"value", 0}, {"min", "0"}, {"max", "1"}, {"interval", "0.01"}, {"type","set"} });
 
 
 	mName = "ssr";
 	mVS = getRenderer()->createVertexShader("hlsl/simple_vs.hlsl");
 	mRayTracing = getRenderer()->createPixelShader("hlsl/ssr.hlsl", "raymarch");
-	mLighting = getRenderer()->createPixelShader("hlsl/ssr.hlsl", "filter");
+	mLighting = getRenderer()->createPixelShader("hlsl/ssr.hlsl", "conetrace");
 	mConstants = getRenderer()->createBuffer(sizeof(Constants), D3D11_BIND_CONSTANT_BUFFER, 0, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 
 	int w = getRenderer()->getWidth();
@@ -77,10 +77,20 @@ void SSR::renderColor(Renderer::Texture2D::Ptr rt)
 {
 	if (mFrame.expired())
 		mFrame = getRenderer()->createTexture(rt->getDesc());
+	if (mColor.expired())
+	{
+		auto desc = rt->getDesc();
+		desc.MipLevels = 0;
+		desc.MiscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
+		mColor = getRenderer()->createTexture(desc);
+	}
 
+	auto context = getRenderer()->getContext();
+	context->CopySubresourceRegion(mColor->getTexture(), 0, 0, 0, 0, rt->getTexture(), 0, NULL);
+	context->GenerateMips(mColor->Renderer::ShaderResource::getView());
 	auto quad = getQuad();
 	quad->setTextures({
-		rt,
+		mColor,
 		getShaderResource("normal"),
 		getShaderResource("depth"),
 		{} ,
@@ -120,7 +130,8 @@ void SSR::renderRaytrace(Renderer::Texture2D::Ptr rt)
 	quad->setTextures({
 		rt,
 		getShaderResource("normal"),
-		mSample->process(getTexture2D("depth"),ImageProcessing::DOWN),
+		getShaderResource("depth"),
+		//mSample->process(getTexture2D("depth"),ImageProcessing::DOWN),
 		mDepthBack ,
 		getShaderResource("material"),
 		mBlueNoise});
