@@ -5,11 +5,11 @@ Texture2D normalTexture: register(t1);
 Texture2D depthTexture: register(t2);
 Texture2D materialTexture:register(t3);
 
-#if IBL
-TextureCube irradianceTexture: register(t4);
-TextureCube prefilteredTexture: register(t5);
-Texture2D lutTexture: register(t6);
-#endif
+//#if IBL
+//TextureCube irradianceTexture: register(t4);
+//TextureCube prefilteredTexture: register(t5);
+//Texture2D lutTexture: register(t6);
+//#endif
 
 Buffer<float4> pointlights: register(t7);
 Buffer<float4> spotlights: register(t8);
@@ -32,10 +32,11 @@ Texture3D<uint4> clusters: register(t11);
 #endif
 Texture2D shadows[NUM_SHADOWMAPS]:register(t20);
 
-#if ENV_RFL
-TextureCube envReflectionTexture:register(t30);
-#endif
-
+//
+//#if ENV_RFL
+//TextureCube envReflectionTexture:register(t30);
+//#endif
+//
 
 SamplerState sampLinear: register(s0);
 SamplerState sampPoint: register(s1);
@@ -55,8 +56,6 @@ cbuffer ConstantBuffer: register(b0)
 	float width;
 	float height;
 	float ambient;
-	
-	float3 sceneSize;
 	float near;
 	float far;
 }
@@ -102,19 +101,6 @@ float3 spotlight(float dist, float range,  float theta, float phi, float3 color)
 }
 
 
-float3 getBoxIntersection(float3 pos, float3 reflectionVector, float3 cubeSize, float3 cubePos)
-{
-	float3 rbmax = (0.5f * (cubeSize - cubePos) - pos) / reflectionVector;
-	float3 rbmin = (-0.5f * (cubeSize - cubePos) - pos) / reflectionVector;
-
-	float3 rbminmax = float3(
-		(reflectionVector.x > 0.0f) ? rbmax.x : rbmin.x,
-		(reflectionVector.y > 0.0f) ? rbmax.y : rbmin.y,
-		(reflectionVector.z > 0.0f) ? rbmax.z : rbmin.z);
-
-	float correction = min(min(rbminmax.x, rbminmax.y), rbminmax.z);
-	return (pos + reflectionVector * correction);
-}
 
 
 #if TILED || CLUSTERED || DIR
@@ -185,19 +171,19 @@ float3 travelLights(float roughness, float metallic,uint pointoffset, uint point
 			Lo += directBRDF(roughness, metallic, F0, albedo, N, L, V) * radiance * shadow;
 		}
 	}
-	float3 R = normalize(reflect(-V, N));
-
-#if IBL
-	float3 lut = LUT(N, V, roughness, lutTexture, sampPoint);
-	float3 prefiltered = prefilteredTexture.SampleLevel(sampPoint, R, roughness * (PREFILTERED_MIP_LEVEL -1)).rgb;
-	float3 irradiance = irradianceTexture.SampleLevel(sampPoint, N, 0).rgb;
-	Lo += indirectBRDF(irradiance, prefiltered, lut, roughness, metallic, F0, albedo, N, V);
-#endif
-#if ENV_RFL
-	float3 corrected = getBoxIntersection(pos, R, sceneSize, float3(0,1,0));
-	corrected = normalize(corrected - float3(0,1,0));
-	Lo = envReflectionTexture.SampleLevel(sampPoint, corrected, 0).rgb;
-#endif
+//	float3 R = normalize(reflect(-V, N));
+//
+//#if IBL
+//	float3 lut = LUT(N, V, roughness, lutTexture, sampPoint);
+//	float3 prefiltered = prefilteredTexture.SampleLevel(sampPoint, R, roughness * (PREFILTERED_MIP_LEVEL -1)).rgb;
+//	float3 irradiance = irradianceTexture.SampleLevel(sampPoint, N, 0).rgb;
+//	Lo += indirectBRDF(irradiance, prefiltered, lut, roughness, metallic, F0, albedo, N, V);
+//#endif
+//#if ENV_RFL
+//	float3 corrected = getBoxIntersection(pos, R, sceneSize, float3(0,1,0));
+//	corrected = normalize(corrected - float3(0,1,0));
+//	Lo = envReflectionTexture.SampleLevel(sampPoint, corrected, 0).rgb;
+//#endif
 	return Lo;
 }
 

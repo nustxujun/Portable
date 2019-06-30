@@ -17,7 +17,6 @@ class PBR:public Pipeline::Stage
 		float width;
 		float height;
 		float ambient;
-		Vector3 sceneSize;
 		float nearZ;
 		float farZ;
 	};

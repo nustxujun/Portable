@@ -13,15 +13,12 @@ PBR::PBR(
 	this->set("roughness", { {"type","set"}, {"value",1},{"min","0.01"},{"max",1.0f},{"interval", "0.01"} });
 	this->set("metallic", { {"type","set"}, {"value",1},{"min","0"},{"max",1.0f},{"interval", "0.01"} });
 	this->set("ambient", { {"type","set"}, {"value",0.001},{"min","0"},{"max","1"},{"interval", "0.001"} });
-	this->set("sceneScale", { {"type","set"}, {"value",1},{"min","0"},{"max","2"},{"interval", "0.001"} });
 
 	const std::vector<const char*> definitions = { "POINT", "DIR", "SPOT", "TILED", "CLUSTERED" };
 	for (int i = 0; i < definitions.size(); ++i)
 	{
 
-		std::vector<D3D10_SHADER_MACRO> macros = { {definitions[i],"1"}, {"IBL", "1"}, };
-		if (has("environment"))
-			macros.push_back({ "ENV_RFL", "1" });
+		std::vector<D3D10_SHADER_MACRO> macros = { {definitions[i],"1"} };
 		macros.push_back({ NULL, NULL });
 		auto blob = r->compileFile("hlsl/lighting.hlsl", "main", "ps_5_0", macros.data());
 		mPSs.push_back( r->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize()) );
@@ -142,11 +139,11 @@ void PBR::renderNormal(Renderer::Texture2D::Ptr rt)
 		mAlbedo, mNormal, 
 		getShaderResource("depth"),
 		getShaderResource("material"),
-		getShaderResource("irradinace"),
-		getShaderResource("prefiltered"),
-		getShaderResource("lut"),
+		//getShaderResource("irradinace"),
+		//getShaderResource("prefiltered"),
+		//getShaderResource("lut"),
 	};
-	srvs.resize(30);
+	srvs.resize(20);
 	srvs[7] = getShaderResource("pointlights");
 	srvs[8] = getShaderResource("spotlights");
 	srvs[9] = getShaderResource("dirlights");
@@ -233,11 +230,8 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 	for (int i = 0; i < mShadowTextures.size(); ++i)
 		srvs[i + 20] = mShadowTextures[i];
 
-	if (has("environment"))
-		srvs[30] = getShaderResource("environment");
 
 	renderer->setTextures(srvs);
-
 
 
 	D3D11_BLEND_DESC blend = { 0 };
@@ -275,7 +269,6 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 	constants.numdirs = getValue<int>("numdirs");
 	
 	auto aabb = getScene()->getRoot()->getWorldAABB();
-	constants.sceneSize = (aabb.second - aabb.first) * getValue<float>("sceneScale");
 
 	mConstants.lock()->blit(&constants, sizeof(constants));
 	renderer->setPSConstantBuffers({ mConstants });

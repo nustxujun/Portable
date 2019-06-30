@@ -1,15 +1,15 @@
-#include "CubemapReflection.h"
+#include "EnvironmentMapping.h"
 #include "GBuffer.h"
 #include "PBR.h"
 #include "PostProcessing.h"
 #include "SkyBox.h"
 #include "MathUtilities.h"
 
-void CubemapReflection::init(const Vector3 & pos, const std::string& cubemap)
+void EnvironmentMapping::init(const Vector3 & pos, const Vector3& size, const std::string& cubemap, int resolution)
 {
-	mName = "CubemapReflection";
-	set("environment", { {"value",true} });
-	int cubesize = 512;
+	mName = "EnvironmentMapping";
+	int cubesize = resolution;
+
 	
 	auto cam = getScene()->createOrGetCamera("dynamicEnv");
 	cam->lookat({ 0,10,0 }, { 0,0,0 });
@@ -23,7 +23,7 @@ void CubemapReflection::init(const Vector3 & pos, const std::string& cubemap)
 
 	auto renderer = getRenderer();
 
-
+	mPS = renderer->createPixelShader("hlsl/environmentmapping.hlsl");
 
 	mCubePipeline = decltype(mCubePipeline)(new Pipeline(renderer, getScene()));
 	mCubePipeline->setCamera(cam);
@@ -87,14 +87,6 @@ void CubemapReflection::init(const Vector3 & pos, const std::string& cubemap)
 
 	mCubePipeline->setValue("ambient", 1.0f);
 
-	//Vector3 dirs[] = {
-	//	Vector3::UnitX,
-	//	-Vector3::UnitX,
-	//	Vector3::UnitY,
-	//	-Vector3::UnitY,
-	//	Vector3::UnitZ,
-	//	-Vector3::UnitZ,
-	//};
 
 	D3D11_TEXTURE2D_DESC cubedesc;
 	cubedesc.Width = cubesize;
@@ -109,8 +101,7 @@ void CubemapReflection::init(const Vector3 & pos, const std::string& cubemap)
 	cubedesc.CPUAccessFlags = 0;
 	cubedesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
 
-	auto cubetex = renderer->createTexture(cubedesc);
-	addShaderResource("environment", cubetex);
+	mCube = renderer->createTexture(cubedesc);
 
 
 
@@ -119,7 +110,7 @@ void CubemapReflection::init(const Vector3 & pos, const std::string& cubemap)
 	mCubePipeline->setFrameBuffer(frame);
 	
 	cam->getNode()->setPosition(pos);
-	mUpdate = [this, pos,cam, renderer, cubetex,frame]() {
+	mUpdate = [this, pos,cam, renderer,frame]() {
 		int index = 0;
 		Matrix viewMats[6] = {
 			MathUtilities::makeMatrixFromAxis(-Vector3::UnitZ, Vector3::UnitY, Vector3::UnitX),
@@ -136,17 +127,16 @@ void CubemapReflection::init(const Vector3 & pos, const std::string& cubemap)
 			cam->getNode()->setOrientation(rot);
 			mCubePipeline->render();
 
-			renderer->getContext()->CopySubresourceRegion(cubetex->getTexture(), index++, 0, 0, 0, frame->getTexture(), 0, 0);
+			renderer->getContext()->CopySubresourceRegion(mCube->getTexture(), index++, 0, 0, 0, frame->getTexture(), 0, 0);
 		}
 
 	};
 	
 	mUpdate();
-	D3DX11SaveTextureToFileA(renderer->getContext(), cubetex->getTexture(), D3DX11_IFF_DDS, "test.dds");
 }
 
 
-void CubemapReflection::render(Renderer::Texture2D::Ptr rt)
+void EnvironmentMapping::render(Renderer::Texture2D::Ptr rt)
 {
 	//mUpdate();
 }
