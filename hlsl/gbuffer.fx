@@ -7,6 +7,7 @@ cbuffer ConstantBuffer: register(b0)
 	matrix World;
 	matrix View;
 	matrix Projection;
+	float3 diffuse;
 	float roughness;
 	float metallic;
 	float reflection;
@@ -174,6 +175,7 @@ GBufferPixelShaderOutput ps(GBufferVertexShaderOutput input) : SV_TARGET
 #else
 	output.Color = 1.0f;
 #endif
+	output.Color.rgb *= diffuse;
 
 #if AO_MAP
 	output.Color.rgb *= aoTex.Sample(sampLinear, coord).rgb;

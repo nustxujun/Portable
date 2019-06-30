@@ -21,10 +21,7 @@ void Pipeline::Stage::update(Renderer::Texture2D::Ptr rt)
 
 void Pipeline::Stage::showCost()
 {
-	std::stringstream ss;
-	ss.precision(4);
-	ss << mProfile.lock()->getElapsedTime();
-	set(getName(), { {"cost",ss.str().c_str()}, {"type", "stage"} });
+	set(getName(), { {"cost",mProfile.lock()->toString()}, {"type", "stage"} });
 }
 
 
@@ -49,10 +46,8 @@ void Pipeline::render()
 	for (auto& i : mStages)
 		i->update(mFrameBuffer);
 
-	std::stringstream ss;
-	ss.precision(4);
-	ss << mProfile.lock()->getElapsedTime();
-	set("total", { {"cost",ss.str().c_str()}, {"type", "stage"} });
+
+	set("total", { {"cost",mProfile.lock()->toString()}, {"type", "stage"} });
 }
 
 void Pipeline::setFrameBuffer(Renderer::Texture2D::Ptr rt)

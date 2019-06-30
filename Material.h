@@ -43,7 +43,11 @@ public:
 	float metallic = 1.0f;
 	float roughness = 1.0f;
 	float reflection = 1.0f;
-
+	DirectX::SimpleMath::Vector3 diffuse = { 1,1,1 };
 private:
 	size_t mShaderID = -1;
+
+
+public:
+	static  Material::Ptr Default;
 };

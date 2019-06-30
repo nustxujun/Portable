@@ -84,7 +84,7 @@ void AO::render(Renderer::Texture2D::Ptr rt)
 		mAO = getRenderer()->createTexture(rt.lock()->getDesc());
 
 	using namespace DirectX;
-	auto cam = getScene()->createOrGetCamera("main");
+	auto cam = getCamera();
 
 	ConstantMatrix matrix;
 	matrix.radius = getValue<float>("AOradius");

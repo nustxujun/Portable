@@ -28,6 +28,8 @@ public:
 		struct Material {
 			std::string albedo;
 			std::string normal;
+
+			std::array<float, 3> diffuse;
 		};
 
 		std::vector<Mesh> meshs;

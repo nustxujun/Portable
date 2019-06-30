@@ -364,15 +364,23 @@ public:
 		~Profile();
 
 		Timer count();
-		float getElapsedTime()const { return mElapsedTime; }
+		float getGPUElapsedTime()const { return mGPUElapsedTime; }
+		float getCPUElapsedTime()const { return mCPUElapsedTime; }
+
+		void begin();
+		void end();
+
+		std::string toString()const;
 	private:
 		void getData(UINT64 frq);
 	private:
 		ID3D11Query* mBegin;
 		ID3D11Query* mEnd;
-		float mCachedTime = 0;
+		size_t mCachedTime = 0;
 		int mNumCached = 0;
-		float mElapsedTime = 0;
+		float mGPUElapsedTime = 0;
+		float mCPUElapsedTime = 0;
+		size_t mCPUTimer = 0;
 	};
 
 

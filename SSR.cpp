@@ -5,21 +5,20 @@ void SSR::init()
 
 	set("raylength", { {"value", 10}, {"min", "1"}, {"max", "1000"}, {"interval", "1"}, {"type","set"} });
 	set("stepstride", { {"value", 4}, {"min", "1"}, {"max", "32"}, {"interval", "1"}, {"type","set"} });
-	set("stridescale", { {"value", 1}, {"min", "0"}, {"max", "0.1"}, {"interval", "0.0001"}, {"type","set"} });
-	set("reflection", { {"value", 1}, {"min", "0"}, {"max", "1"}, {"interval", "0.1"}, {"type","set"} });
-	set("jitter", { {"value", 0}, {"min", "0"}, {"max", "1"}, {"interval", "0.01"}, {"type","set"} });
-	set("brdfBias", { {"value", 0}, {"min", "0"}, {"max", "1"}, {"interval", "0.01"}, {"type","set"} });
+	//set("stridescale", { {"value", 1}, {"min", "0"}, {"max", "0.1"}, {"interval", "0.0001"}, {"type","set"} });
+	set("reflection", { {"value", 1}, {"min", "0"}, {"max", "1"}, {"interval", "1"}, {"type","set"} });
+	set("jitter", { {"value", 0}, {"min", "0"}, {"max", "1"}, {"interval", "0.001"}, {"type","set"} });
+	//set("brdfBias", { {"value", 0}, {"min", "0"}, {"max", "1"}, {"interval", "0.01"}, {"type","set"} });
 
 
 	mName = "ssr";
 	mVS = getRenderer()->createVertexShader("hlsl/simple_vs.hlsl");
-	mRayTracing = getRenderer()->createPixelShader("hlsl/ssr.hlsl", "raymarch");
-	mLighting = getRenderer()->createPixelShader("hlsl/ssr.hlsl", "conetrace");
+	mRayTracing = getRenderer()->createPixelShader("hlsl/ssr.hlsl", "raycast");
+	mLighting = getRenderer()->createPixelShader("hlsl/ssr.hlsl", "resolve");
 	mConstants = getRenderer()->createBuffer(sizeof(Constants), D3D11_BIND_CONSTANT_BUFFER, 0, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 
-	int w = getRenderer()->getWidth();
-	int h = getRenderer()->getHeight();
-	mDepthBack = getRenderer()->createDepthStencil(w, h, DXGI_FORMAT_R32_TYPELESS, true);
+	auto vp = getCamera()->getViewport();
+	mDepthBack = getRenderer()->createDepthStencil(vp.Width, vp.Height, DXGI_FORMAT_R32_TYPELESS, true);
 	mMatrixConst = getRenderer()->createBuffer(sizeof(MatrixConstants), D3D11_BIND_CONSTANT_BUFFER, 0, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 	mLinear = getRenderer()->createSampler("linear_clamp", D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
 	mPoint = getRenderer()->createSampler("point_clamp", D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
@@ -28,7 +27,7 @@ void SSR::init()
 	mGaussian = ImageProcessing::create<Gaussian>(getRenderer(), ImageProcessing::RT_TEMP);
 
 
-	mHitmap = getRenderer()->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	mHitmap = getRenderer()->createRenderTarget(vp.Width, vp.Height, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	mBlueNoise = getRenderer()->createTexture("media/BlueNoise.tga", 1);
 }
 
@@ -52,7 +51,7 @@ void SSR::render(Renderer::Texture2D::Ptr rt)
 	//}
 
 	auto quad = getQuad();
-	quad->setTextures({mFrame});
+	quad->setTextures({(mFrame)});
 	quad->setRenderTarget(rt);
 	quad->setDefaultPixelShader();
 	//quad->setBlendColorAdd();
@@ -60,7 +59,7 @@ void SSR::render(Renderer::Texture2D::Ptr rt)
 	D3D11_BLEND_DESC desc = { 0 };
 	desc.RenderTarget[0] = {
 		TRUE,
-		D3D11_BLEND_SRC_ALPHA,
+		D3D11_BLEND_ONE,
 		D3D11_BLEND_ONE,
 		D3D11_BLEND_OP_ADD,
 		D3D11_BLEND_ONE,
@@ -77,20 +76,22 @@ void SSR::renderColor(Renderer::Texture2D::Ptr rt)
 {
 	if (mFrame.expired())
 		mFrame = getRenderer()->createTexture(rt->getDesc());
-	if (mColor.expired())
-	{
-		auto desc = rt->getDesc();
-		desc.MipLevels = 0;
-		desc.MiscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
-		mColor = getRenderer()->createTexture(desc);
-	}
+	//if (mColor.expired())
+	//{
+	//	auto desc = rt->getDesc();
+	//	desc.MipLevels = 0;
+	//	desc.MiscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
+	//	mColor = getRenderer()->createTexture(desc);
+	//}
 
-	auto context = getRenderer()->getContext();
-	context->CopySubresourceRegion(mColor->getTexture(), 0, 0, 0, 0, rt->getTexture(), 0, NULL);
-	context->GenerateMips(mColor->Renderer::ShaderResource::getView());
+	//auto context = getRenderer()->getContext();
+	//context->CopySubresourceRegion(mColor->getTexture(), 0, 0, 0, 0, rt->getTexture(), 0, NULL);
+	//context->GenerateMips(mColor->Renderer::ShaderResource::getView());
+	
 	auto quad = getQuad();
 	quad->setTextures({
-		mColor,
+		rt,
+		//mColor,
 		getShaderResource("normal"),
 		getShaderResource("depth"),
 		{} ,
@@ -108,16 +109,17 @@ void SSR::renderColor(Renderer::Texture2D::Ptr rt)
 
 void SSR::renderRaytrace(Renderer::Texture2D::Ptr rt)
 {
-	auto cam = getScene()->createOrGetCamera("main");
+	auto cam = getCamera();
+	auto vp = cam->getViewport();
 	Constants c;
 	c.view = cam->getViewMatrix().Transpose();
 	c.proj = cam->getProjectionMatrix().Transpose();
 	c.invertProj = cam->getProjectionMatrix().Invert().Transpose();
 	c.reflection = getValue<float>("reflection");
 	c.raylength = getValue<float>("raylength");
-	c.screenSize = { (float)getRenderer()->getWidth(), (float)getRenderer()->getHeight() };
+	c.screenSize = { vp.Width, vp.Height };
 	c.noiseSize = {(float) mBlueNoise->getDesc().Width, (float)mBlueNoise->getDesc().Height };
-	c.jitter = { 0,0 };
+	c.jitter = { getValue<float>("jitter"),getValue<float>("jitter") };
 	c.stepstride = getValue<float>("stepstride");
 	c.stridescale = getValue<float>("stridescale");
 	c.nearZ = cam->getNear();
@@ -151,7 +153,7 @@ void SSR::renderDepthBack()
 	using namespace DirectX;
 	using namespace DirectX::SimpleMath;
 
-	auto cam = getScene()->createOrGetCamera("main");
+	auto cam = getCamera();
 	MatrixConstants constant;
 	constant.view = cam->getViewMatrix().Transpose();
 	constant.proj = cam->getProjectionMatrix().Transpose();

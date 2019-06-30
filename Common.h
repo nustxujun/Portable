@@ -10,6 +10,7 @@
 #include <bitset>
 #include <array>
 #include <unordered_map>
+#include <sstream>
 
 using Parameters = std::map<std::string, std::string>;
 
@@ -27,5 +28,20 @@ public:
 		std::string d((const char*)data, size);
 		std::hash<std::string> hash;
 		return hash(d);
+	}
+
+	template<class T, class ... Args>
+	static std::string format(const T& v, const Args& ... args)
+	{
+		std::stringstream ss;
+		ss << v;
+		ss << format(args...);
+		return ss.str();
+	}
+
+private:
+	static std::string format()
+	{
+		return {};
 	}
 };

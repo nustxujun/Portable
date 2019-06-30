@@ -27,9 +27,8 @@ void HDR::init()
 	blob = r->compileFile("hlsl/downsample.hlsl", "downSample3x3", "ps_5_0");
 	mDownSamplePS3x3 = r->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
 
-	auto w = r->getWidth();
-	auto h = r->getHeight();
-	mTarget = r->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	auto vp = getCamera()->getViewport();
+	mTarget = r->createRenderTarget(vp.Width, vp.Height, DXGI_FORMAT_R32G32B32A32_FLOAT);
 
 	const size_t numSamples = 5;
 	mLuminance.resize(numSamples);

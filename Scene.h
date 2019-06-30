@@ -40,6 +40,10 @@ public:
 		const Quaternion& getOrientation() { return mOrientation; }
 		const Quaternion& getRealOrientation();
 		void rotate(const Quaternion& rot) { setOrientation( mOrientation * rot); }
+		void rotate(float pitch, float yaw, float roll) {
+			Quaternion rot = Quaternion::CreateFromYawPitchRoll(yaw, pitch, roll);
+			rotate(rot);
+		}
 
 		void addChild(Ptr p) { mChildren.insert(p); p->mParent = this; p->dirty(DT_PARENT); }
 		void removeChild(Ptr p) { mChildren.erase(p); p->mParent = nullptr; p->dirty(DT_PARENT); }
@@ -128,6 +132,7 @@ public:
 		virtual std::pair<Vector3, Vector3> getWorldAABB()const override { return std::pair<Vector3, Vector3>(); };
 
 		Matrix getViewMatrix();
+		void setViewMatrix(const Matrix& mat);
 		void lookat(const Vector3& eye, const Vector3& at);
 		void setViewport(float left, float top, float width, float height);
 		void setFOVy(float fovy);

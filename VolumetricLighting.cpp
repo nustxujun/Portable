@@ -9,9 +9,8 @@ VolumetricLighting::VolumetricLighting(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr 
 	blob = r->compileFile("hlsl/volumetriclight_filtercolor.hlsl", "main", "ps_5_0");
 	mColorFilter = r->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
 
-	auto w = r->getWidth();
-	auto h = r->getHeight();
-	mBlur = r->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
+	auto vp = getCamera()->getViewport();
+	mBlur = r->createRenderTarget(vp.Width, vp.Height, DXGI_FORMAT_R8G8B8A8_UNORM);
 
 
 	mConstants = r->createBuffer(sizeof(Vector4), D3D11_BIND_CONSTANT_BUFFER);
@@ -35,7 +34,7 @@ void VolumetricLighting::renderBlur(Renderer::Texture2D::Ptr rt)
 {
 	auto w = getRenderer()->getWidth();
 	auto h = getRenderer()->getHeight();
-	auto cam = getScene()->createOrGetCamera("main");
+	auto cam = getCamera();
 	auto view = cam->getViewMatrix();
 	auto proj = cam->getProjectionMatrix();
 	Vector3 lightdir = -getScene()->createOrGetLight("main")->getDirection();

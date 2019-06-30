@@ -83,7 +83,7 @@ void SkyBox::render(Renderer::Texture2D::Ptr rt)
 	auto view = e->getVariable("View")->AsMatrix();
 	auto proj = e->getVariable("Projection")->AsMatrix();
 
-	auto cam = getScene()->createOrGetCamera("main");
+	auto cam = getCamera();
 
 	world->SetMatrix((const float*)&cam->getNode()->getTransformation());
 	view->SetMatrix((const float*)&cam->getViewMatrix());

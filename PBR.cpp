@@ -10,16 +10,18 @@ PBR::PBR(
 	Pipeline::Stage(r, s, q,set, p)
 {
 	mName = "pbr lighting";
-	this->set("roughness", { {"type","set"}, {"value",0.5},{"min","0.01"},{"max",1.0f},{"interval", "0.01"} });
-	this->set("metallic", { {"type","set"}, {"value",0.5f},{"min","0"},{"max",1.0f},{"interval", "0.01"} });
-	this->set("ambient", { {"type","set"}, {"value",0.5},{"min","0"},{"max","1"},{"interval", "0.001"} });
-
+	this->set("roughness", { {"type","set"}, {"value",1},{"min","0.01"},{"max",1.0f},{"interval", "0.01"} });
+	this->set("metallic", { {"type","set"}, {"value",1},{"min","0"},{"max",1.0f},{"interval", "0.01"} });
+	this->set("ambient", { {"type","set"}, {"value",0.001},{"min","0"},{"max","1"},{"interval", "0.001"} });
+	this->set("sceneScale", { {"type","set"}, {"value",1},{"min","0"},{"max","2"},{"interval", "0.001"} });
 
 	const std::vector<const char*> definitions = { "POINT", "DIR", "SPOT", "TILED", "CLUSTERED" };
 	for (int i = 0; i < definitions.size(); ++i)
 	{
 
-		std::vector<D3D10_SHADER_MACRO> macros = { {definitions[i],"1"} };
+		std::vector<D3D10_SHADER_MACRO> macros = { {definitions[i],"1"}, {"IBL", "1"}, };
+		if (has("environment"))
+			macros.push_back({ "ENV_RFL", "1" });
 		macros.push_back({ NULL, NULL });
 		auto blob = r->compileFile("hlsl/lighting.hlsl", "main", "ps_5_0", macros.data());
 		mPSs.push_back( r->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize()) );
@@ -66,10 +68,11 @@ PBR::PBR(
 	mNormal = getShaderResource("normal");
 	mDepth = getDepthStencil("depth");
 
+	auto vp = getCamera()->getViewport();
 
 	D3D11_TEXTURE2D_DESC desc;
-	desc.Width = getRenderer()->getWidth();
-	desc.Height = getRenderer()->getHeight();
+	desc.Width = vp.Width;
+	desc.Height = vp.Height;
 	desc.MipLevels = 1;
 	desc.ArraySize = 1;
 	desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
@@ -110,7 +113,7 @@ void PBR::renderNormal(Renderer::Texture2D::Ptr rt)
 {
 	using namespace DirectX;
 	using namespace DirectX::SimpleMath;
-	auto cam = getScene()->createOrGetCamera("main");
+	auto cam = getCamera();
 
 
 
@@ -196,7 +199,8 @@ void PBR::renderNormal(Renderer::Texture2D::Ptr rt)
 void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 {
 	auto renderer = getRenderer();
-	renderer->setViewport({ 0,0, (float)renderer->getWidth(), (float)renderer->getHeight(), 0, 1.0f });
+	auto vp = getCamera()->getViewport();
+	renderer->setViewport(vp);
 	renderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	renderer->setDefaultRasterizer();
 	renderer->setDefaultDepthStencilState();
@@ -213,7 +217,7 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 	getShaderResource("prefiltered"),
 	getShaderResource("lut"),
 	};
-	srvs.resize(30);
+	srvs.resize(40);
 	srvs[7] = getShaderResource("pointlights");
 	srvs[8] = getShaderResource("spotlights");
 	srvs[9] = getShaderResource("dirlights");
@@ -228,6 +232,9 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 	//srvs[10] = mDefaultShadowTex;
 	for (int i = 0; i < mShadowTextures.size(); ++i)
 		srvs[i + 20] = mShadowTextures[i];
+
+	if (has("environment"))
+		srvs[30] = getShaderResource("environment");
 
 	renderer->setTextures(srvs);
 
@@ -248,7 +255,7 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 
 
 
-	auto cam = getScene()->createOrGetCamera("main");
+	auto cam = getCamera();
 	LightVolumeConstants consts;
 
 	Matrix view = cam->getViewMatrix();
@@ -261,15 +268,21 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 
 	constants.roughness = 1;
 	constants.metallic = 1;
-	constants.width = renderer->getWidth();
-	constants.height = renderer->getHeight();
+	constants.width = vp.Width;
+	constants.height = vp.Height;
 	constants.campos = cam->getNode()->getRealPosition();
 	constants.ambient = getValue<float>("ambient");
 	constants.numdirs = getValue<int>("numdirs");
+	
+	auto aabb = getScene()->getRoot()->getWorldAABB();
+	constants.sceneSize = (aabb.second - aabb.first) * getValue<float>("sceneScale");
 
 	mConstants.lock()->blit(&constants, sizeof(constants));
 	renderer->setPSConstantBuffers({ mConstants });
+
 	// point
+	int pointcount= getValue<int>("numpoints");
+	if (pointcount > 0)
 	{
 		auto srv = getShaderResource("pointlights")->getView();
 		renderer->getContext()->VSSetShaderResources(0, 1,&srv);
@@ -277,7 +290,6 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 		mLightVolumeConstants.lock()->blit(&consts, sizeof(consts));
 		renderer->setVSConstantBuffers({ mLightVolumeConstants });
 
-		int count = getValue<int>("numpoints");
 
 		auto instances = mLightVolumesInstances[Scene::Light::LT_POINT];
 		auto context = renderer->getContext();
@@ -333,7 +345,7 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 		renderer->setDepthStencilState(dsdesc, 1);
 		renderer->setPixelShader({});
 		renderer->setRenderTargets({}, mDepth);
-		context->DrawIndexedInstanced(rend.numIndices, count, 0, 0, 0);
+		context->DrawIndexedInstanced(rend.numIndices, pointcount, 0, 0, 0);
 		// 2  render back face and test stencil(only draw pixel in the range of light volume)
 		dsdesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
 		dsdesc.FrontFace.StencilFunc = D3D11_COMPARISON_NOT_EQUAL;
@@ -347,7 +359,7 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 		renderer->setRasterizer(rasterDesc);
 		renderer->setPixelShader(mPSs[Scene::Light::LT_POINT]);
 		renderer->setRenderTarget(rt, mDepth);
-		context->DrawIndexedInstanced(rend.numIndices, count, 0, 0, 0);
+		context->DrawIndexedInstanced(rend.numIndices, pointcount, 0, 0, 0);
 
 	}
 

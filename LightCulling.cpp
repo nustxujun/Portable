@@ -28,7 +28,7 @@ void LightCulling::render(Renderer::Texture2D::Ptr rt)
 	getRenderer()->clearUnorderedAccess(mCurIndex, clear);
 
 	Constants consts;
-	auto cam = getScene()->createOrGetCamera("main");
+	auto cam = getCamera();
 	consts.invertProj = cam->getProjectionMatrix().Invert().Transpose();
 	const Matrix& view = cam->getViewMatrix();
 	consts.view = view.Transpose();

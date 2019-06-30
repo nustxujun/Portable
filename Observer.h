@@ -82,6 +82,8 @@ public :
 
 	virtual void initPipeline() override
 	{
+		mPipeline->setCamera(mScene->createOrGetCamera("main"));
+
 		//Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
 		//auto w = mRenderer->getWidth();
 		//auto h = mRenderer->getHeight();

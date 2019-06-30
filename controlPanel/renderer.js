@@ -56,7 +56,7 @@ ipcRenderer.on('renderer',function(event, msg)
     {
    
         context.stages[data.key] = {
-            cost: +data.cost, 
+            cost: data.cost, 
         }
 
 

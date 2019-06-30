@@ -1,5 +1,7 @@
 #include "Material.h"
 
+Material::Ptr Material::Default = Material::create();
+
 Material::Material()
 {
 }

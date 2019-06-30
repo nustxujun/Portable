@@ -25,6 +25,7 @@ Mesh::Mesh(const Parameters& params, Renderer::Ptr r)
 		if (!mraw.normal.empty())
 			mat->setTexture(Material::TU_NORMAL, r->createTexture(mraw.albedo));
 
+		mat->diffuse = DirectX::SimpleMath::Vector3( mraw.diffuse.data() );
 		materials.emplace_back(mat);
 	}
 
@@ -68,7 +69,7 @@ Mesh::Mesh(const Parameters& params, Renderer::Ptr r)
 
 
 
-		mMeshs.push_back({ vb, ib, mesh.numVertex, mesh.indices.size(),mesh.materialIndex == -1? Material::Ptr(): materials[mesh.materialIndex] , layout , trans });
+		mMeshs.push_back({ vb, ib, mesh.numVertex, mesh.indices.size(),mesh.materialIndex == -1 ? Material::Default : materials[mesh.materialIndex] , layout , trans });
 	}
 
 

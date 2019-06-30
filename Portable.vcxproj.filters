@@ -150,6 +150,12 @@
     <ClInclude Include="SSR.h">
       <Filter>Pipeline\Stage</Filter>
     </ClInclude>
+    <ClInclude Include="Reflections.h">
+      <Filter>Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="CubemapReflection.h">
+      <Filter>Pipeline\Stage</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -242,6 +248,9 @@
     <ClCompile Include="SSR.cpp">
       <Filter>Pipeline\Stage</Filter>
     </ClCompile>
+    <ClCompile Include="CubemapReflection.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="deferredRendering.rc">
@@ -281,13 +290,7 @@
       <Filter>shader</Filter>
     </None>
     <None Include="hlsl\tiledlightculling.hlsl" />
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="hlsl\ssr.hlsl">
-      <Filter>shader</Filter>
-    </FxCompile>
-    <FxCompile Include="hlsl\simple_vs.hlsl">
-      <Filter>shader</Filter>
-    </FxCompile>
+    <None Include="hlsl\ssr.hlsl" />
+    <None Include="hlsl\simple_vs.hlsl" />
   </ItemGroup>
 </Project>

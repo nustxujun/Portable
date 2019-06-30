@@ -14,7 +14,7 @@ DepthLinearing::DepthLinearing(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setti
 
 void DepthLinearing::render(Renderer::Texture2D::Ptr rt)
 {
-	auto cam = getScene()->createOrGetCamera("main");
+	auto cam = getCamera();
 	Matrix proj = cam->getViewMatrix().Invert().Transpose();
 	mConstants.lock()->blit(&proj, sizeof(proj));
 

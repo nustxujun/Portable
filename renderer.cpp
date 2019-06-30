@@ -5,6 +5,7 @@
 #include "D3D11Helper.h"
 #include <regex>
 #include <iostream>
+#include <sstream>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -203,9 +204,8 @@ void Renderer::setTextures(const std::vector<ShaderResource::Ptr>& srvs)
 
 void Renderer::removeShaderResourceViews()
 {
-	ID3D11ShaderResourceView* nil = 0;
-	for (int i = 0; i < mSRVState; ++i)
-		mContext->PSSetShaderResources(i, 1, &nil);
+	std::vector<ID3D11ShaderResourceView*> nil(mSRVState);
+	mContext->PSSetShaderResources(0, nil.size(), nil.data());
 	mSRVState = 0;
 }
 
@@ -1180,7 +1180,7 @@ void Renderer::Profile::getData(UINT64 frq)
 
 	float delta = float(end - beg) / float(frq) * 1000.0f;
 
-	mElapsedTime = delta;
+	mGPUElapsedTime = delta;
 	//mCachedTime += delta;
 	//mNumCached++;
 
@@ -1191,6 +1191,42 @@ void Renderer::Profile::getData(UINT64 frq)
 	//mCachedTime = 0;
 	//mNumCached = 0;
 }
+
+void Renderer::Profile::begin()
+{
+	mCPUTimer = GetTickCount64();
+	getContext()->End(mBegin);
+}
+
+void Renderer::Profile::end()
+{
+	mCPUElapsedTime = (GetTickCount64() - mCPUTimer) ;
+	getContext()->End(mEnd);
+}
+
+std::string Renderer::Profile::toString()const
+{
+	std::stringstream ss;
+	ss.precision(4);
+	ss << getCPUElapsedTime() << "(" << getGPUElapsedTime() << ")";
+	return ss.str();
+}
+
+
+Renderer::Profile::Timer::Timer(Profile * p) :profile(p)
+{
+#ifdef USE_PROFILE
+	p->begin();
+#endif
+}
+
+Renderer::Profile::Timer::~Timer()
+{
+#ifdef USE_PROFILE
+	profile->end();
+#endif
+}
+
 
 void Renderer::Texture2D::initTexture()
 {
@@ -1345,19 +1381,6 @@ void Renderer::Texture2D::blit(const void * data, size_t size, UINT index )
 	}
 }
 
-Renderer::Profile::Timer::Timer(Profile * p) :profile(p)
-{
-#ifdef USE_PROFILE
-	p->getContext()->End(p->mBegin);
-#endif
-}
-
-Renderer::Profile::Timer::~Timer()
-{
-#ifdef USE_PROFILE
-	profile->getContext()->End(profile->mEnd);
-#endif
-}
 
 void Renderer::Texture3D::initTexture()
 {

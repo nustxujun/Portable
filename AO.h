@@ -27,7 +27,7 @@ public:
 	AO(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr set,Pipeline* p);
 	
 	void render(Renderer::Texture2D::Ptr rt) override;
-	void init(float radius);
+	void init(float radius = 10);
 private:
 	Renderer::Texture2D::Ptr mNoise;
 	Renderer::ShaderResource::Ptr mNormal;

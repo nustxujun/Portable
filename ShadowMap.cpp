@@ -36,9 +36,6 @@ void ShadowMap::init(int mapsize, int numlevels, const std::vector<Renderer::Tex
 	//blob = r->compileFile("hlsl/castshadow.hlsl", "ps", "ps_5_0", macros);
 	//mShadowPS = r->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
 
-	size_t w = getRenderer()->getWidth();
-	size_t h = getRenderer()->getHeight();
-
 	mMapParams.resize(mNumMaps);
 	for (int i = 0; i < mNumMaps; ++i)
 	{
@@ -97,7 +94,7 @@ void ShadowMap::fitToScene(int index, Scene::Light::Ptr light)
 	auto lighttoworld = MathUtilities::makeMatrixFromAxis(x, y, dir);
 	auto worldtolight = lighttoworld.Invert();
 
-	auto cam = getScene()->createOrGetCamera("main");
+	auto cam = getCamera();
 	auto corners = cam->getWorldCorners();
 
 	Vector3 min = { FLT_MAX, FLT_MAX ,FLT_MAX };
@@ -246,7 +243,7 @@ void ShadowMap::renderShadow(int index, Renderer::RenderTarget::Ptr rt)
 	}
 	constants.lightView = mLightView.Transpose();
 
-	auto cam = getScene()->createOrGetCamera("main");
+	auto cam = getCamera();
 	constants.invertView = cam->getViewMatrix().Invert().Transpose();
 	constants.invertProj =  cam->getProjectionMatrix().Invert().Transpose();
 	constants.numcascades = mNumLevels;
@@ -270,7 +267,7 @@ void ShadowMap::renderShadow(int index, Renderer::RenderTarget::Ptr rt)
 void ShadowMap::render(Renderer::Texture2D::Ptr rt) 
 {
 	std::vector<Scene::Light::Ptr> lights;
-	getScene()->visitLights([&lights, this](auto l) {
+	getScene()->visitLights([&lights, this](Scene::Light::Ptr l) {
 		if (l->isCastingShadow() && lights.size() < mNumMaps)
 			lights.push_back(l);
 	});

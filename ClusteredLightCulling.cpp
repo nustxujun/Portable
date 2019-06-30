@@ -23,7 +23,7 @@ void ClusteredLightCulling::render(Renderer::Texture2D::Ptr rt)
 	mComputer->setOuputs({ mCurIndex ,getUnorderedAccess("lightindices"), getUnorderedAccess("lighttable") });
 	
 	Constants constants;
-	auto cam = getScene()->createOrGetCamera("main");
+	auto cam = getCamera();
 	constants.invertProj = cam->getProjectionMatrix().Invert().Transpose();
 	constants.view = cam->getViewMatrix().Transpose();
 	constants.farZ = cam->getFar();

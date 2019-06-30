@@ -9,7 +9,8 @@
 	 void add##x(const std::string& name, Renderer::x::Ptr ptr){mPipeline->add##x(name, ptr);}\
 	 Renderer::x::Ptr get##x(const std::string& name){ return mPipeline->get##x(name);}
 
-
+#define PIPELINE_GET_METHOD(x, Space)\
+	Space::x::Ptr get##x(){return mPipeline->get##x();};
 
 class Pipeline:public Setting::Modifier
 {
@@ -42,6 +43,8 @@ public:
 		VIEW_METHOD(UnorderedAccess);
 		VIEW_METHOD(Buffer);
 		VIEW_METHOD(Texture2D);
+
+		PIPELINE_GET_METHOD(Camera, Scene);
 
 	protected:
 		std::string mName = "Default Stage";
@@ -108,9 +111,13 @@ public:
 	Renderer::UnorderedAccess::Ptr getUnorderedAccess(const std::string& name);
 	Renderer::Buffer::Ptr getBuffer(const std::string& name);
 	Renderer::Texture2D::Ptr getTexture2D(const std::string& name);
+
+	void setCamera(Scene::Camera::Ptr cam) { mMainCamera = cam; }
+	Scene::Camera::Ptr getCamera() { return mMainCamera; }
 private:
 	static void report(const std::string& msg);
 private:
+	Scene::Camera::Ptr mMainCamera;
 	Renderer::Ptr mRenderer;
 	Scene::Ptr mScene;
 	Quad::Ptr mQuad;

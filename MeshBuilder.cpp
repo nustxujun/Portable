@@ -220,6 +220,7 @@ MeshBuilder::Data MeshBuilder::buildByTinyobj(const std::string & filename)
 		if (!i.normal_texname.empty())
 			m.normal = totalpath + i.normal_texname;
 
+		memcpy(m.diffuse.data(), i.diffuse, 4 * m.diffuse.size());
 		ret.materials.push_back(m);
 	}
 

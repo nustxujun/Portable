@@ -21,8 +21,11 @@
 
 void MultipleLights::initPipeline()
 {
-	auto w = mRenderer->getWidth();
-	auto h = mRenderer->getHeight();
+	auto cam = mScene->createOrGetCamera("main");
+	mPipeline->setCamera(cam);
+	auto vp = cam->getViewport();
+	auto w = vp.Width;
+	auto h = vp.Height;
 	auto albedo = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
 	mPipeline->addShaderResource("albedo", albedo);
 	mPipeline->addRenderTarget("albedo", albedo);
@@ -412,8 +415,10 @@ void MultipleLights::update()
 void MultipleLights::initDRPipeline()
 {
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
-	auto w = mRenderer->getWidth();
-	auto h = mRenderer->getHeight();
+	auto cam = mScene->createOrGetCamera("main");
+	auto vp = cam->getViewport();
+	auto w = vp.Width;
+	auto h = vp.Height;
 
 
 	auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
@@ -442,8 +447,10 @@ void MultipleLights::initDRPipeline()
 void MultipleLights::initTBDRPipeline()
 {
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
-	auto w = mRenderer->getWidth();
-	auto h = mRenderer->getHeight();
+	auto cam = mScene->createOrGetCamera("main");
+	auto vp = cam->getViewport();
+	int w = vp.Width;
+	int h = vp.Height;
 	auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 
 
@@ -518,8 +525,10 @@ void MultipleLights::initTBDRPipeline()
 
 void MultipleLights::initCDRPipeline()
 {
-	auto w = mRenderer->getWidth();
-	auto h = mRenderer->getHeight();
+	auto cam = mScene->createOrGetCamera("main");
+	auto vp = cam->getViewport();
+	int w = vp.Width;
+	int h = vp.Height;
 	//std::array<std::string,6> files = {
 	//	"media/Ditch-River_2k.hdr",
 	//};

@@ -47,7 +47,7 @@ void GBuffer::render(Renderer::Texture2D::Ptr rt)
 	using namespace DirectX;
 	auto renderer = getRenderer();
 
-	auto cam = getScene()->createOrGetCamera("main");
+	auto cam = getCamera();
 	renderer->setViewport(cam->getViewport());
 
 	std::vector<Renderer::RenderTarget::Ptr> rts = { mAlbedo, mNormal, getRenderTarget("material")};
@@ -73,17 +73,17 @@ void GBuffer::render(Renderer::Texture2D::Ptr rt)
 		e->getVariable("roughness")->AsScalar()->SetFloat(r.material->roughness * getValue<float>("roughness"));
 		e->getVariable("metallic")->AsScalar()->SetFloat(r.material->metallic * getValue<float>("metallic"));
 		e->getVariable("reflection")->AsScalar()->SetFloat(r.material->reflection);
+		e->getVariable("diffuse")->AsVector()->SetFloatVector((const float*)&r.material->diffuse);
 
 		e->getVariable("campos")->AsVector()->SetFloatVector((const float*)&cam->getNode()->getRealPosition());
 		e->getVariable("heightscale")->AsScalar()->SetFloat(getValue<float>("heightscale"));
 		e->getVariable("minsamplecount")->AsScalar()->SetInt(getValue<int>("minSampleCount"));
 		e->getVariable("maxsamplecount")->AsScalar()->SetInt(getValue<int>("maxSampleCount"));
 
-
 		getRenderer()->setIndexBuffer(r.indices, DXGI_FORMAT_R32_UINT, 0);
 		getRenderer()->setVertexBuffer(r.vertices, r.layout.lock()->getSize(), 0);
 	
-		e->render(getRenderer(), [ this, &r](ID3DX11EffectPass* pass)
+		e->render(getRenderer(), [ this, &r,e](ID3DX11EffectPass* pass)
 		{
 			getRenderer()->setTextures(r.material->textures);
 			getRenderer()->setLayout(r.layout.lock()->bind(pass));

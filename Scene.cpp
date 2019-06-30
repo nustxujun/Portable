@@ -143,6 +143,9 @@ void Scene::Entity::setDirection(const Vector3 & dir)
 	d.Normalize();
 	Vector3 up(0, 1, 0);
 
+	if (fabs(up.Dot(dir)) == 1.0f)
+		up = { 0 ,0, 1 };
+
 	Vector3 x = up.Cross(d);
 	x.Normalize();
 	Vector3 y = d.Cross(x);
@@ -308,6 +311,15 @@ Scene::Camera::~Camera()
 Matrix Scene::Camera::getViewMatrix()
 {
 	return MathUtilities::makeViewMatrix(mNode->getRealPosition(), mNode->getRealOrientation());
+}
+
+void Scene::Camera::setViewMatrix(const Matrix& mat)
+{
+	auto conv = mat;
+	mNode->setPosition(-mat.Translation());
+	conv.Translation(-mat.Translation());
+	Quaternion q = Quaternion::CreateFromRotationMatrix(conv.Transpose());
+	mNode->setOrientation(q);
 }
 
 void Scene::Camera::lookat(const Vector3 & eye, const Vector3 & at)

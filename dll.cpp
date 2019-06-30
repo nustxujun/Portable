@@ -1,10 +1,15 @@
 
 #include <Windows.h>
-#include "MultipleLights.h"
-#include "PBRMaterial.h"
+
 #include <thread>
 #include "json.hpp"
 #include <sstream>
+
+
+
+#include "MultipleLights.h"
+#include "PBRMaterial.h"
+#include "Reflections.h"
 
 using namespace nlohmann;
 
@@ -14,7 +19,7 @@ using namespace nlohmann;
 #define EXPORT
 #endif
 
-using FRAMEWORK = Framework;
+using FRAMEWORK = Reflections;
 using Ptr = std::shared_ptr<FRAMEWORK>;
 Ptr framework;
 std::shared_ptr<std::thread> loop;
@@ -334,8 +339,14 @@ extern "C"
 #ifndef _WINDLL
 int main()
 {
-	init(1600,1000,1,1,0);
-	loop->join();
+	try {
+		init(1600, 1000, 1, 1, 0);
+		loop->join();
+	}
+	catch (std::exception& e)
+	{
+		MessageBoxA(NULL, e.what(), NULL, NULL);
+	}
 	return 0;
 }
 #endif

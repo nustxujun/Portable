@@ -258,8 +258,11 @@ public:
 
 	virtual void initPipeline()override
 	{
-		auto w = mRenderer->getWidth();
-		auto h = mRenderer->getHeight();
+		auto cam = mScene->createOrGetCamera("main");
+		mPipeline->setCamera(cam);
+		auto vp = cam->getViewport();
+		auto w = vp.Width;
+		auto h = vp.Height;
 		auto albedo = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
 		mPipeline->addShaderResource("albedo", albedo);
 		mPipeline->addRenderTarget("albedo", albedo);

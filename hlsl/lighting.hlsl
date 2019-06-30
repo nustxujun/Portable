@@ -4,10 +4,12 @@ Texture2D albedoTexture: register(t0);
 Texture2D normalTexture: register(t1);
 Texture2D depthTexture: register(t2);
 Texture2D materialTexture:register(t3);
+
+#if IBL
 TextureCube irradianceTexture: register(t4);
 TextureCube prefilteredTexture: register(t5);
 Texture2D lutTexture: register(t6);
-
+#endif
 
 Buffer<float4> pointlights: register(t7);
 Buffer<float4> spotlights: register(t8);
@@ -30,6 +32,10 @@ Texture3D<uint4> clusters: register(t11);
 #endif
 Texture2D shadows[NUM_SHADOWMAPS]:register(t20);
 
+#if ENV_RFL
+TextureCube envReflectionTexture:register(t30);
+#endif
+
 
 SamplerState sampLinear: register(s0);
 SamplerState sampPoint: register(s1);
@@ -38,16 +44,21 @@ cbuffer ConstantBuffer: register(b0)
 {
 	matrix invertViewProj;
 	matrix view;
+
 	float3 clustersize;
 	uint numdirs;
+	
 	float3 campos;
 	float roughness;
+
 	float metallic;
 	float width;
 	float height;
+	float ambient;
+	
+	float3 sceneSize;
 	float near;
 	float far;
-	float ambient;
 }
 
 struct PS_INPUT
@@ -91,6 +102,21 @@ float3 spotlight(float dist, float range,  float theta, float phi, float3 color)
 }
 
 
+float3 getBoxIntersection(float3 pos, float3 reflectionVector, float3 cubeSize, float3 cubePos)
+{
+	float3 rbmax = (0.5f * (cubeSize - cubePos) - pos) / reflectionVector;
+	float3 rbmin = (-0.5f * (cubeSize - cubePos) - pos) / reflectionVector;
+
+	float3 rbminmax = float3(
+		(reflectionVector.x > 0.0f) ? rbmax.x : rbmin.x,
+		(reflectionVector.y > 0.0f) ? rbmax.y : rbmin.y,
+		(reflectionVector.z > 0.0f) ? rbmax.z : rbmin.z);
+
+	float correction = min(min(rbminmax.x, rbminmax.y), rbminmax.z);
+	return (pos + reflectionVector * correction);
+}
+
+
 #if TILED || CLUSTERED || DIR
 float3 travelLights(float roughness, float metallic,uint pointoffset, uint pointnum, uint spotoffset, uint spotnum, float3 N, float3 pos, float3 albedo, float2 uv)
 {
@@ -100,66 +126,78 @@ float3 travelLights(float roughness, float metallic,uint pointoffset, uint point
 
 	float shadowlist[NUM_SHADOWMAPS];
 	shadowlist[0] = 1.0f;
-	for (uint i = 1; i < NUM_SHADOWMAPS; ++i)
 	{
-		shadowlist[i ] = shadows[i - 1].SampleLevel(sampPoint, uv, 0).r;
+		for (uint i = 1; i < NUM_SHADOWMAPS; ++i)
+		{
+			shadowlist[i] = shadows[i - 1].SampleLevel(sampPoint, uv, 0).r;
+		}
 	}
 
 #if (TILED || CLUSTERED)
-	for (uint i = 0; i < pointnum; ++i)
 	{
-		uint index = lightsIndices[pointoffset + i];
+		for (uint i = 0; i < pointnum; ++i)
+		{
+			uint index = lightsIndices[pointoffset + i];
 
-		float4 lightpos = pointlights[index * 2]; // pos and range
-		float4 lightcolor = pointlights[index * 2 + 1]; // color and shadow index
+			float4 lightpos = pointlights[index * 2]; // pos and range
+			float4 lightcolor = pointlights[index * 2 + 1]; // color and shadow index
 
-		uint shadowindex = lightcolor.w;
-		float shadow = shadowlist[shadowindex];
+			uint shadowindex = lightcolor.w;
+			float shadow = shadowlist[shadowindex];
 
-		float3 L = normalize(lightpos.xyz - pos);
+			float3 L = normalize(lightpos.xyz - pos);
 
-		float dist = length(pos - lightpos.xyz);
-		float3 radiance = pointlight(dist, lightpos.w, lightcolor.rgb) ;
-		Lo += directBRDF(roughness, metallic, F0, albedo, N, L, V) * radiance * shadow;
+			float dist = length(pos - lightpos.xyz);
+			float3 radiance = pointlight(dist, lightpos.w, lightcolor.rgb);
+			Lo += directBRDF(roughness, metallic, F0, albedo, N, L, V) * radiance * shadow;
+		}
 	}
-
-	for (uint i = 0; i < spotnum; ++i)
 	{
-		uint index = lightsIndices[spotoffset + i];
-		float4 lightpos = spotlights[index * 3]; // pos and range
-		float4 lightdir = spotlights[index * 3 + 1]; // dir and phi
-		float4 lightcolor = spotlights[index * 3 + 2];
+		for (uint i = 0; i < spotnum; ++i)
+		{
+			uint index = lightsIndices[spotoffset + i];
+			float4 lightpos = spotlights[index * 3]; // pos and range
+			float4 lightdir = spotlights[index * 3 + 1]; // dir and phi
+			float4 lightcolor = spotlights[index * 3 + 2];
 
-		uint shadowindex = lightcolor.w;
-		float shadow = shadowlist[shadowindex];
+			uint shadowindex = lightcolor.w;
+			float shadow = shadowlist[shadowindex];
 
-		float3 L = normalize(lightpos.xyz - pos);
+			float3 L = normalize(lightpos.xyz - pos);
 
-		float dist = length(pos - lightpos.xyz);
-		float3 radiance = spotlight(dist, lightpos.w, dot(-L, lightdir.xyz), lightdir.w, lightcolor.rgb) ;
-		Lo += directBRDF(roughness, metallic, F0, albedo, N, L, V) * radiance * shadow;
+			float dist = length(pos - lightpos.xyz);
+			float3 radiance = spotlight(dist, lightpos.w, dot(-L, lightdir.xyz), lightdir.w, lightcolor.rgb);
+			Lo += directBRDF(roughness, metallic, F0, albedo, N, L, V) * radiance * shadow;
+		}
 	}
 #endif
-
-	for (uint i = 0; i < numdirs; ++i)
 	{
-		float4 lightdir = dirlights[i * 2];
-		float4 lightcolor = dirlights[i * 2 + 1];
+		for (uint i = 0; i < numdirs; ++i)
+		{
+			float4 lightdir = dirlights[i * 2];
+			float4 lightcolor = dirlights[i * 2 + 1];
 
-		uint shadowindex = lightcolor.w;
-		float shadow = shadowlist[shadowindex];
+			uint shadowindex = lightcolor.w;
+			float shadow = shadowlist[shadowindex];
 
-		float3 L = normalize(-lightdir.xyz);
-		float3 radiance = lightcolor.xyz;
-		Lo += directBRDF(roughness, metallic, F0, albedo, N, L, V) * radiance * shadow;
+			float3 L = normalize(-lightdir.xyz);
+			float3 radiance = lightcolor.xyz;
+			Lo += directBRDF(roughness, metallic, F0, albedo, N, L, V) * radiance * shadow;
+		}
 	}
+	float3 R = normalize(reflect(-V, N));
 
-	float3 reflectcoord = normalize(reflect(-V, N));
-
+#if IBL
 	float3 lut = LUT(N, V, roughness, lutTexture, sampPoint);
-	float3 prefiltered = prefilteredTexture.SampleLevel(sampPoint, reflectcoord, roughness * (PREFILTERED_MIP_LEVEL -1));
+	float3 prefiltered = prefilteredTexture.SampleLevel(sampPoint, R, roughness * (PREFILTERED_MIP_LEVEL -1)).rgb;
 	float3 irradiance = irradianceTexture.SampleLevel(sampPoint, N, 0).rgb;
 	Lo += indirectBRDF(irradiance, prefiltered, lut, roughness, metallic, F0, albedo, N, V);
+#endif
+#if ENV_RFL
+	float3 corrected = getBoxIntersection(pos, R, sceneSize, float3(0,1,0));
+	corrected = normalize(corrected - float3(0,1,0));
+	Lo = envReflectionTexture.SampleLevel(sampPoint, corrected, 0).rgb;
+#endif
 	return Lo;
 }
 
