@@ -7,23 +7,38 @@
 
 void EnvironmentMapping::init(const Vector3 & pos, const Vector3& size, const std::string& cubemap, int resolution)
 {
+	set("envIntensity", { {"type","set"}, {"value",1},{"min","0"},{"max",2.0f},{"interval", "0.01"} });
+	set("envCubeScale", { {"type","set"}, {"value",1},{"min","0"},{"max",2.0f},{"interval", "0.01"} });
+	set("boxProjection", { {"type","set"}, {"value",0},{"min","0"},{"max",1},{"interval", "1"} });
+
+
 	mName = "EnvironmentMapping";
 	int cubesize = resolution;
-
+	mSize = size;
+	mPosition = pos;
 	
 	auto cam = getScene()->createOrGetCamera("dynamicEnv");
-	cam->lookat({ 0,10,0 }, { 0,0,0 });
 
 	auto aabb = getScene()->getRoot()->getWorldAABB();
 	Vector3 vec = aabb.second - aabb.first;
 
 	cam->setViewport(0, 0, cubesize, cubesize);
-	cam->setNearFar(0.1, vec.Length() + 1);
+	cam->setNearFar(0.1, vec.Length() + 1); 
 	cam->setFOVy(3.14159265358f * 0.5f);
 
 	auto renderer = getRenderer();
 
-	mPS = renderer->createPixelShader("hlsl/environmentmapping.hlsl");
+	std::vector<D3D10_SHADER_MACRO> norm = { {"IBL", "1"},  {NULL,NULL} };
+	std::vector<D3D10_SHADER_MACRO> corr = { {"IBL", "1"}, {"CORRECTED", "1"}, {NULL,NULL} };
+
+	mPS[0] = renderer->createPixelShader("hlsl/environmentmapping.hlsl", "main", norm.data());
+	mPS[1] = renderer->createPixelShader("hlsl/environmentmapping.hlsl", "main", corr.data());
+
+	mIrradianceProcessor = ImageProcessing::create<IrradianceCubemap>(renderer, ImageProcessing::RT_COPY, true);
+	mPrefilteredProcessor = ImageProcessing::create<PrefilterCubemap>(renderer, ImageProcessing::RT_COPY, true);
+	mLUT = renderer->createTexture("media/IBL_BRDF_LUT.png", 1);
+
+	mConstants = renderer->createConstantBuffer(sizeof(Constants));
 
 	mCubePipeline = decltype(mCubePipeline)(new Pipeline(renderer, getScene()));
 	mCubePipeline->setCamera(cam);
@@ -59,8 +74,6 @@ void EnvironmentMapping::init(const Vector3 & pos, const Vector3& size, const st
 	{
 		Vector4 lightinfo[2];
 		auto l = getScene()->createOrGetLight("main");
-		float rad = getValue<float>("time");
-		l->setDirection({ 0.1f, cos(rad), sin(rad) });
 		auto dir = l->getDirection();
 		lightinfo[0] = { dir.x, dir.y,dir.z , 0 };
 		auto color = l->getColor() * getValue<float>("dirradiance");
@@ -68,11 +81,6 @@ void EnvironmentMapping::init(const Vector3 & pos, const Vector3& size, const st
 		dirlights.lock()->blit(lightinfo, sizeof(lightinfo));
 	}
 
-
-
-	mCubePipeline->addShaderResource("irradinace", {});
-	mCubePipeline->addShaderResource("prefiltered", {});
-	mCubePipeline->addShaderResource("lut", {});
 
 
 	mCubePipeline->pushStage("clear rt", [this, renderer](Renderer::Texture2D::Ptr rt)
@@ -85,7 +93,10 @@ void EnvironmentMapping::init(const Vector3 & pos, const Vector3& size, const st
 	mCubePipeline->pushStage<SkyBox>(cubemap, false);
 	//mCubePipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 
-	mCubePipeline->setValue("ambient", 1.0f);
+	//mCubePipeline->setValue("ambient", 1.0f);
+	mCubePipeline->setValue("numdirs", 1.0f);
+	mCubePipeline->setValue("dirradiance", 1.0f);
+
 
 
 	D3D11_TEXTURE2D_DESC cubedesc;
@@ -108,9 +119,11 @@ void EnvironmentMapping::init(const Vector3 & pos, const Vector3& size, const st
 
 	auto frame = renderer->createRenderTarget(cubesize, cubesize, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	mCubePipeline->setFrameBuffer(frame);
-	
 	cam->getNode()->setPosition(pos);
-	mUpdate = [this, pos,cam, renderer,frame]() {
+
+
+
+	mUpdate = [this,cam, renderer,frame]() {
 		int index = 0;
 		Matrix viewMats[6] = {
 			MathUtilities::makeMatrixFromAxis(-Vector3::UnitZ, Vector3::UnitY, Vector3::UnitX),
@@ -130,6 +143,13 @@ void EnvironmentMapping::init(const Vector3 & pos, const Vector3& size, const st
 			renderer->getContext()->CopySubresourceRegion(mCube->getTexture(), index++, 0, 0, 0, frame->getTexture(), 0, 0);
 		}
 
+		std::string hdrenvfile = "media/Ditch-River_2k.hdr";
+		//mCube = renderer->createTexture(hdrenvfile, 1);
+
+		mIrradiance = mIrradianceProcessor->process(mCube);
+		mPrefiltered = mPrefilteredProcessor->process(mCube);
+
+		//D3DX11SaveTextureToFile(renderer->getContext(), mCube->getTexture(), D3DX11_IFF_DDS, L"test.dds");
 	};
 	
 	mUpdate();
@@ -138,5 +158,50 @@ void EnvironmentMapping::init(const Vector3 & pos, const Vector3& size, const st
 
 void EnvironmentMapping::render(Renderer::Texture2D::Ptr rt)
 {
+	if (mFrame.expired())
+	{
+		mFrame = getRenderer()->createTexture(rt->getDesc());
+	}
 	//mUpdate();
+
+
+	auto cam = getCamera();
+	Constants constants;
+	constants.invertViewProj = (cam->getViewMatrix() * cam->getProjectionMatrix()).Invert().Transpose();
+	constants.campos = cam->getNode()->getRealPosition();
+	constants.envCubeScale = getValue<float>("envCubeScale");
+	constants.envCubeSize = mSize;
+	constants.envIntensity = getValue<float>("envIntensity");
+	constants.envCubePos = mPosition;
+	mConstants.lock()->blit(constants);
+
+	auto quad = getQuad();
+	//quad->setDefaultBlend(false);
+	quad->setBlendColorAdd();
+	quad->setDefaultSampler();
+	quad->setViewport(cam->getViewport());
+	quad->setPixelShader(mPS[getValue<int>("boxProjection")]);
+	quad->setConstant(mConstants);
+	quad->setRenderTarget(rt);
+	quad->setTextures({
+		getShaderResource("albedo"),
+		getShaderResource("normal"),
+		getShaderResource("material"),
+		getShaderResource("depth"),
+		//mCube,
+
+		mIrradiance,
+		mPrefiltered,
+		mLUT,
+	});
+	quad->draw();
+
+	//mFrame->swap(rt);
+	//quad->setDefaultPixelShader();
+	//quad->setBlendColorAdd();
+	//quad->setRenderTarget(rt);
+	//quad->setTextures({ mFrame });
+	//quad->draw();
+
+
 }

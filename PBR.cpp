@@ -210,9 +210,9 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 	std::vector<Renderer::ShaderResource::Ptr> srvs = {
 	mAlbedo, mNormal, mDepthCopy ,
 	getShaderResource("material"),
-	getShaderResource("irradinace"),
-	getShaderResource("prefiltered"),
-	getShaderResource("lut"),
+	//getShaderResource("irradinace"),
+	//getShaderResource("prefiltered"),
+	//getShaderResource("lut"),
 	};
 	srvs.resize(40);
 	srvs[7] = getShaderResource("pointlights");

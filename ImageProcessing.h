@@ -109,7 +109,7 @@ public:
 class PrefilterCubemap : public CubeMapProcessing
 {
 public:
-	using Ptr = std::shared_ptr<IrradianceCubemap>;
+	using Ptr = std::shared_ptr<PrefilterCubemap>;
 	using CubeMapProcessing::CubeMapProcessing;
 
 	void init(bool iscube);

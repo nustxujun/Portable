@@ -1,16 +1,19 @@
 #pragma once
 
 #include "Pipeline.h"
+#include "ImageProcessing.h"
 
 class EnvironmentMapping : public Pipeline::Stage
 {
 	__declspec(align(16))
 		struct Constants
 	{
-		Vector3 envCubeSize;
+		Matrix invertViewProj;
+		Vector3 campos;
 		float envCubeScale;
-
-
+		Vector3 envCubeSize;
+		float envIntensity;
+		Vector3 envCubePos;
 	};
 public:
 	using Pipeline::Stage::Stage;
@@ -20,7 +23,18 @@ public:
 
 private:
 	Renderer::Texture2D::Ptr mCube;
+	Renderer::Texture2D::Ptr mIrradiance;
+	Renderer::Texture2D::Ptr mPrefiltered;
+	Renderer::Texture2D::Ptr mLUT;
+	IrradianceCubemap::Ptr mIrradianceProcessor;
+	PrefilterCubemap::Ptr mPrefilteredProcessor;
+
+
 	std::shared_ptr<Pipeline> mCubePipeline;
 	std::function<void(void)> mUpdate;
-	Renderer::Texture2D::Ptr mPS;
+	Renderer::PixelShader::Weak mPS[2];
+	Renderer::Buffer::Ptr mConstants;
+	Renderer::Texture2D::Ptr mFrame;
+	Vector3 mSize;
+	Vector3 mPosition;
 };

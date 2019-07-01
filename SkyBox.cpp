@@ -29,7 +29,7 @@ void SkyBox::init(bool isCubemap)
 		Parameters params;
 		params["geom"] = "sphere";
 		params["size"] = "1000";
-		params["resolution"] = "100";
+		params["resolution"] = "50";
 		mSkyMesh = GeometryMesh::Ptr(new GeometryMesh(params, getRenderer()));
 	}
 

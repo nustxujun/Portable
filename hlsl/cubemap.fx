@@ -68,7 +68,7 @@ float4 sampleTex(float3 coords)
 float4 sampleTex(float3 coords)
 {
 	float4 color = diffuseTex.SampleLevel(sampLinear, coords,0);
-	color.rgb = pow(color.rgb, 2.2f);
+	//color.rgb = pow(color.rgb, 2.2f);
 	return color;
 }
 #endif

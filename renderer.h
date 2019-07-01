@@ -475,7 +475,7 @@ public:
 	Texture2D::Ptr createRenderTarget(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage = D3D11_USAGE_DEFAULT);
 	Buffer::Ptr createBuffer(int size, D3D11_BIND_FLAG bindflag, const D3D11_SUBRESOURCE_DATA* initialdata = NULL,D3D11_USAGE usage = D3D11_USAGE_DEFAULT, size_t CPUaccess = 0);
 	Buffer::Ptr createRWBuffer(int size, int stride, DXGI_FORMAT format, size_t bindflag,  D3D11_USAGE usage = D3D11_USAGE_DEFAULT, size_t CPUaccess = 0);
-
+	Buffer::Ptr createConstantBuffer(int size, void* data = 0, size_t datasize = 0);
 	SharedCompiledData compileFile(const std::string& filename, const std::string& entryPoint, const std::string& shaderModel, const D3D10_SHADER_MACRO* macro = NULL);
 	Effect::Ptr createEffect(const std::string& file, const D3D10_SHADER_MACRO* macro = NULL);
 	Effect::Ptr createEffect(void* data, size_t size);

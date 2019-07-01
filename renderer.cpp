@@ -710,6 +710,13 @@ Renderer::Buffer::Ptr Renderer::createRWBuffer(int size, int stride, DXGI_FORMAT
 	return mBuffers.back();
 }
 
+Renderer::Buffer::Ptr Renderer::createConstantBuffer(int size, void* data , size_t datasize)
+{
+	D3D11_SUBRESOURCE_DATA initdata;
+	initdata.pSysMem = data;
+	return createBuffer(size, D3D11_BIND_CONSTANT_BUFFER, data? &initdata:nullptr, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+}
+
 
 Renderer::SharedCompiledData Renderer::compileFile(const std::string& filename, const std::string& entryPoint, const std::string& shaderModel, const D3D10_SHADER_MACRO* macro)
 {

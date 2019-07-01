@@ -10,7 +10,7 @@
 #include "PostProcessing.h"
 #include "SkyBox.h"
 #include "SSR.h"
-#include "CubemapReflection.h"
+#include "EnvironmentMapping.h"
 #include "AO.h"
 class Reflections :public Framework
 {
@@ -43,40 +43,16 @@ public:
 			model->setCastShadow(true);
 			model->attach(root);
 			Material::Ptr mat = Material::create();
-			mat->roughness = 0;
-			mat->metallic = 0;
+			mat->roughness = 1;
+			mat->metallic = 1;
 			for (int i = 0; i < textures.size(); ++i)
 				if (!textures[i].empty())
 					mat->setTexture(i, mRenderer->createTexture(textures[i]));
-			//model->setMaterial(mat);
+			model->setMaterial(mat);
 		}
 
-		{
-			std::vector<std::string> textures = {
-					"media/rustediron/rustediron2_basecolor.png",
-					"media/rustediron/rustediron2_normal.png",
-					"media/rustediron/rustediron2_roughness.png",
-					"media/rustediron/rustediron2_metallic.png",
-			};
-			Parameters params;
-			params["geom"] = "plane";
-			params["size"] = "50";
-			auto model = mScene->createModel("plane2", params, [this](const Parameters& p)
-			{
-				return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-			});
-			model->getNode()->setPosition({ 0, 20, 0 });
-			model->getNode()->rotate(3.1415926, 0, 0);
-			model->setCastShadow(true);
-			model->attach(root);
-			Material::Ptr mat = Material::create();
-			mat->roughness = 0;
-			mat->metallic = 0;
-			for (int i = 0; i < textures.size(); ++i)
-				if (!textures[i].empty())
-					mat->setTexture(i, mRenderer->createTexture(textures[i]));
-			//model->setMaterial(mat);
-		}
+
+
 		int spherecount = 10;
 		for (int i = 0; i < spherecount; ++i)
 		{
@@ -97,7 +73,6 @@ public:
 			});
 
 			float theta = 3.14159265358  * 2.0f / spherecount;
-			//float theta = 1;
 
 			float sin = std::sin(i * theta) * 10;
 			float cos = std::cos(i* theta) * 10;
@@ -105,7 +80,7 @@ public:
 			model->setCastShadow(true);
 			model->attach(root);
 			Material::Ptr mat = Material::create();
-			//mat->roughness = 0.2;
+			mat->roughness = 0.2;
 
 			for (int i = 0; i < textures.size(); ++i)
 				if (!textures[i].empty())
@@ -116,8 +91,8 @@ public:
 
 		//{
 		//	Parameters params;
-		//	params["file"] = "media/model.obj";
-		//	//params["file"] = "media/sponza/sponza.obj";
+		//	//params["file"] = "media/model.obj";
+		//	params["file"] = "media/sponza/sponza.obj";
 		//	auto model = mScene->createModel("test", params, [this](const Parameters& p) {
 		//		return Mesh::Ptr(new Mesh(p, mRenderer));
 		//	});
@@ -136,7 +111,9 @@ public:
 		DirectX::XMFLOAT3 eye(aabb.second);
 		DirectX::XMFLOAT3 at(aabb.first);
 		//cam->lookat(eye, at);
-		cam->lookat({ 0,3,0 }, { 0,0,0 });
+		//cam->lookat((aabb.first + aabb.second) * 0.5, { 0,0,0 });
+		cam->getNode()->setPosition((aabb.first + aabb.second) * 0.5);
+		cam->setDirection({ 0, -1, 0 });
 		cam->setViewport(0, 0, mRenderer->getWidth(), mRenderer->getHeight());
 		cam->setNearFar(1, vec.Length() + 1);
 		cam->setFOVy(0.785398185);
@@ -201,13 +178,16 @@ public:
 			mRenderer->clearDepth(depth, 1.0f);
 		});
 
-		mPipeline->pushStage<CubemapReflection>(Vector3(0,1,0), "media/Ditch-River_2k.hdr");
+
+		auto aabb = mScene->getRoot()->getWorldAABB();
 
 		mPipeline->pushStage<GBuffer>();
 		mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
 		mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
+		mPipeline->pushStage<EnvironmentMapping>((aabb.first + aabb.second) * 0.5f, aabb.second - aabb.first, "media/Ditch-River_2k.hdr");
+
 		//mPipeline->pushStage<AO>();
-		//mPipeline->pushStage<SSR>();
+		mPipeline->pushStage<SSR>();
 		mPipeline->pushStage<SkyBox>("media/Ditch-River_2k.hdr", false);
 		mPipeline->pushStage<HDR>();
 		mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");

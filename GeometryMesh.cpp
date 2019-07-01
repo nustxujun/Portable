@@ -196,7 +196,7 @@ std::pair<Mesh::Meshs, Mesh::AABB> GeometryMesh::generateGeometry(const Paramete
 		};
 
 		
-		aabb.min.y = -half;
+		aabb.min.y = 0;
 		aabb.max.y = half;
 	}
 	else if (geom->second == "room" || geom->second == "cube")

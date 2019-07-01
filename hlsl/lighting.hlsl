@@ -15,7 +15,6 @@ Buffer<float4> pointlights: register(t7);
 Buffer<float4> spotlights: register(t8);
 Buffer<float4> dirlights: register(t9);
 
-#define PREFILTERED_MIP_LEVEL 5
 
 #if TILED || CLUSTERED
 Buffer<uint> lightsIndices: register(t10);
