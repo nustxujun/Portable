@@ -54,21 +54,21 @@ void SSR::render(Renderer::Texture2D::Ptr rt)
 	quad->setTextures({(mFrame)});
 	quad->setRenderTarget(rt);
 	quad->setDefaultPixelShader();
-	//quad->setBlendColorAdd();
+	quad->setBlendColorAdd();
 
-	D3D11_BLEND_DESC desc = { 0 };
-	desc.RenderTarget[0] = {
-		TRUE,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_OP_ADD,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_OP_ADD,
-		D3D11_COLOR_WRITE_ENABLE_ALL
-	};
+	//D3D11_BLEND_DESC desc = { 0 };
+	//desc.RenderTarget[0] = {
+	//	TRUE,
+	//	D3D11_BLEND_ONE,
+	//	D3D11_BLEND_ONE,
+	//	D3D11_BLEND_OP_ADD,
+	//	D3D11_BLEND_ONE,
+	//	D3D11_BLEND_ONE,
+	//	D3D11_BLEND_OP_ADD,
+	//	D3D11_COLOR_WRITE_ENABLE_ALL
+	//};
 
-	quad->setBlend(desc);
+	//quad->setBlend(desc);
 	quad->draw();
 }
 

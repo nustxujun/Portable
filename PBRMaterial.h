@@ -8,6 +8,7 @@
 #include "GBuffer.h"
 #include "SkyBox.h"
 #include "SSR.h"
+#include "EnvironmentMapping.h"
 
 class PBRMaterial :public Observer
 {
@@ -148,7 +149,7 @@ public:
 				});
 				model->setCastShadow(false);
 				model->attach(root);
-				model->getNode()->setPosition(0.0f, 2.0f * r, 2.0f * m);
+				model->getNode()->setPosition(10.0f, 2.0f * r - 7, 2.0f * m - 7);
 				Material::Ptr mat = Material::create();
 				mat->metallic = m * 0.1f;
 				mat->roughness = r * 0.1f;
@@ -223,7 +224,7 @@ public:
 
 		//plane();
 		differentMaterials();
-		//roughAndMetal();
+		roughAndMetal();
 		//gun();
 
 		auto cam = mScene->createOrGetCamera("main");
@@ -294,19 +295,6 @@ public:
 		mPipeline->setFrameBuffer(frame);
 
 		std::string hdrenvfile = "media/Ditch-River_Env.hdr";
-		auto equirect = mRenderer->createTexture(hdrenvfile, 1);
-		{
-			auto proc = ImageProcessing::create<IrradianceCubemap>(mRenderer, ImageProcessing::RT_TEMP, false);
-			auto ret = proc->process(equirect);
-			mPipeline->addShaderResource("irradinace", ret);
-		}
-		{
-			auto proc = ImageProcessing::create<PrefilterCubemap>(mRenderer, ImageProcessing::RT_TEMP, false);
-			auto ret = proc->process(equirect);
-			mPipeline->addShaderResource("prefiltered", ret);
-		}
-		auto lut = mRenderer->createTexture("media/IBL_BRDF_LUT.png", 1);
-		mPipeline->addShaderResource("lut", lut);
 
 		auto bb = mRenderer->getBackbuffer();
 		mPipeline->pushStage("clear rt", [bb, this](Renderer::Texture2D::Ptr rt)
@@ -317,7 +305,8 @@ public:
 		mPipeline->pushStage<GBuffer>();
 		mPipeline->pushStage<PBR>();
 		//mPipeline->pushStage<AO>(3.0f);
-		mPipeline->pushStage<SSR>();
+		//mPipeline->pushStage<SSR>();
+		mPipeline->pushStage<EnvironmentMapping>(hdrenvfile);
 		mPipeline->pushStage<SkyBox>(hdrenvfile, false);
 		mPipeline->pushStage<HDR>();
 		mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");

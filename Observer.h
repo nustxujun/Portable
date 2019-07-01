@@ -170,7 +170,7 @@ public :
 				const float degree = 3.14f * 0.5f;
 
 				o.x += d.x * 0.005;
-				o.y += d.y * 0.005;
+				o.y -= d.y * 0.005;
 				o.y = std::max(-degree, std::min(degree, o.y));
 				float r = cos(o.y) * maxlen;
 				ldir = { cos(o.x) * r, sin(o.y) * maxlen, sin(o.x) * r };

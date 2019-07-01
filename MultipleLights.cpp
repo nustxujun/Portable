@@ -52,11 +52,6 @@ void MultipleLights::initPipeline()
 	mPipeline->addShaderResource("dirlights", dirlights);
 	mPipeline->addBuffer("dirlights", dirlights);
 
-	// used in IBL
-	mPipeline->addShaderResource("irradinace", {});
-	mPipeline->addShaderResource("prefiltered", {});
-	mPipeline->addShaderResource("lut", {});
-
 
 
 	initDRPipeline();
@@ -99,68 +94,41 @@ void MultipleLights::initScene()
 		Material::Ptr mat = Material::create();
 		mat->metallic = 1.0f;
 		mat->roughness = 1.0f;
-		//mat->setTexture(0, mRenderer->createTexture("media/streaked/streaked-metal1-albedo.png"));
+	
+		model->setMaterial(mat);
+	}
+	
+
+
+	
+
+
+	{
+
+		Parameters params;
+		params["geom"] = "sphere";
+		params["radius"] = "10";
+		params["resolution"] = "20";
+		params["size"] = "1";
+		std::stringstream ss;
+		ss << "sphere"; 
+		auto model = mScene->createModel(ss.str(), params, [this](const Parameters& p)
+		{
+			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+		});
+		model->setCastShadow(false);
+		model->attach(root);
+		model->getNode()->setPosition(0,0,0);
+		Material::Ptr mat = Material::create();
+		//mat->metallic = 1;
+		//mat->roughness = 0;
+		mat->setTexture(0, mRenderer->createTexture("media/streaked/streaked-metal1-albedo.png"));
 		mat->setTexture(1, mRenderer->createTexture("media/streaked/streaked-metal1-normal-dx.png"));
 		mat->setTexture(2, mRenderer->createTexture("media/streaked/streaked-metal1-rough.png"));
 		mat->setTexture(3, mRenderer->createTexture("media/streaked/streaked-metal1-metalness.png"));
 		mat->setTexture(4, mRenderer->createTexture("media/streaked/streaked-metal1-ao.png"));
 
-		//model->setMaterial(mat);
-	}
-
-
-	//{
-	//	Parameters params;
-	//	params["geom"] = "plane";
-	//	params["size"] = "100";
-	//	//params["resolution"] = "500";
-	//	auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
-	//	{
-	//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-	//	});
-	//	model->setCastShadow(true);
-	//	model->attach(root);
-	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-
-	//}
-
-
-	auto albedo = mRenderer->createTexture("media/rustediron/rustediron2_basecolor.png");
-	//auto normal = mRenderer->createTexture("media/rustediron/streaked-metal1-normal-dx.png");
-	auto rough = mRenderer->createTexture("media/rustediron/rustediron2_roughness.png");
-	auto metal = mRenderer->createTexture("media/rustediron/rustediron2_metallic.png");
-	//auto ao = mRenderer->createTexture("media/rustediron/streaked-metal1-ao.png");
-
-
-	for (int r = 0; r <= 10; ++r)
-	{
-		for (int m = 0; m <= 10; ++m)
-		{
-			Parameters params;
-			params["geom"] = "sphere";
-			params["radius"] = "1";
-			params["resolution"] = "20";
-			params["size"] = "1";
-			std::stringstream ss;
-			ss << "material" << r << m; 
-			auto model = mScene->createModel(ss.str(), params, [this](const Parameters& p)
-			{
-				return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-			});
-			model->setCastShadow(false);
-			model->attach(root);
-			model->getNode()->setPosition(0.0f, 2.0f * r, 2.0f * m);
-			Material::Ptr mat = Material::create();
-			mat->metallic = m * 0.1f;
-			mat->roughness = r * 0.1f;
-			mat->setTexture(0, albedo);
-			//mat->setTexture(1, normal);
-			mat->setTexture(2, rough);
-			mat->setTexture(3, metal);
-			//mat->setTexture(4, ao);
-
-			model->setMaterial(mat);
-		}
+		model->setMaterial(mat);
 	}
 
 
@@ -432,7 +400,7 @@ void MultipleLights::initDRPipeline()
 
 	mPipeline->pushStage<GBuffer>();
 	mPipeline->pushStage<PBR>();
-	//mPipeline->pushStage<HDR>();
+	mPipeline->pushStage<HDR>();
 	mPipeline->pushStage<SkyBox>("media/Ditch-River_2k.hdr", false);
 
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
@@ -589,24 +557,8 @@ void MultipleLights::initCDRPipeline()
 	std::string hdrenvfile = "media/Ditch-River_2k.hdr";
 	auto equirect = mRenderer->createTexture(hdrenvfile, 1);
 	constexpr auto equirectTex = false;
-	Renderer::Texture2D::Ptr ibltex;
-	if (equirectTex)
-		ibltex = equirect;
-	else
-		ibltex = envmap;
 
-	{
-		auto proc = ImageProcessing::create<IrradianceCubemap>(mRenderer,ImageProcessing::RT_TEMP, !equirectTex);
-		auto ret = proc->process(ibltex);
-		mPipeline->addShaderResource("irradinace", ret);
-	}
-	{
-		auto proc = ImageProcessing::create<PrefilterCubemap>(mRenderer, ImageProcessing::RT_TEMP, !equirectTex);
-		auto ret = proc->process(ibltex);
-		mPipeline->addShaderResource("prefiltered", ret);
-	}
-	auto lut = mRenderer->createTexture("media/IBL_BRDF_LUT.png",1);
-	mPipeline->addShaderResource("lut", lut);
+
 
 	mPipeline->setFrameBuffer(frame);
 	auto bb = mRenderer->getBackbuffer();
@@ -623,7 +575,7 @@ void MultipleLights::initCDRPipeline()
 	
 	mPipeline->pushStage<PBR>(Vector3(bw, bh,0), shadowmaps);
 
-	mPipeline->pushStage<AO>(20.0f);
+	//mPipeline->pushStage<AO>(20.0f);
 
 
 	//std::vector<std::string> files = { "media/uffizi_cross.dds" };

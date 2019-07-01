@@ -19,9 +19,12 @@ public:
 	using Pipeline::Stage::Stage;
 
 	void init(const Vector3& pos, const Vector3& size,const std::string& cubemap, int resolution = 512);
+	void init(const std::string& cubemap);
 	void render(Renderer::Texture2D::Ptr rt)  override final;
-
 private:
+	void init();
+private:
+	bool mIsOnlySkybox = false;
 	Renderer::Texture2D::Ptr mCube;
 	Renderer::Texture2D::Ptr mIrradiance;
 	Renderer::Texture2D::Ptr mPrefiltered;

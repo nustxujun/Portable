@@ -143,7 +143,7 @@ void PBR::renderNormal(Renderer::Texture2D::Ptr rt)
 		//getShaderResource("prefiltered"),
 		//getShaderResource("lut"),
 	};
-	srvs.resize(20);
+	srvs.resize(30);
 	srvs[7] = getShaderResource("pointlights");
 	srvs[8] = getShaderResource("spotlights");
 	srvs[9] = getShaderResource("dirlights");

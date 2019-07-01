@@ -103,7 +103,7 @@ float4 main(PS_INPUT Input) : SV_TARGET
 	float3 prefiltered = prefilteredTexture.SampleLevel(sampLinear, R, roughness * (PREFILTERED_MIP_LEVEL -1)).rgb;
 	float3 irradiance = irradianceTexture.SampleLevel(sampLinear, N, 0).rgb;
 	result = indirectBRDF(irradiance, prefiltered, lut, roughness, metallic, F0_DEFAULT, albedo, N, V);
-	return float4(result, 1);
+	return float4(result * intensity, 1);
 #else
 	result = envTex.SampleLevel(sampLinear, R, 0).rgb;
 	return float4(result * intensity * (1 - roughness) * metallic * reflection , 1);

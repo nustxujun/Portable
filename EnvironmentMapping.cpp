@@ -5,14 +5,47 @@
 #include "SkyBox.h"
 #include "MathUtilities.h"
 
+
+void EnvironmentMapping::init()
+{
+	mName = "EnvironmentMapping";
+	auto renderer = getRenderer();
+
+	std::vector<D3D10_SHADER_MACRO> norm = { {"IBL", "1"},  {NULL,NULL} };
+	std::vector<D3D10_SHADER_MACRO> corr = { {"IBL", "1"}, {"CORRECTED", "1"}, {NULL,NULL} };
+
+	mPS[0] = renderer->createPixelShader("hlsl/environmentmapping.hlsl", "main", norm.data());
+	mPS[1] = renderer->createPixelShader("hlsl/environmentmapping.hlsl", "main", corr.data());
+
+
+	mLUT = renderer->createTexture("media/IBL_BRDF_LUT.png", 1);
+
+	mConstants = renderer->createConstantBuffer(sizeof(Constants));
+}
+
+void EnvironmentMapping::init(const std::string& cubemap )
+{
+	init();
+	set("envIntensity", { {"type","set"}, {"value",1},{"min","0"},{"max",2.0f},{"interval", "0.01"} });
+
+	mIsOnlySkybox = true;
+	mIrradianceProcessor = ImageProcessing::create<IrradianceCubemap>(getRenderer(), ImageProcessing::RT_COPY, false);
+	mPrefilteredProcessor = ImageProcessing::create<PrefilterCubemap>(getRenderer(), ImageProcessing::RT_COPY, false);
+	mCube = getRenderer()->createTexture(cubemap, 1);
+	mIrradiance = mIrradianceProcessor->process(mCube);
+	mPrefiltered = mPrefilteredProcessor->process(mCube);
+}
+
+
 void EnvironmentMapping::init(const Vector3 & pos, const Vector3& size, const std::string& cubemap, int resolution)
 {
+	init();
 	set("envIntensity", { {"type","set"}, {"value",1},{"min","0"},{"max",2.0f},{"interval", "0.01"} });
 	set("envCubeScale", { {"type","set"}, {"value",1},{"min","0"},{"max",2.0f},{"interval", "0.01"} });
 	set("boxProjection", { {"type","set"}, {"value",0},{"min","0"},{"max",1},{"interval", "1"} });
 
+	mIsOnlySkybox = false;
 
-	mName = "EnvironmentMapping";
 	int cubesize = resolution;
 	mSize = size;
 	mPosition = pos;
@@ -28,17 +61,8 @@ void EnvironmentMapping::init(const Vector3 & pos, const Vector3& size, const st
 
 	auto renderer = getRenderer();
 
-	std::vector<D3D10_SHADER_MACRO> norm = { {"IBL", "1"},  {NULL,NULL} };
-	std::vector<D3D10_SHADER_MACRO> corr = { {"IBL", "1"}, {"CORRECTED", "1"}, {NULL,NULL} };
-
-	mPS[0] = renderer->createPixelShader("hlsl/environmentmapping.hlsl", "main", norm.data());
-	mPS[1] = renderer->createPixelShader("hlsl/environmentmapping.hlsl", "main", corr.data());
-
-	mIrradianceProcessor = ImageProcessing::create<IrradianceCubemap>(renderer, ImageProcessing::RT_COPY, true);
-	mPrefilteredProcessor = ImageProcessing::create<PrefilterCubemap>(renderer, ImageProcessing::RT_COPY, true);
-	mLUT = renderer->createTexture("media/IBL_BRDF_LUT.png", 1);
-
-	mConstants = renderer->createConstantBuffer(sizeof(Constants));
+	mIrradianceProcessor = ImageProcessing::create<IrradianceCubemap>(getRenderer(), ImageProcessing::RT_COPY, true);
+	mPrefilteredProcessor = ImageProcessing::create<PrefilterCubemap>(getRenderer(), ImageProcessing::RT_COPY, true);
 
 	mCubePipeline = decltype(mCubePipeline)(new Pipeline(renderer, getScene()));
 	mCubePipeline->setCamera(cam);
@@ -90,12 +114,14 @@ void EnvironmentMapping::init(const Vector3 & pos, const Vector3& size, const st
 
 	mCubePipeline->pushStage<GBuffer>();
 	mCubePipeline->pushStage<PBR>();
-	mCubePipeline->pushStage<SkyBox>(cubemap, false);
-	//mCubePipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
-
+	if (!cubemap.empty())
+	{
+		mCubePipeline->pushStage<EnvironmentMapping>(cubemap);
+		mCubePipeline->pushStage<SkyBox>(cubemap, false);
+	}
 	//mCubePipeline->setValue("ambient", 1.0f);
-	mCubePipeline->setValue("numdirs", 1.0f);
-	mCubePipeline->setValue("dirradiance", 1.0f);
+	//mCubePipeline->setValue("numdirs", 1.0f);
+	//mCubePipeline->setValue("dirradiance", 1.0f);
 
 
 
@@ -183,17 +209,24 @@ void EnvironmentMapping::render(Renderer::Texture2D::Ptr rt)
 	quad->setPixelShader(mPS[getValue<int>("boxProjection")]);
 	quad->setConstant(mConstants);
 	quad->setRenderTarget(rt);
-	quad->setTextures({
+
+
+	std::vector<Renderer::ShaderResource::Ptr> srvs = {
 		getShaderResource("albedo"),
 		getShaderResource("normal"),
 		getShaderResource("material"),
 		getShaderResource("depth"),
-		//mCube,
+	};
 
-		mIrradiance,
-		mPrefiltered,
-		mLUT,
-	});
+	//if (mIsOnlySkybox)
+	//	srvs.push_back(mCube);
+	//else
+	{
+		srvs.push_back(mIrradiance);
+		srvs.push_back(mPrefiltered);
+		srvs.push_back(mLUT);
+	}
+	quad->setTextures(srvs);
 	quad->draw();
 
 	//mFrame->swap(rt);

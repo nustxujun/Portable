@@ -99,9 +99,6 @@ void Framework::initPipeline()
 	auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	mPipeline->setFrameBuffer(frame);
 
-	mPipeline->addShaderResource("irradinace", {});
-	mPipeline->addShaderResource("prefiltered", {});
-	mPipeline->addShaderResource("lut", {});
 
 	constexpr auto MAX_SHADOWMAPS = 1;
 	std::vector<Renderer::Texture2D::Ptr> shadowmaps;

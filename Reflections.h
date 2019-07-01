@@ -74,13 +74,14 @@ public:
 
 			float theta = 3.14159265358  * 2.0f / spherecount;
 
-			float sin = std::sin(i * theta) * 10;
+			float sin = std::sin(i * theta) * 4;
 			float cos = std::cos(i* theta) * 10;
-			model->getNode()->setPosition({cos , 1, sin });
+			model->getNode()->setPosition({cos , cos * 0.5f + 6, sin });
 			model->setCastShadow(true);
 			model->attach(root);
 			Material::Ptr mat = Material::create();
-			mat->roughness = 0.2;
+			mat->reflection = 0;
+
 
 			for (int i = 0; i < textures.size(); ++i)
 				if (!textures[i].empty())
@@ -162,9 +163,6 @@ public:
 		auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 		mPipeline->setFrameBuffer(frame);
 
-		mPipeline->addShaderResource("irradinace", {});
-		mPipeline->addShaderResource("prefiltered", {});
-		mPipeline->addShaderResource("lut", {});
 
 		constexpr auto MAX_SHADOWMAPS = 1;
 		std::vector<Renderer::Texture2D::Ptr> shadowmaps;
