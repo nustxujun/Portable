@@ -754,16 +754,27 @@ Renderer::Effect::Ptr Renderer::createEffect(const std::string& file, const D3D1
 
 Renderer::Effect::Ptr Renderer::createEffect(void* data, size_t size)
 {
-	mEffects.emplace_back( new Effect(this,data, size));
-	return mEffects.back();
+	auto hash = Common::hash(data, size);
+	auto ret = mEffects.find(hash);
+	if (ret != mEffects.end())
+		return ret->second;
+
+	auto ptr = std::shared_ptr<Effect>(new Effect(this, data, size));
+	mEffects[hash] = ptr;
+	return ptr;
 }
 
 Renderer::VertexShader::Weak Renderer::createVertexShader(const void * data, size_t size)
 {
+	auto hash = Common::hash(data, size);
+	auto ret = mVSs.find(hash);
+	if (ret != mVSs.end())
+		return ret->second;
+
 	ID3D11VertexShader* vs;
 	checkResult(mDevice->CreateVertexShader(data, size, NULL, &vs));
-	mVSs.emplace_back(new VertexShader(vs, data, size));
-	return mVSs.back();
+	mVSs[hash] = std::shared_ptr<VertexShader> (new VertexShader(vs, data, size));
+	return mVSs[hash];
 }
 
 Renderer::VertexShader::Weak Renderer::createVertexShader(const std::string & file, const std::string & entry, const D3D10_SHADER_MACRO * macro)
@@ -774,10 +785,15 @@ Renderer::VertexShader::Weak Renderer::createVertexShader(const std::string & fi
 
 Renderer::PixelShader::Weak Renderer::createPixelShader(const void * data, size_t size)
 {
+	auto hash = Common::hash(data, size);
+	auto ret = mPSs.find(hash);
+	if (ret != mPSs.end())
+		return ret->second;
+
 	ID3D11PixelShader* ps;
 	checkResult(mDevice->CreatePixelShader(data, size, NULL, &ps));
-	mPSs.emplace_back(new PixelShader(ps));
-	return mPSs.back();
+	mPSs[hash] = std::shared_ptr<PixelShader>(new PixelShader(ps));
+	return mPSs[hash];
 }
 
 Renderer::PixelShader::Weak Renderer::createPixelShader(const std::string& file, const std::string& entry, const D3D10_SHADER_MACRO* macro)
@@ -788,10 +804,16 @@ Renderer::PixelShader::Weak Renderer::createPixelShader(const std::string& file,
 
 Renderer::ComputeShader::Weak Renderer::createComputeShader(const void * data, size_t size)
 {
+	auto hash = Common::hash(data, size);
+	auto ret = mCSs.find(hash);
+	if (ret != mCSs.end())
+		return ret->second;
+
+
 	ID3D11ComputeShader* cs;
 	checkResult(mDevice->CreateComputeShader(data, size, NULL, &cs));
-	mCSs.emplace_back(new ComputeShader(cs));
-	return mCSs.back();
+	mCSs[hash] = std::shared_ptr<ComputeShader>(new ComputeShader(cs));
+	return mCSs[hash];
 }
 
 Renderer::ComputeShader::Weak Renderer::createComputeShader(const std::string& name, const std::string& entry)

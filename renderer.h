@@ -519,14 +519,14 @@ private:
 	size_t mConstantState = 0;
 
 	std::vector<std::shared_ptr<Buffer>> mBuffers;
-	std::vector<std::shared_ptr<Effect>> mEffects;
+	std::unordered_map<size_t,std::shared_ptr<Effect>> mEffects;
 	std::vector<std::shared_ptr<Layout>> mLayouts;
 
 	std::vector<std::shared_ptr<Texture>> mTextures;
 	std::unordered_map<std::string,std::shared_ptr<Sampler>> mSamplers;
-	std::vector<VertexShader::Shared> mVSs;
-	std::vector<PixelShader::Shared> mPSs;
-	std::vector<ComputeShader::Shared> mCSs;
+	std::unordered_map<size_t,VertexShader::Shared> mVSs;
+	std::unordered_map<size_t, PixelShader::Shared> mPSs;
+	std::unordered_map<size_t,ComputeShader::Shared> mCSs;
 	std::vector<std::shared_ptr<Profile>> mProfiles;
 	std::unordered_map<std::wstring, std::shared_ptr<Font>> mFonts;
 	std::unordered_map<size_t, std::shared_ptr<Rasterizer>> mRasterizers;
