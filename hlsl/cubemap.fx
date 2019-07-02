@@ -26,6 +26,14 @@ SamplerState sampLinear
 	AddressW = Clamp;
 };
 
+SamplerState sampPoint
+{
+	Filter = MIN_MAG_MIP_POINT;
+	AddressU = Clamp;
+	AddressV = Clamp;
+	AddressW = Clamp;
+};
+
 struct VertexShaderInput
 {
 	float3 Position : POSITION0;

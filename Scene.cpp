@@ -117,6 +117,21 @@ Scene::Node::Ptr Scene::createNode(const std::string& name)
 	return ptr;
 }
 
+Scene::Probe::Ptr Scene::createProbe(const std::string & name)
+{
+	auto ret = mProbes.find(name);
+	if (ret != mProbes.end())
+		return ret->second;
+
+	Node::Ptr node(new Node());
+	auto probe = Probe::Ptr(new Probe());
+	node->mEntity = probe;
+	probe->mNode = node;
+	mProbes[name] = probe;
+	return probe;
+}
+
+
 Scene::Entity::Entity()
 {
 }
@@ -393,3 +408,35 @@ Scene::Light::~Light()
 {
 }
 
+Scene::Probe::Probe()
+{
+//#ifdef _DEBUG
+//	
+//#endif
+}
+
+//bool Scene::Probe::intersectAABB(const Vector3 & min, const Vector3 & max)
+//{
+//	auto aabb = getWorldAABB();
+//
+//	return
+//		!(aabb.second.x < min.x || aabb.first.x > max.x ||
+//			aabb.second.y < min.y || aabb.first.y > max.y ||
+//			aabb.second.z < min.z || aabb.first.z > max.z);
+//}
+
+void Scene::Probe::visitRenderable(std::function<void(const Renderable&)> v)
+{
+//#if _DEBUG
+//	for (int i = 0; i < mDebugGeom->getNumMesh(); ++i)
+//	{
+//		v(mDebugGeom->getMesh(i));
+//	}
+//#endif
+}
+
+std::pair<Vector3, Vector3> Scene::Probe::getWorldAABB() const
+{
+	auto pos = getNode()->getRealPosition();
+	return std::pair<Vector3, Vector3>(pos + mSize * -0.5f, pos + mSize * 0.5f);
+}

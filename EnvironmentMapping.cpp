@@ -6,8 +6,12 @@
 #include "MathUtilities.h"
 
 
+static auto constexpr MAX_NUM_PROBES = 10;
+
+
 void EnvironmentMapping::init()
 {
+	setValue("envmap", true);
 	mName = "EnvironmentMapping";
 	auto renderer = getRenderer();
 
@@ -21,6 +25,8 @@ void EnvironmentMapping::init()
 	mLUT = renderer->createTexture("media/IBL_BRDF_LUT.png", 1);
 
 	mConstants = renderer->createConstantBuffer(sizeof(Constants));
+
+	mProbeInfos = renderer->createRWBuffer(sizeof(Vector3) * 3 * MAX_NUM_PROBES, sizeof(Vector3), DXGI_FORMAT_R32G32B32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 }
 
 void EnvironmentMapping::init(const std::string& cubemap )
@@ -28,27 +34,32 @@ void EnvironmentMapping::init(const std::string& cubemap )
 	init();
 	set("envIntensity", { {"type","set"}, {"value",1},{"min","0"},{"max",2.0f},{"interval", "0.01"} });
 
-	mIsOnlySkybox = true;
 	mIrradianceProcessor = ImageProcessing::create<IrradianceCubemap>(getRenderer(), ImageProcessing::RT_COPY, false);
 	mPrefilteredProcessor = ImageProcessing::create<PrefilterCubemap>(getRenderer(), ImageProcessing::RT_COPY, false);
 	mCube = getRenderer()->createTexture(cubemap, 1);
-	mIrradiance = mIrradianceProcessor->process(mCube);
-	mPrefiltered = mPrefilteredProcessor->process(mCube);
+	mIrradiance.push_back( mIrradianceProcessor->process(mCube));
+	mPrefiltered.push_back( mPrefilteredProcessor->process(mCube));
+	mNumProbes = 1;
+
+	auto aabb = getScene()->getRoot()->getWorldAABB();
+	Vector3 raw[3] = { (aabb.first + aabb.second)* 0.5f, aabb.second - aabb.first , {1,1,1} };
+
+	mProbeInfos.lock()->blit(raw, sizeof(raw));
 }
 
 
-void EnvironmentMapping::init(const Vector3 & pos, const Vector3& size, const std::string& cubemap, int resolution)
+void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolution)
 {
+	mType = type;
 	init();
 	set("envIntensity", { {"type","set"}, {"value",1},{"min","0"},{"max",2.0f},{"interval", "0.01"} });
 	set("envCubeScale", { {"type","set"}, {"value",1},{"min","0"},{"max",2.0f},{"interval", "0.01"} });
 	set("boxProjection", { {"type","set"}, {"value",0},{"min","0"},{"max",1},{"interval", "1"} });
 
-	mIsOnlySkybox = false;
+
+
 
 	int cubesize = resolution;
-	mSize = size;
-	mPosition = pos;
 	
 	auto cam = getScene()->createOrGetCamera("dynamicEnv");
 
@@ -145,35 +156,47 @@ void EnvironmentMapping::init(const Vector3 & pos, const Vector3& size, const st
 
 	auto frame = renderer->createRenderTarget(cubesize, cubesize, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	mCubePipeline->setFrameBuffer(frame);
-	cam->getNode()->setPosition(pos);
 
 
 
 	mUpdate = [this,cam, renderer,frame]() {
-		int index = 0;
-		Matrix viewMats[6] = {
-			MathUtilities::makeMatrixFromAxis(-Vector3::UnitZ, Vector3::UnitY, Vector3::UnitX),
-			MathUtilities::makeMatrixFromAxis(Vector3::UnitZ, Vector3::UnitY, -Vector3::UnitX),
-			MathUtilities::makeMatrixFromAxis(Vector3::UnitX, -Vector3::UnitZ, Vector3::UnitY),
-			MathUtilities::makeMatrixFromAxis(Vector3::UnitX, Vector3::UnitZ, -Vector3::UnitY),
-			MathUtilities::makeMatrixFromAxis(Vector3::UnitX, Vector3::UnitY, Vector3::UnitZ),
-			MathUtilities::makeMatrixFromAxis(-Vector3::UnitX, Vector3::UnitY, -Vector3::UnitZ),
-		};
-
-		for (auto& d : viewMats)
+		auto scene = getScene();
+		auto probes = scene->getProbes();
+		std::vector<Vector3> raw;
+		mNumProbes = 0;
+		for (auto& p : probes)
 		{
-			Quaternion rot = Quaternion::CreateFromRotationMatrix(d);
-			cam->getNode()->setOrientation(rot);
-			mCubePipeline->render();
+			mNumProbes++;
+			auto pos = p.second->getNode()->getRealPosition();
+			raw.push_back(pos);
+			raw.push_back(p.second->getSize());
+			raw.push_back(p.second->getColor());
+			cam->getNode()->setPosition(pos);
+			Matrix viewMats[6] = {
+				MathUtilities::makeMatrixFromAxis(-Vector3::UnitZ, Vector3::UnitY, Vector3::UnitX),
+				MathUtilities::makeMatrixFromAxis(Vector3::UnitZ, Vector3::UnitY, -Vector3::UnitX),
+				MathUtilities::makeMatrixFromAxis(Vector3::UnitX, -Vector3::UnitZ, Vector3::UnitY),
+				MathUtilities::makeMatrixFromAxis(Vector3::UnitX, Vector3::UnitZ, -Vector3::UnitY),
+				MathUtilities::makeMatrixFromAxis(Vector3::UnitX, Vector3::UnitY, Vector3::UnitZ),
+				MathUtilities::makeMatrixFromAxis(-Vector3::UnitX, Vector3::UnitY, -Vector3::UnitZ),
+			};
+			int index = 0;
+			for (auto& d : viewMats)
+			{
+				Quaternion rot = Quaternion::CreateFromRotationMatrix(d);
+				cam->getNode()->setOrientation(rot);
+				mCubePipeline->render();
 
-			renderer->getContext()->CopySubresourceRegion(mCube->getTexture(), index++, 0, 0, 0, frame->getTexture(), 0, 0);
+				renderer->getContext()->CopySubresourceRegion(mCube->getTexture(), index++, 0, 0, 0, frame->getTexture(), 0, 0);
+			}
+
+
+			mIrradiance.push_back(mIrradianceProcessor->process(mCube));
+			mPrefiltered.push_back( mPrefilteredProcessor->process(mCube));
 		}
+		mNumProbes = std::min((int)MAX_NUM_PROBES, mNumProbes);
 
-		std::string hdrenvfile = "media/Ditch-River_2k.hdr";
-		//mCube = renderer->createTexture(hdrenvfile, 1);
-
-		mIrradiance = mIrradianceProcessor->process(mCube);
-		mPrefiltered = mPrefilteredProcessor->process(mCube);
+		mProbeInfos.lock()->blit(raw.data(), raw.size() * sizeof(Vector3));
 
 		//D3DX11SaveTextureToFile(renderer->getContext(), mCube->getTexture(), D3DX11_IFF_DDS, L"test.dds");
 	};
@@ -187,6 +210,7 @@ void EnvironmentMapping::render(Renderer::Texture2D::Ptr rt)
 	if (mFrame.expired())
 	{
 		mFrame = getRenderer()->createTexture(rt->getDesc());
+		addShaderResource("envmap", mFrame);
 	}
 	//mUpdate();
 
@@ -195,10 +219,8 @@ void EnvironmentMapping::render(Renderer::Texture2D::Ptr rt)
 	Constants constants;
 	constants.invertViewProj = (cam->getViewMatrix() * cam->getProjectionMatrix()).Invert().Transpose();
 	constants.campos = cam->getNode()->getRealPosition();
-	constants.envCubeScale = getValue<float>("envCubeScale");
-	constants.envCubeSize = mSize;
 	constants.envIntensity = getValue<float>("envIntensity");
-	constants.envCubePos = mPosition;
+	constants.numprobes = mNumProbes;
 	mConstants.lock()->blit(constants);
 
 	auto quad = getQuad();
@@ -208,7 +230,14 @@ void EnvironmentMapping::render(Renderer::Texture2D::Ptr rt)
 	quad->setViewport(cam->getViewport());
 	quad->setPixelShader(mPS[getValue<int>("boxProjection")]);
 	quad->setConstant(mConstants);
-	quad->setRenderTarget(rt);
+
+	if (has("ssr"))
+	{
+		getRenderer()->clearRenderTarget(mFrame, { 0,0,0,0 });
+		quad->setRenderTarget(mFrame);
+	}
+	else
+		quad->setRenderTarget(rt);
 
 
 	std::vector<Renderer::ShaderResource::Ptr> srvs = {
@@ -216,15 +245,15 @@ void EnvironmentMapping::render(Renderer::Texture2D::Ptr rt)
 		getShaderResource("normal"),
 		getShaderResource("material"),
 		getShaderResource("depth"),
+		mProbeInfos,
+		mLUT,
 	};
 
-	//if (mIsOnlySkybox)
-	//	srvs.push_back(mCube);
-	//else
+	srvs.resize(30);
+	for (size_t i = 0; i < mNumProbes; ++i)
 	{
-		srvs.push_back(mIrradiance);
-		srvs.push_back(mPrefiltered);
-		srvs.push_back(mLUT);
+		srvs[i + 10] = mIrradiance[i];
+		srvs[i + 20] = mPrefiltered[i];
 	}
 	quad->setTextures(srvs);
 	quad->draw();

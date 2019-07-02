@@ -14,6 +14,44 @@
 
 using Parameters = std::map<std::string, std::string>;
 
+template<class Container>
+class IteratorWrapper
+{
+public:
+	using Iter = typename Container::iterator;
+
+
+	IteratorWrapper(Iter beg, Iter end):
+		mBegin(beg), mEnd(end)
+	{
+	}
+
+	IteratorWrapper(Container& c)
+	{
+		mBegin = c.begin();
+		mEnd = c.end();
+	}
+
+	Iter begin()const
+	{
+		return mBegin;
+	}
+
+	Iter end()const
+	{
+		return mEnd;
+	}
+
+
+	operator Iter()
+	{
+		return mBegin;
+	}
+
+private:
+	Iter mBegin;
+	Iter mEnd;
+};
 class Common
 {
 public:

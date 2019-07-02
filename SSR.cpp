@@ -10,7 +10,7 @@ void SSR::init()
 	set("jitter", { {"value", 0}, {"min", "0"}, {"max", "1"}, {"interval", "0.001"}, {"type","set"} });
 	//set("brdfBias", { {"value", 0}, {"min", "0"}, {"max", "1"}, {"interval", "0.01"}, {"type","set"} });
 
-
+	setValue("ssr", true);
 	mName = "ssr";
 	mVS = getRenderer()->createVertexShader("hlsl/simple_vs.hlsl");
 	mRayTracing = getRenderer()->createPixelShader("hlsl/ssr.hlsl", "raycast");
@@ -89,7 +89,7 @@ void SSR::renderColor(Renderer::Texture2D::Ptr rt)
 	//context->GenerateMips(mColor->Renderer::ShaderResource::getView());
 	
 	auto quad = getQuad();
-	quad->setTextures({
+	std::vector<Renderer::ShaderResource::Ptr> srvs = {
 		rt,
 		//mColor,
 		getShaderResource("normal"),
@@ -97,7 +97,12 @@ void SSR::renderColor(Renderer::Texture2D::Ptr rt)
 		{} ,
 		getShaderResource("material"),
 		mBlueNoise,
-		mHitmap });
+		mHitmap 
+	};
+
+	if (has("envmap"))
+		srvs.push_back(getShaderResource("envmap"));
+	quad->setTextures(srvs);
 	
 	quad->setPixelShader(mLighting);
 	quad->setRenderTarget(mFrame);

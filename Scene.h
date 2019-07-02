@@ -74,8 +74,9 @@ public:
 		~Entity();
 
 		virtual void visitRenderable(std::function<void(const Renderable&)>) = 0;
-		virtual void setMaterial(Material::Ptr mat) { abort(); };
 		virtual std::pair<Vector3, Vector3> getWorldAABB()const = 0;
+		virtual void setMaterial(Material::Ptr mat) { abort(); };
+
 		void attach(Node::Ptr n) { n->addChild(mNode); };
 		void detach() { if (!mNode->mParent) return; mNode->mParent->removeChild(mNode); }
 
@@ -191,6 +192,30 @@ public:
 		float mAngle = 0.7854f;
 		bool mIsCastingShadow = false;
 	};
+
+
+	class Probe :public Entity
+	{
+	public:
+		using Ptr = std::shared_ptr<Probe>;
+	public:
+		virtual void visitRenderable(std::function<void(const Renderable&)>);
+		virtual std::pair<Vector3, Vector3> getWorldAABB()const ;
+
+		Probe();
+
+		void setSize(const Vector3& size) { mSize = size; }
+		const Vector3& getSize() const { return mSize; }
+		void setColor(const Vector3& c) { mColor = c; }
+		const Vector3& getColor()const { return mColor; }
+	private:
+		Vector3 mSize = {0,0,0};
+		Vector3 mColor = { 1,1,1 };
+//#ifdef _DEBUG
+//		Mesh::Ptr mDebugGeom;
+//#endif
+
+	};
 public:
 	Scene();
 	~Scene();
@@ -204,6 +229,8 @@ public:
 	size_t getNumLights()const { return mLights.size(); }
 	Node::Ptr getRoot() { return mRoot; }
 	Node::Ptr createNode(const std::string& name = {});
+	Probe::Ptr createProbe(const std::string& name);
+	IteratorWrapper<std::unordered_map<std::string, Probe::Ptr>> getProbes() { return IteratorWrapper<decltype(mProbes)>(mProbes); }
 private:
 	std::unordered_map<std::string, Model::Ptr> mModels;
 	Node::Ptr mRoot;
@@ -211,5 +238,6 @@ private:
 	std::unordered_map<std::string, Camera::Ptr> mCameras;
 	std::unordered_map<std::string, Light::Ptr> mLights;
 	std::unordered_map<std::string, Node::Ptr> mNodes;
+	std::unordered_map<std::string, Probe::Ptr> mProbes;
 
 };

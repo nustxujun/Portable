@@ -12,6 +12,7 @@
 #include "SSR.h"
 #include "EnvironmentMapping.h"
 #include "AO.h"
+#include <random>
 class Reflections :public Framework
 {
 public:
@@ -26,84 +27,83 @@ public:
 		set("dirradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
 
 		auto root = mScene->getRoot();
-		{
-			std::vector<std::string> textures = {
-					"media/rustediron/rustediron2_basecolor.png",
-					"media/rustediron/rustediron2_normal.png",
-					"media/rustediron/rustediron2_roughness.png",
-					"media/rustediron/rustediron2_metallic.png",
-			};
-			Parameters params;
-			params["geom"] = "plane";
-			params["size"] = "50";
-			auto model = mScene->createModel("plane", params, [this](const Parameters& p)
-			{
-				return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-			});
-			model->setCastShadow(true);
-			model->attach(root);
-			Material::Ptr mat = Material::create();
-			mat->roughness = 1;
-			mat->metallic = 1;
-			for (int i = 0; i < textures.size(); ++i)
-				if (!textures[i].empty())
-					mat->setTexture(i, mRenderer->createTexture(textures[i]));
-			model->setMaterial(mat);
-		}
-
-
-
-		int spherecount = 10;
-		for (int i = 0; i < spherecount; ++i)
-		{
-			std::vector<std::string> textures = {
-					"media/streaked/streaked-metal1-albedo.png",
-					"",
-					"media/streaked/streaked-metal1-rough.png",
-					"media/streaked/streaked-metal1-metalness.png",
-					"media/streaked/streaked-metal1-ao.png",
-			};
-
-			Parameters params;
-			params["geom"] = "sphere";
-			params["radius"] = "1";
-			auto model = mScene->createModel(Common::format("sphere", i), params, [this](const Parameters& p)
-			{
-				return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-			});
-
-			float theta = 3.14159265358  * 2.0f / spherecount;
-
-			float sin = std::sin(i * theta) * 4;
-			float cos = std::cos(i* theta) * 10;
-			model->getNode()->setPosition({cos , cos * 0.5f + 6, sin });
-			model->setCastShadow(true);
-			model->attach(root);
-			Material::Ptr mat = Material::create();
-			mat->reflection = 0;
-
-
-			for (int i = 0; i < textures.size(); ++i)
-				if (!textures[i].empty())
-					mat->setTexture(i, mRenderer->createTexture(textures[i]));
-			model->setMaterial(mat);
-		}
-
-
 		//{
+		//	std::vector<std::string> textures = {
+		//			"media/rustediron/rustediron2_basecolor.png",
+		//			"media/rustediron/rustediron2_normal.png",
+		//			"media/rustediron/rustediron2_roughness.png",
+		//			"media/rustediron/rustediron2_metallic.png",
+		//	};
 		//	Parameters params;
-		//	//params["file"] = "media/model.obj";
-		//	params["file"] = "media/sponza/sponza.obj";
-		//	auto model = mScene->createModel("test", params, [this](const Parameters& p) {
-		//		return Mesh::Ptr(new Mesh(p, mRenderer));
+		//	params["geom"] = "plane";
+		//	params["size"] = "50";
+		//	auto model = mScene->createModel("plane", params, [this](const Parameters& p)
+		//	{
+		//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+		//	});
+		//	model->setCastShadow(true);
+		//	model->attach(root);
+		//	Material::Ptr mat = Material::create();
+		//	mat->roughness = 0;
+		//	mat->metallic = 1;
+		//	for (int i = 0; i < textures.size(); ++i)
+		//		if (!textures[i].empty())
+		//			mat->setTexture(i, mRenderer->createTexture(textures[i]));
+		//	//model->setMaterial(mat);
+		//}
+
+
+
+		//int spherecount = 10;
+		//for (int i = 0; i < spherecount; ++i)
+		//{
+		//	std::vector<std::string> textures = {
+		//			"media/streaked/streaked-metal1-albedo.png",
+		//			"",
+		//			"media/streaked/streaked-metal1-rough.png",
+		//			"media/streaked/streaked-metal1-metalness.png",
+		//			"media/streaked/streaked-metal1-ao.png",
+		//	};
+
+		//	Parameters params;
+		//	params["geom"] = "sphere";
+		//	params["radius"] = "1";
+		//	auto model = mScene->createModel(Common::format("sphere", i), params, [this](const Parameters& p)
+		//	{
+		//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
 		//	});
 
+		//	float theta = 3.14159265358  * 2.0f / spherecount;
+
+		//	float sin = std::sin(i * theta) * 4;
+		//	float cos = std::cos(i* theta) * 10;
+		//	model->getNode()->setPosition({cos , cos * 0.5f + 6, sin });
 		//	model->setCastShadow(true);
-		//	model->attach(mScene->getRoot());
-		//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-		//	Matrix mat = Matrix::CreateFromYawPitchRoll(0, -3.14 / 2, 0);
-		//	//model->getNode()->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
+		//	model->attach(root);
+		//	Material::Ptr mat = Material::create();
+		//	mat->reflection = 0;
+
+		//	for (int i = 0; i < textures.size(); ++i)
+		//		if (!textures[i].empty())
+		//			mat->setTexture(i, mRenderer->createTexture(textures[i]));
+		//	//model->setMaterial(mat);
 		//}
+
+
+		{
+			Parameters params;
+			//params["file"] = "media/model.obj";
+			params["file"] = "media/sponza/sponza.obj";
+			auto model = mScene->createModel("test", params, [this](const Parameters& p) {
+				return Mesh::Ptr(new Mesh(p, mRenderer));
+			});
+
+			model->setCastShadow(true);
+			model->attach(mScene->getRoot());
+			model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+			Matrix mat = Matrix::CreateFromYawPitchRoll(0, -3.14 / 2, 0);
+			//model->getNode()->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
+		}
 		auto aabb = root->getWorldAABB();
 
 		Vector3 vec = aabb.second - aabb.first;
@@ -123,6 +123,22 @@ public:
 		auto light = mScene->createOrGetLight("main");
 		light->setDirection({ 0,-1,0 });
 		light->setCastingShadow(true);
+
+
+		auto half = vec * 0.5f;
+		auto dx = vec.x / 10.0f;
+		auto pos = (aabb.first + aabb.second) * 0.5f;
+		std::uniform_real_distribution<float> rand(0.0f, 1.0f);
+		std::default_random_engine gen;
+		for (int i = 0; i < 10; ++i)
+		{
+			auto probe = mScene->createProbe(Common::format(i));
+			probe->setSize({dx, vec.y, vec.z});
+			Vector3 calpos = {aabb.first.x + dx * 0.5f + i * dx, pos.y,pos.z };
+			probe->getNode()->setPosition(calpos);
+			probe->setColor({ rand(gen),rand(gen) ,rand(gen) });
+			probe->attach(root);
+		}
 	}
 
 
@@ -182,10 +198,10 @@ public:
 		mPipeline->pushStage<GBuffer>();
 		mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
 		mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
-		mPipeline->pushStage<EnvironmentMapping>((aabb.first + aabb.second) * 0.5f, aabb.second - aabb.first, "media/Ditch-River_2k.hdr");
+		mPipeline->pushStage<EnvironmentMapping>(EnvironmentMapping::T_ONCE, "media/Ditch-River_2k.hdr");
 
 		//mPipeline->pushStage<AO>();
-		mPipeline->pushStage<SSR>();
+		//mPipeline->pushStage<SSR>();
 		mPipeline->pushStage<SkyBox>("media/Ditch-River_2k.hdr", false);
 		mPipeline->pushStage<HDR>();
 		mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");

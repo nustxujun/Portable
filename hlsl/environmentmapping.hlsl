@@ -4,14 +4,17 @@ Texture2D albedoTex: register(t0);
 Texture2D normalTex: register(t1);
 Texture2D materialTex:register(t2);
 Texture2D depthTex:register(t3);
+Buffer<float3> probes:register(t4);
+
+#define MAX_NUM_PROBES 10
+
 #if IBL
 #define PREFILTERED_MIP_LEVEL 5
-
-TextureCube irradianceTexture: register(t4);
-TextureCube prefilteredTexture: register(t5);
-Texture2D lutTexture: register(t6);
+Texture2D lutTexture: register(t5);
+TextureCube irradianceTexture[MAX_NUM_PROBES]: register(t10);
+TextureCube prefilteredTexture[MAX_NUM_PROBES]: register(t20);
 #else
-TextureCube envTex: register(t4);
+TextureCube envTex[MAX_NUM_PROBES]: register(t10);
 #endif
 
 
@@ -19,10 +22,8 @@ cbuffer ConstantBuffer: register(b0)
 {
 	matrix invertViewProj;
 	float3 campos;
-	float envCubeScale;
-	float3 envCubeSize;
 	float intensity;
-	float3 envCubePos;
+	int numprobes;
 }
 
 SamplerState sampLinear: register(s0);
@@ -39,11 +40,17 @@ struct PS_INPUT
 	float2 Tex: TEXCOORD0;
 };
 
-
-float3 intersectBox(float3 pos, float3 reflectionVector, float3 cubeSize, float3 cubePos)
+bool testBox(float3 pos, float3 cubemin, float3 cubemax)
 {
-	float3 FirstPlaneIntersect = (cubePos + cubeSize * 0.5f - pos) / reflectionVector;
-	float3 SecondPlaneIntersect = (cubePos - cubeSize * 0.5f - pos) / reflectionVector;
+	return !(pos.x < cubemin.x || pos.x > cubemax.x ||
+		pos.y < cubemin.y || pos.y > cubemax.y ||
+		pos.z < cubemin.z || pos.z > cubemax.z);
+}
+
+float3 intersectBox(float3 pos, float3 reflectionVector, float3 cubemin, float3 cubemax)
+{
+	float3 FirstPlaneIntersect = (cubemax - pos) / reflectionVector;
+	float3 SecondPlaneIntersect = (cubemin - pos) / reflectionVector;
 	// Get the furthest of these intersections along the ray
 	// (Ok because x/0 give +inf and -x/0 give ¨Cinf )
 	float3 FurthestPlane = max(FirstPlaneIntersect, SecondPlaneIntersect);
@@ -52,19 +59,6 @@ float3 intersectBox(float3 pos, float3 reflectionVector, float3 cubeSize, float3
 
 	// Get the intersection position
 	return pos + reflectionVector * Distance;
-
-
-
-	//float3 rbmax = (0.5f * (cubeSize - cubePos) - pos) / reflectionVector;
-	//float3 rbmin = (-0.5f * (cubeSize - cubePos) - pos) / reflectionVector;
-
-	//float3 rbminmax = float3(
-	//	(reflectionVector.x > 0.0f) ? rbmax.x : rbmin.x,
-	//	(reflectionVector.y > 0.0f) ? rbmax.y : rbmin.y,
-	//	(reflectionVector.z > 0.0f) ? rbmax.z : rbmin.z);
-
-	//float correction = min(min(rbminmax.x, rbminmax.y), rbminmax.z);
-	//return (pos + reflectionVector * correction);
 }
 
 
@@ -92,22 +86,45 @@ float4 main(PS_INPUT Input) : SV_TARGET
 
 	float3 result  = 0;
 
+	float numWeight = 0;
+	int maxnums = min(MAX_NUM_PROBES, numprobes);
+	for (int i = 0; i < maxnums; ++i)
+	{
+		float3 coord = R;
+		float3 probepos = probes[i * 3].xyz;
+		float3 probsize = probes[i * 3 + 1].xyz;
+		float3 probintensity = probes[i * 3 + 2].xyz;
+		float3 halfsize = probsize * 0.5f;
+		float3 probemin = probepos - halfsize;
+		float3 probemax = probepos + halfsize;
+
+		if (testBox(worldpos.xyz, probemin, probemax))
+		{
+			numWeight += 1;
+			float3 calcolor = 0;
 #if CORRECTED
-	float3 corrected = intersectBox(worldpos.xyz, R, envCubeSize * envCubeScale, envCubePos);
-	R = normalize(corrected - envCubePos);
+			float3 corrected = intersectBox(worldpos.xyz, R, probemin, probemax);
+			coord = normalize(corrected - probsize);
 #endif
 
 
 #if IBL
-	float3 lut = LUT(N, V, roughness, lutTexture, sampLinear);
-	float3 prefiltered = prefilteredTexture.SampleLevel(sampLinear, R, roughness * (PREFILTERED_MIP_LEVEL -1)).rgb;
-	float3 irradiance = irradianceTexture.SampleLevel(sampLinear, N, 0).rgb;
-	result = indirectBRDF(irradiance, prefiltered, lut, roughness, metallic, F0_DEFAULT, albedo, N, V);
-	return float4(result * intensity, 1);
+			float3 lut = LUT(N, V, roughness, lutTexture, sampLinear);
+			float3 prefiltered = prefilteredTexture[i].SampleLevel(sampLinear, coord, roughness * (PREFILTERED_MIP_LEVEL - 1)).rgb;
+			float3 irradiance = irradianceTexture[i].SampleLevel(sampLinear, N, 0).rgb;
+			calcolor = indirectBRDF(irradiance, prefiltered, lut, roughness, metallic, F0_DEFAULT, albedo, N, V);
+			result += calcolor * intensity * probintensity;
 #else
-	result = envTex.SampleLevel(sampLinear, R, 0).rgb;
-	return float4(result * intensity * (1 - roughness) * metallic * reflection , 1);
+			calcolor = envTex.SampleLevel(sampLinear, coord, 0).rgb;
+			result += calcolor * intensity * (1 - roughness) * metallic * reflection, 1) * probintensity;
 #endif
+		}
+	}
+
+	if (numWeight == 0)
+		numWeight = 1;
+
+	return float4(result / numWeight, 1);
 }
 
 

@@ -8,6 +8,7 @@ Texture2D depthbackTex:register(t3);
 Texture2D materialTex:register(t4);
 Texture2D noiseTex:register(t5);
 Texture2D hitTex:register(t6);
+Texture2D envTex:register(t7);
 
 SamplerState linearClamp: register(s0);
 SamplerState pointClamp : register(s1);
@@ -256,11 +257,13 @@ float4 resolve(PS_INPUT Input) :SV_TARGET
 {
 	int3 index = int3(Input.Pos.xy, 0);
 	float4 hit = hitTex.Load(index);
-	float3 sampleColor = colorTex.Load(int3(hit.xy,0));
+	float3 sampleColor = colorTex.Load(int3(hit.xy,0)).rgb;
+	float3 sampleEnv = envTex.Load(int3(hit.xy, 0)).rgb;
 	float4 material = materialTex.Load(int3(Input.Pos.xy, 0));
 	float roughness = material.r;
 	float metallic = material.g;
-	return float4(sampleColor * hit.z * (1 - roughness) * (metallic), 0);
+	float3 env = envTex.Load(int3(Input.Pos.xy, 0));
+	return float4((sampleColor  + sampleEnv)* hit.z * (1 - roughness) * (metallic) + env * (1 - hit.z), 0);
 }
 
 //float4 conetrace(PS_INPUT Input) :SV_TARGET
