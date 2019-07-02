@@ -26,7 +26,7 @@ void EnvironmentMapping::init()
 
 	mConstants = renderer->createConstantBuffer(sizeof(Constants));
 
-	mProbeInfos = renderer->createRWBuffer(sizeof(Vector3) * 3 * MAX_NUM_PROBES, sizeof(Vector3), DXGI_FORMAT_R32G32B32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+	mProbeInfos = renderer->createRWBuffer(sizeof(Vector3) * 5 * MAX_NUM_PROBES, sizeof(Vector3), DXGI_FORMAT_R32G32B32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 }
 
 void EnvironmentMapping::init(const std::string& cubemap )
@@ -42,7 +42,7 @@ void EnvironmentMapping::init(const std::string& cubemap )
 	mNumProbes = 1;
 
 	auto aabb = getScene()->getRoot()->getWorldAABB();
-	Vector3 raw[3] = { (aabb.first + aabb.second)* 0.5f, aabb.second - aabb.first , {1,1,1} };
+	Vector3 raw[5] = { (aabb.first + aabb.second)* 0.5f, aabb.first , aabb.second,  aabb.first, aabb.second };
 
 	mProbeInfos.lock()->blit(raw, sizeof(raw));
 }
@@ -169,8 +169,13 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 			mNumProbes++;
 			auto pos = p.second->getNode()->getRealPosition();
 			raw.push_back(pos);
-			raw.push_back(p.second->getSize());
-			raw.push_back(p.second->getColor());
+			auto box = p.second->getProjectionBox();
+			raw.push_back(pos + box.second - box.first * 0.5);
+			raw.push_back(pos + box.second + box.first * 0.5);
+			auto influence = p.second->getInfluence();
+			raw.push_back(pos + influence.second - influence.first * 0.5);
+			raw.push_back(pos + influence.second + influence.first * 0.5);
+
 			cam->getNode()->setPosition(pos);
 			Matrix viewMats[6] = {
 				MathUtilities::makeMatrixFromAxis(-Vector3::UnitZ, Vector3::UnitY, Vector3::UnitX),

@@ -415,6 +415,11 @@ Scene::Probe::Probe()
 //#endif
 }
 
+void Scene::Probe::setDebugObject(Mesh::Ptr m) 
+{ 
+	mDebugObject = m; 
+}
+
 //bool Scene::Probe::intersectAABB(const Vector3 & min, const Vector3 & max)
 //{
 //	auto aabb = getWorldAABB();
@@ -427,16 +432,18 @@ Scene::Probe::Probe()
 
 void Scene::Probe::visitRenderable(std::function<void(const Renderable&)> v)
 {
-//#if _DEBUG
-//	for (int i = 0; i < mDebugGeom->getNumMesh(); ++i)
-//	{
-//		v(mDebugGeom->getMesh(i));
-//	}
-//#endif
+	if (!mDebugObject)
+		return;
+	for (int i = 0; i < mDebugObject->getNumMesh(); ++i)
+	{
+		v(mDebugObject->getMesh(i));
+	}
+
 }
 
 std::pair<Vector3, Vector3> Scene::Probe::getWorldAABB() const
 {
-	auto pos = getNode()->getRealPosition();
-	return std::pair<Vector3, Vector3>(pos + mSize * -0.5f, pos + mSize * 0.5f);
+	auto pos = getNode()->getRealPosition() + mInfluence.second;
+
+	return { pos - mInfluence.first * 0.5f , pos + mInfluence.first * 0.5f };
 }

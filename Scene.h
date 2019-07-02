@@ -197,6 +197,7 @@ public:
 	class Probe :public Entity
 	{
 	public:
+		using Box = std::pair<Vector3, Vector3>;
 		using Ptr = std::shared_ptr<Probe>;
 	public:
 		virtual void visitRenderable(std::function<void(const Renderable&)>);
@@ -204,17 +205,18 @@ public:
 
 		Probe();
 
-		void setSize(const Vector3& size) { mSize = size; }
-		const Vector3& getSize() const { return mSize; }
+		void setProjectionBox(const Vector3& size, const Vector3& offset = Vector3::Zero) { mBox = Box(size, offset); }
+		const Box& getProjectionBox() const { return mBox; }
+		void setInfluence(const Vector3& size, const Vector3& offset = Vector3::Zero) { mInfluence = { size, offset }; }
+		const Box& getInfluence()const { return mInfluence; }
 		void setColor(const Vector3& c) { mColor = c; }
 		const Vector3& getColor()const { return mColor; }
+		void setDebugObject(Mesh::Ptr m);
 	private:
-		Vector3 mSize = {0,0,0};
+		Box mBox = { {0,0,0}, {0,0,0} };
+		Box mInfluence = { {0,0,0}, {0,0,0} };
 		Vector3 mColor = { 1,1,1 };
-//#ifdef _DEBUG
-//		Mesh::Ptr mDebugGeom;
-//#endif
-
+		Mesh::Ptr mDebugObject;
 	};
 public:
 	Scene();
