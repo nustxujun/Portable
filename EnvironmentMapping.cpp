@@ -26,7 +26,7 @@ void EnvironmentMapping::init()
 
 	mConstants = renderer->createConstantBuffer(sizeof(Constants));
 
-	mProbeInfos = renderer->createRWBuffer(sizeof(Vector3) * 5 * MAX_NUM_PROBES, sizeof(Vector3), DXGI_FORMAT_R32G32B32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+	mProbeInfos = renderer->createRWBuffer(sizeof(Vector3) * 6 * MAX_NUM_PROBES, sizeof(Vector3), DXGI_FORMAT_R32G32B32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 }
 
 void EnvironmentMapping::init(const std::string& cubemap )
@@ -42,7 +42,7 @@ void EnvironmentMapping::init(const std::string& cubemap )
 	mNumProbes = 1;
 
 	auto aabb = getScene()->getRoot()->getWorldAABB();
-	Vector3 raw[5] = { (aabb.first + aabb.second)* 0.5f, aabb.first , aabb.second,  aabb.first, aabb.second };
+	Vector3 raw[6] = { (aabb.first + aabb.second)* 0.5f, aabb.first , aabb.second,  aabb.first, aabb.second , {1,1,1} };
 
 	mProbeInfos.lock()->blit(raw, sizeof(raw));
 }
@@ -54,7 +54,7 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 	init();
 	set("envIntensity", { {"type","set"}, {"value",1},{"min","0"},{"max",2.0f},{"interval", "0.01"} });
 	set("envCubeScale", { {"type","set"}, {"value",1},{"min","0"},{"max",2.0f},{"interval", "0.01"} });
-	set("boxProjection", { {"type","set"}, {"value",0},{"min","0"},{"max",1},{"interval", "1"} });
+	set("boxProjection", { {"type","set"}, {"value",1},{"min","0"},{"max",1},{"interval", "1"} });
 
 
 
@@ -159,15 +159,23 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 
 
 
-	mUpdate = [this,cam, renderer,frame]() {
+	mUpdate = [this,cam, renderer,frame](bool force) {
 		auto scene = getScene();
+		auto campos = scene->createOrGetCamera("main")->getNode()->getRealPosition();
 		auto probes = scene->getProbes();
 		std::vector<Vector3> raw;
 		mNumProbes = 0;
+		float sumdist = 0;
+		float mindist = FLT_MAX;
+		std::vector<float> dists;
 		for (auto& p : probes)
 		{
 			mNumProbes++;
 			auto pos = p.second->getNode()->getRealPosition();
+			float d = (pos - campos).Length();
+			mindist = std::min(d, mindist);
+			dists.push_back(d);
+			sumdist += d;
 			raw.push_back(pos);
 			auto box = p.second->getProjectionBox();
 			raw.push_back(pos + box.second - box.first * 0.5);
@@ -175,30 +183,38 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 			auto influence = p.second->getInfluence();
 			raw.push_back(pos + influence.second - influence.first * 0.5);
 			raw.push_back(pos + influence.second + influence.first * 0.5);
-
-			cam->getNode()->setPosition(pos);
-			Matrix viewMats[6] = {
-				MathUtilities::makeMatrixFromAxis(-Vector3::UnitZ, Vector3::UnitY, Vector3::UnitX),
-				MathUtilities::makeMatrixFromAxis(Vector3::UnitZ, Vector3::UnitY, -Vector3::UnitX),
-				MathUtilities::makeMatrixFromAxis(Vector3::UnitX, -Vector3::UnitZ, Vector3::UnitY),
-				MathUtilities::makeMatrixFromAxis(Vector3::UnitX, Vector3::UnitZ, -Vector3::UnitY),
-				MathUtilities::makeMatrixFromAxis(Vector3::UnitX, Vector3::UnitY, Vector3::UnitZ),
-				MathUtilities::makeMatrixFromAxis(-Vector3::UnitX, Vector3::UnitY, -Vector3::UnitZ),
-			};
-			int index = 0;
-			for (auto& d : viewMats)
+			raw.push_back({ 1,1,1 });
+			if (force || mType == T_EVERYFRAME)
 			{
-				Quaternion rot = Quaternion::CreateFromRotationMatrix(d);
-				cam->getNode()->setOrientation(rot);
-				mCubePipeline->render();
+				cam->getNode()->setPosition(pos);
+				Matrix viewMats[6] = {
+					MathUtilities::makeMatrixFromAxis(-Vector3::UnitZ, Vector3::UnitY, Vector3::UnitX),
+					MathUtilities::makeMatrixFromAxis(Vector3::UnitZ, Vector3::UnitY, -Vector3::UnitX),
+					MathUtilities::makeMatrixFromAxis(Vector3::UnitX, -Vector3::UnitZ, Vector3::UnitY),
+					MathUtilities::makeMatrixFromAxis(Vector3::UnitX, Vector3::UnitZ, -Vector3::UnitY),
+					MathUtilities::makeMatrixFromAxis(Vector3::UnitX, Vector3::UnitY, Vector3::UnitZ),
+					MathUtilities::makeMatrixFromAxis(-Vector3::UnitX, Vector3::UnitY, -Vector3::UnitZ),
+				};
+				int index = 0;
+				for (auto& d : viewMats)
+				{
+					Quaternion rot = Quaternion::CreateFromRotationMatrix(d);
+					cam->getNode()->setOrientation(rot);
+					mCubePipeline->render();
 
-				renderer->getContext()->CopySubresourceRegion(mCube->getTexture(), index++, 0, 0, 0, frame->getTexture(), 0, 0);
+					renderer->getContext()->CopySubresourceRegion(mCube->getTexture(), index++, 0, 0, 0, frame->getTexture(), 0, 0);
+				}
+
+				mIrradiance.push_back(mIrradianceProcessor->process(mCube));
+				mPrefiltered.push_back(mPrefilteredProcessor->process(mCube));
 			}
-
-
-			mIrradiance.push_back(mIrradianceProcessor->process(mCube));
-			mPrefiltered.push_back( mPrefilteredProcessor->process(mCube));
 		}
+
+		for (size_t i = 0; i < dists.size(); ++i)
+		{
+			raw[i * 6 + 5] = Vector3(1, 1, 1) * ( dists[i] > mindist ? 0: 1);
+		}
+	
 		mNumProbes = std::min((int)MAX_NUM_PROBES, mNumProbes);
 
 		mProbeInfos.lock()->blit(raw.data(), raw.size() * sizeof(Vector3));
@@ -206,7 +222,7 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 		//D3DX11SaveTextureToFile(renderer->getContext(), mCube->getTexture(), D3DX11_IFF_DDS, L"test.dds");
 	};
 	
-	mUpdate();
+	mUpdate(true);
 }
 
 
@@ -217,7 +233,8 @@ void EnvironmentMapping::render(Renderer::Texture2D::Ptr rt)
 		mFrame = getRenderer()->createTexture(rt->getDesc());
 		addShaderResource("envmap", mFrame);
 	}
-	//mUpdate();
+	if (mUpdate)
+		mUpdate(false);
 
 
 	auto cam = getCamera();

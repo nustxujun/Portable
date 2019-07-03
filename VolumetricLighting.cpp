@@ -4,10 +4,10 @@ VolumetricLighting::VolumetricLighting(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr 
 	Pipeline::Stage(r,s,q,st,p), mQuad(r)
 {
 	auto blob = r->compileFile("hlsl/volumetriclight.hlsl", "main", "ps_5_0");
-	mPS = r->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
+	mPS = r->createPixelShader(blob->GetBufferPointer(), blob->GetBufferSize());
 
 	blob = r->compileFile("hlsl/volumetriclight_filtercolor.hlsl", "main", "ps_5_0");
-	mColorFilter = r->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
+	mColorFilter = r->createPixelShader(blob->GetBufferPointer(), blob->GetBufferSize());
 
 	auto vp = getCamera()->getViewport();
 	mBlur = r->createRenderTarget(vp.Width, vp.Height, DXGI_FORMAT_R8G8B8A8_UNORM);

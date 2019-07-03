@@ -86,20 +86,19 @@ float4 main(PS_INPUT Input) : SV_TARGET
 
 	float3 result  = 0;
 
-	float numWeight = 0;
 	int maxnums = min(MAX_NUM_PROBES, numprobes);
 	for (int i = 0; i < maxnums; ++i)
 	{
 		float3 coord = R;
-		float3 probepos = probes[i * 5].xyz;
-		float3 boxmin = probes[i * 5 + 1].xyz;
-		float3 boxmax = probes[i * 5 + 2].xyz;
-		float3 infmin = probes[i * 5 + 3].xyz;
-		float3 infmax = probes[i * 5 + 4].xyz;
+		float3 probepos = probes[i * 6].xyz;
+		float3 boxmin = probes[i * 6 + 1].xyz;
+		float3 boxmax = probes[i * 6 + 2].xyz;
+		float3 infmin = probes[i * 6 + 3].xyz;
+		float3 infmax = probes[i * 6 + 4].xyz;
+		float3 probeintensity = probes[i * 6 + 5].xyz;
 		
 		if (testBox(worldpos.xyz, infmin, infmax))
 		{
-			numWeight += 1;
 			float3 calcolor = 0;
 #if CORRECTED
 			float3 corrected = intersectBox(worldpos.xyz, R, boxmin, boxmax);
@@ -112,7 +111,7 @@ float4 main(PS_INPUT Input) : SV_TARGET
 			float3 prefiltered = prefilteredTexture[i].SampleLevel(sampLinear, coord, roughness * (PREFILTERED_MIP_LEVEL - 1)).rgb;
 			float3 irradiance = irradianceTexture[i].SampleLevel(sampLinear, N, 0).rgb;
 			calcolor = indirectBRDF(irradiance, prefiltered, lut, roughness, metallic, F0_DEFAULT, albedo, N, V);
-			result += calcolor * intensity /** float3((i % 2), 0, (1.0f - i % 2)) */;
+			result += calcolor * intensity * probeintensity/** float3((i % 2), 0, (1.0f - i % 2)) */;
 #else
 			calcolor = envTex.SampleLevel(sampLinear, coord, 0).rgb;
 			result += calcolor * intensity * (1 - roughness) * metallic * reflection, 1) ;
@@ -120,10 +119,9 @@ float4 main(PS_INPUT Input) : SV_TARGET
 		}
 	}
 
-	if (numWeight == 0)
-		numWeight = 1;
 
-	return float4(result / numWeight, 1);
+
+	return float4(result, 1);
 }
 
 

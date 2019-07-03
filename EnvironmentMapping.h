@@ -40,7 +40,7 @@ private:
 	int mNumProbes = 0;
 
 	std::shared_ptr<Pipeline> mCubePipeline;
-	std::function<void(void)> mUpdate;
+	std::function<void(bool)> mUpdate;
 	Renderer::PixelShader::Weak mPS[2];
 	Renderer::Buffer::Ptr mConstants;
 	Renderer::Texture2D::Ptr mFrame;

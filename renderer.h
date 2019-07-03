@@ -7,6 +7,7 @@
 #include "Common.h"
 #include "SpriteFont.h"
 #include "SimpleMath.h"
+#include <vector>
 #undef min
 #undef max
 
@@ -383,9 +384,51 @@ public:
 		size_t mCPUTimer = 0;
 	};
 
+	class CompiledData
+	{
+	public:
+		using Ptr = std::shared_ptr<CompiledData>;
+		CompiledData(size_t h , ID3D10Blob* b):blob(b),hash(h)
+		{
 
-	using CompiledData = Interface<ID3D10Blob>;
-	using SharedCompiledData = CompiledData::Shared ;
+		}
+		CompiledData(size_t h, const std::vector<char>& buffer):mBuffer(buffer),hash(h)
+		{
+
+		}
+		~CompiledData()
+		{
+			if (blob)
+				blob->Release();
+		}
+
+		void* GetBufferPointer()
+		{
+			if (blob)
+				return blob->GetBufferPointer();
+			else
+				return mBuffer.data();
+		}
+
+		size_t GetBufferSize()
+		{
+			if (blob)
+				return blob->GetBufferSize();
+			else
+				return mBuffer.size();
+		}
+
+		size_t getHash() { return hash; }
+
+	private:
+		size_t hash;
+		ID3D10Blob* blob = nullptr;
+		std::vector<char> mBuffer;
+	};
+
+
+	//using CompiledData = Interface<ID3D10Blob>;
+	using SharedCompiledData = CompiledData::Ptr;
 	using PixelShader = Interface<ID3D11PixelShader>;
 	using ComputeShader = Interface<ID3D11ComputeShader>;
 
@@ -495,6 +538,7 @@ public:
 	Profile::Ptr createProfile();
 
  private:
+	void initCompiledShaders();
 	static void checkResult(HRESULT hr);
 	static void error(const std::string& err);
 
@@ -527,6 +571,9 @@ private:
 	std::unordered_map<size_t,VertexShader::Shared> mVSs;
 	std::unordered_map<size_t, PixelShader::Shared> mPSs;
 	std::unordered_map<size_t,ComputeShader::Shared> mCSs;
+	std::unordered_map<size_t, SharedCompiledData> mCompiledShader;
+
+
 	std::vector<std::shared_ptr<Profile>> mProfiles;
 	std::unordered_map<std::wstring, std::shared_ptr<Font>> mFonts;
 	std::unordered_map<size_t, std::shared_ptr<Rasterizer>> mRasterizers;

@@ -272,36 +272,40 @@ extern "C"
 
 		loop = std::shared_ptr<std::thread>(new std::thread([width, height, overlayWidth, overlayHeight]()
 		{
-			registerWindow();
-			auto win = createWindow(width, height);
-			framework = Ptr(new FRAMEWORK(win));
-			overlay = ElectronOverlay::Ptr(new ElectronOverlay());
-			overlay->setSetting(framework->getSetting());
-			overlay->window = win;
-			framework->init();
-			framework->setOverlay(overlay);
-			overlay->init(overlayWidth, overlayHeight);
-			MSG msg = {};
-			while (WM_QUIT != msg.message && WM_CLOSE != msg.message
-#ifdef _WINDLL
-				&& electronCallback
-#endif
-				)
+			try
 			{
-				if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+				registerWindow();
+				auto win = createWindow(width, height);
+				framework = Ptr(new FRAMEWORK(win));
+				overlay = ElectronOverlay::Ptr(new ElectronOverlay());
+				overlay->setSetting(framework->getSetting());
+				overlay->window = win;
+				framework->init();
+				framework->setOverlay(overlay);
+				overlay->init(overlayWidth, overlayHeight);
+				MSG msg = {};
+				while (WM_QUIT != msg.message && WM_CLOSE != msg.message
+#ifdef _WINDLL
+					&& electronCallback
+#endif
+					)
 				{
-					TranslateMessage(&msg);
-					DispatchMessage(&msg);
+					if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+					{
+						TranslateMessage(&msg);
+						DispatchMessage(&msg);
+					}
+					else
+					{
+						overlay->refresh();
+						framework->update();
+
+					}
 				}
-				else
-				{
-					overlay->refresh();
-					framework->update();
-					std::stringstream ss;
-					ss.precision(4);
-					ss << framework->getFPS();
-					SetWindowTextA(overlay->window, ss.str().c_str());
-				}
+			}
+			catch (std::exception& e)
+			{
+				MessageBoxA(NULL, e.what(), NULL, NULL);
 			}
 
 

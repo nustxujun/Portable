@@ -12,7 +12,7 @@ Quad::Quad(Renderer::Ptr r):mRenderer(r)
 
 
 	auto vsblob = mRenderer->compileFile("quad_vs.hlsl", "main", "vs_5_0");
-	mVS = mRenderer->createVertexShader((**vsblob).GetBufferPointer(), (**vsblob).GetBufferSize());
+	mVS = mRenderer->createVertexShader((vsblob)->GetBufferPointer(), (vsblob)->GetBufferSize());
 	
 
 
@@ -48,7 +48,7 @@ Quad::Quad(Renderer::Ptr r):mRenderer(r)
 	mIndexBuffer = mRenderer->createBuffer(sizeof(quadIndices), D3D11_BIND_INDEX_BUFFER, &InitQuadData);
 
 	auto blob = mRenderer->compileFile("drawTexture_ps.hlsl", "main", "ps_5_0");
-	mDrawTexturePS = mRenderer->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
+	mDrawTexturePS = mRenderer->createPixelShader(blob->GetBufferPointer(), blob->GetBufferSize());
 
 	mDefaultSampler = r->createSampler("linear_clamp", D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
 

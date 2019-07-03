@@ -21,7 +21,7 @@ PBR::PBR(
 		std::vector<D3D10_SHADER_MACRO> macros = { {definitions[i],"1"} };
 		macros.push_back({ NULL, NULL });
 		auto blob = r->compileFile("hlsl/lighting.hlsl", "main", "ps_5_0", macros.data());
-		mPSs.push_back( r->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize()) );
+		mPSs.push_back( r->createPixelShader(blob->GetBufferPointer(), blob->GetBufferSize()) );
 	}
 
 
@@ -56,7 +56,7 @@ PBR::PBR(
 
 	{
 		auto blob = r->compileFile("hlsl/lightvolume_vs.hlsl", "main", "vs_5_0");
-		mLightVolumeVS = r->createVertexShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
+		mLightVolumeVS = r->createVertexShader(blob->GetBufferPointer(), blob->GetBufferSize());
 	}
 
 	mLightVolumeConstants = r->createBuffer(sizeof(LightVolumeConstants), D3D11_BIND_CONSTANT_BUFFER, 0, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);

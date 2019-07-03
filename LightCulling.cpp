@@ -10,7 +10,7 @@ LightCulling::LightCulling(
 {
 	mName = "cull lights";
 	auto blob = r->compileFile("hlsl/tiledlightculling.hlsl", "main", "cs_5_0");
-	mCS = r->createComputeShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
+	mCS = r->createComputeShader(blob->GetBufferPointer(), blob->GetBufferSize());
 
 	mConstants = r->createBuffer(sizeof(Constants), D3D11_BIND_CONSTANT_BUFFER);
 

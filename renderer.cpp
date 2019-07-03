@@ -6,6 +6,7 @@
 #include <regex>
 #include <iostream>
 #include <sstream>
+#include <fstream>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -28,8 +29,48 @@ void Renderer::error(const std::string& err)
 	abort();
 }
 
+
+void Renderer::initCompiledShaders()
+{
+	CreateDirectoryA("cache/", NULL);
+	WIN32_FIND_DATAA data;
+	auto h = FindFirstFileA("cache/*", &data);
+	
+	std::vector<std::string> files;
+	while (h != INVALID_HANDLE_VALUE)
+	{
+		if (data.cFileName[0] != '.')
+			files.push_back( data.cFileName);
+		if (!FindNextFileA(h, &data))
+			break;
+	}
+	FindClose(h);
+
+
+	std::string prefix = "cache/";
+	for (auto&i : files)
+	{
+		std::fstream f(prefix + i, std::ios::in | std::ios::binary);
+		if (!f)
+			continue;
+		unsigned int size = 0;
+		f.read((char*)&size, sizeof(size));
+		size_t h;
+		f.read((char*)&h, sizeof(h));
+		std::vector<char> buffer(size);
+		f.read(buffer.data(), size);
+
+		std::stringstream ss;
+		ss << i;
+		size_t hash;
+		ss >> std::hex>> hash;
+		mCompiledShader[hash] = SharedCompiledData(new CompiledData(h, buffer ));
+	}
+}
+
 void Renderer::init(HWND win, int width, int height)
 {
+	initCompiledShaders();
 	mWidth = width;
 	mHeight = height;
 	D3D_FEATURE_LEVEL featureLevels[] =
@@ -720,16 +761,54 @@ Renderer::Buffer::Ptr Renderer::createConstantBuffer(int size, void* data , size
 
 Renderer::SharedCompiledData Renderer::compileFile(const std::string& filename, const std::string& entryPoint, const std::string& shaderModel, const D3D10_SHADER_MACRO* macro)
 {
+
+
+	std::string hashstr = filename + entryPoint + shaderModel;
+	auto M = macro;
+	while (M && M->Name)
+	{
+		hashstr += M->Name;
+		hashstr += M->Definition;
+		M++;
+	}
+
+#if (defined _DEBUG)
+	hashstr += "_DEBUG";
+#endif
+#if(defined WIN32)
+	hashstr += "WIN32";
+#endif
+
+	std::fstream shaderfile(filename, std::ios::in | std::ios::binary);
+	shaderfile.seekg(0, std::ios::end);
+	size_t datasize = shaderfile.tellg();
+	shaderfile.seekg(0);
+	std::vector<char> mem(datasize);
+	shaderfile.read(mem.data(), datasize);
+	size_t rawhash = Common::hash(mem.data(), datasize);
+
+	size_t hash = Common::hash(hashstr);
+	auto shader = mCompiledShader.find(hash);
+	if (shader != mCompiledShader.end())
+	{
+
+		if (rawhash == shader->second->getHash())
+			return shader->second;
+	}
+
 	int flags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if (defined _DEBUG ) || (defined RELEASE_WITH_DEBUGINFO)
 	flags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION ;
 #endif
 
+
+
+
 	ID3D10Blob* blob;
 	ID3D10Blob* err;
 	std::cout << "compile " << filename << " "<< entryPoint << " " << shaderModel << " ... ";
 	auto curtime = GetTickCount();
-	HRESULT hr = D3DX11CompileFromFileA(filename.c_str(), macro, NULL, entryPoint.c_str(), shaderModel.c_str(), flags, 0, NULL, &blob, &err, NULL);
+	HRESULT hr = D3DX11CompileFromMemory(mem.data(), mem.size(),filename.c_str(), macro, NULL, entryPoint.c_str(), shaderModel.c_str(), flags, 0, NULL, &blob, &err, NULL);
 	std::cout << GetTickCount() - curtime << "ms." << std::endl;
 	
 	if (hr != S_OK)
@@ -743,13 +822,21 @@ Renderer::SharedCompiledData Renderer::compileFile(const std::string& filename, 
 		else
 			checkResult(hr);
 	}
-	return SharedCompiledData(new CompiledData(blob));
+	std::string path = "cache/";
+	std::stringstream ss;
+	ss << path << std::hex << hash;
+	std::fstream f(ss.str(), std::ios::out | std::ios::binary);
+	unsigned int s = blob->GetBufferSize();
+	f.write((const char*)&s, sizeof(s));
+	f.write((const char*)&rawhash, sizeof(rawhash));
+	f.write((const char*)blob->GetBufferPointer(), s);
+	return SharedCompiledData(new CompiledData(rawhash,blob));
 }
 
 Renderer::Effect::Ptr Renderer::createEffect(const std::string& file, const D3D10_SHADER_MACRO* macro)
 {
 	auto blob = compileFile(file, "", "fx_5_0", macro);
-	return createEffect((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
+	return createEffect(blob->GetBufferPointer(), blob->GetBufferSize());
 }
 
 Renderer::Effect::Ptr Renderer::createEffect(void* data, size_t size)
@@ -780,7 +867,7 @@ Renderer::VertexShader::Weak Renderer::createVertexShader(const void * data, siz
 Renderer::VertexShader::Weak Renderer::createVertexShader(const std::string & file, const std::string & entry, const D3D10_SHADER_MACRO * macro)
 {
 	auto blob = compileFile(file, entry, "vs_5_0", macro);
-	return createVertexShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
+	return createVertexShader(blob->GetBufferPointer(), blob->GetBufferSize());
 }
 
 Renderer::PixelShader::Weak Renderer::createPixelShader(const void * data, size_t size)
@@ -799,7 +886,7 @@ Renderer::PixelShader::Weak Renderer::createPixelShader(const void * data, size_
 Renderer::PixelShader::Weak Renderer::createPixelShader(const std::string& file, const std::string& entry, const D3D10_SHADER_MACRO* macro)
 {
 	auto blob = compileFile(file, entry, "ps_5_0", macro);
-	return createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
+	return createPixelShader(blob->GetBufferPointer(), blob->GetBufferSize());
 }
 
 Renderer::ComputeShader::Weak Renderer::createComputeShader(const void * data, size_t size)
@@ -819,7 +906,7 @@ Renderer::ComputeShader::Weak Renderer::createComputeShader(const void * data, s
 Renderer::ComputeShader::Weak Renderer::createComputeShader(const std::string& name, const std::string& entry)
 {
 	auto blob = compileFile(name, entry, "cs_5_0");
-	return createComputeShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
+	return createComputeShader(blob->GetBufferPointer(), blob->GetBufferSize());
 }
 
 

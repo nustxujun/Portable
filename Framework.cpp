@@ -11,7 +11,7 @@
 #include "SkyBox.h"
 #include "SSR.h"
 
-Framework::Framework(HWND win)
+Framework::Framework(HWND win):mWindow(win)
 {
 	mRenderer = std::make_shared<Renderer>();
 	RECT rect;
@@ -47,6 +47,15 @@ void Framework::update()
 
 	renderOverlay();
 	mRenderer->present();
+
+
+	std::stringstream ss;
+	ss.precision(4);
+	ss << getFPS();
+
+	auto cam = mScene->createOrGetCamera("main");
+	auto pos = cam->getNode()->getRealPosition();
+	SetWindowTextA(mWindow, Common::format(ss.str(), "(", pos.x, ",", pos.y, ",",pos.z,")").c_str());
 }
 
 //void Framework::initOverlay(int width, int height)

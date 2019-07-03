@@ -68,6 +68,11 @@ public:
 		return hash(d);
 	}
 
+	static size_t hash(const std::string& str)
+	{
+		return hash(str.c_str(), str.size());
+	}
+
 	template<class T, class ... Args>
 	static std::string format(const T& v, const Args& ... args)
 	{

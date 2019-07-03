@@ -20,12 +20,12 @@ void HDR::init()
 
 	auto r = getRenderer();
 	auto blob = r->compileFile("hlsl/hdr.hlsl", "main", "ps_5_0");
-	mPS = r->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
+	mPS = r->createPixelShader(blob->GetBufferPointer(), blob->GetBufferSize());
 
 	blob = r->compileFile("hlsl/downsample.hlsl", "downSample2x2", "ps_5_0");
-	mDownSamplePS2x2 = r->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
+	mDownSamplePS2x2 = r->createPixelShader(blob->GetBufferPointer(), blob->GetBufferSize());
 	blob = r->compileFile("hlsl/downsample.hlsl", "downSample3x3", "ps_5_0");
-	mDownSamplePS3x3 = r->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
+	mDownSamplePS3x3 = r->createPixelShader(blob->GetBufferPointer(), blob->GetBufferSize());
 
 	auto vp = getCamera()->getViewport();
 	mTarget = r->createRenderTarget(vp.Width, vp.Height, DXGI_FORMAT_R32G32B32A32_FLOAT);

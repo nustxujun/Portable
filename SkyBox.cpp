@@ -38,7 +38,7 @@ void SkyBox::init(bool isCubemap)
 	if (!isCubemap)
 		macros[0].Definition = "1";
 	auto blob = getRenderer()->compileFile("hlsl/cubemap.fx", "", "fx_5_0", macros);
-	mEffect = getRenderer()->createEffect((**blob).GetBufferPointer(), (**blob).GetBufferSize());
+	mEffect = getRenderer()->createEffect(blob->GetBufferPointer(), blob->GetBufferSize());
 	mEffect.lock()->setTech("skybox");
 
 	D3D11_INPUT_ELEMENT_DESC modelLayout[] =

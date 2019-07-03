@@ -17,7 +17,7 @@ void AO::init(float radius)
 
 	auto r = getRenderer();
 	auto blob = r->compileFile("hlsl/ssao.hlsl", "main", "ps_5_0");
-	mPS = r->createPixelShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize());
+	mPS = r->createPixelShader(blob->GetBufferPointer(), blob->GetBufferSize());
 
 
 	mKernel = r->createBuffer(sizeof(Kernel), D3D11_BIND_CONSTANT_BUFFER);
