@@ -27,88 +27,118 @@ public:
 		set("dirradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
 
 		auto root = mScene->getRoot();
-		//{
-		//	std::vector<std::string> textures = {
-		//			"media/rustediron/rustediron2_basecolor.png",
-		//			"media/rustediron/rustediron2_normal.png",
-		//			"media/rustediron/rustediron2_roughness.png",
-		//			"media/rustediron/rustediron2_metallic.png",
-		//	};
-		//	Parameters params;
-		//	params["geom"] = "plane";
-		//	params["size"] = "50";
-		//	auto model = mScene->createModel("plane", params, [this](const Parameters& p)
-		//	{
-		//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		//	});
-		//	model->setCastShadow(true);
-		//	model->attach(root);
-		//	Material::Ptr mat = Material::create();
-		//	mat->roughness = 0;
-		//	mat->metallic = 1;
-		//	//for (int i = 0; i < textures.size(); ++i)
-		//	//	if (!textures[i].empty())
-		//	//		mat->setTexture(i, mRenderer->createTexture(textures[i]));
-		//	model->setMaterial(mat);
-		//}
+		{
+			std::vector<std::string> textures = {
+					"media/rustediron/rustediron2_basecolor.png",
+					"media/rustediron/rustediron2_normal.png",
+					"media/rustediron/rustediron2_roughness.png",
+					"media/rustediron/rustediron2_metallic.png",
+			};
+			Parameters params;
+			params["geom"] = "plane";
+			params["size"] = "50";
+			auto model = mScene->createModel("plane", params, [this](const Parameters& p)
+			{
+				return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+			});
+			model->setCastShadow(true);
+			model->attach(root);
+			Material::Ptr mat = Material::create();
+			mat->roughness = 1;
+			mat->metallic = 1;
+			for (int i = 0; i < textures.size(); ++i)
+				if (!textures[i].empty())
+					mat->setTexture(i, mRenderer->createTexture(textures[i]));
+			model->setMaterial(mat);
+		}
 
-		//for (int i = 0; i < 20; ++i)
-		//{
-		//	Parameters params;
-		//	params["geom"] = "plane";
-		//	params["size"] = "5";
-		//	auto model = mScene->createModel(Common::format("wall", i), params, [this](const Parameters& p)
-		//	{
-		//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		//	});
-		//	int sign = (9 - i) & 0x80000000;
-		//	model->getNode()->setPosition({ float(i % 10) * 5.0f - 25,0, sign? -24.0f:24.0f });
-		//	model->getNode()->rotate( (sign?1.0f: -1.0f ) * 3.1415926 * 0.5, 0, 0);
-		//	model->setCastShadow(true);
-		//	model->attach(root);
-		//	Material::Ptr mat = Material::create();
-		//	mat->roughness = 1;
-		//	mat->metallic = 1;
-		//	mat->diffuse = { float(i % 2),float(1 - i % 2 ), 0};
-		//	model->setMaterial(mat);
-		//}
+		{
+			Parameters params;
+			params["geom"] = "plane";
+			params["size"] = "50";
+			auto model = mScene->createModel("wall1", params, [this](const Parameters& p)
+			{
+				return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+			});
+			model->getNode()->setPosition({ 0,0,24 });
+			model->getNode()->rotate( -3.1415926 * 0.5, 0, 0);
+			model->setCastShadow(true);
+			model->attach(root);
+			Material::Ptr mat = Material::create();
+			mat->roughness = 1;
+			mat->metallic = 0;
+			mat->reflection = 0;
+			mat->diffuse = { 1,0, 0};
+			model->setMaterial(mat);
 
-		////{
-		////	int spherecount = 10;
-		////	Parameters params;
-		////	params["geom"] = "sphere";
-		////	params["radius"] = "1";
-		////	auto sphere = Mesh::Ptr(new GeometryMesh(params, mRenderer));
-		////	Material::Ptr mat = Material::create();
-		////	mat->reflection = 0;
-		////	std::vector<std::string> textures = {
-		////	"media/streaked/streaked-metal1-albedo.png",
-		////	"",
-		////	"media/streaked/streaked-metal1-rough.png",
-		////	"media/streaked/streaked-metal1-metalness.png",
-		////	"media/streaked/streaked-metal1-ao.png",
-		////	};
-		////	for (int i = 0; i < textures.size(); ++i)
-		////		if (!textures[i].empty())
-		////			mat->setTexture(i, mRenderer->createTexture(textures[i]));
-		////	//sphere->setMaterial(mat);
-		////	for (int i = 0; i < spherecount; ++i)
-		////	{
-		////		auto model = mScene->createModel(Common::format("sphere", i), params, [this, sphere](const Parameters& p)
-		////		{
-		////			return sphere;
-		////		});
 
-		////		float theta = 3.14159265358  * 2.0f / spherecount;
+			model = mScene->createModel("wall2", params, [this](const Parameters& p)
+			{
+				return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+			});
+			model->getNode()->setPosition({ 0,0,-24 });
+			model->getNode()->rotate(3.1415926 * 0.5, 0, 0);
+			model->setCastShadow(true);
+			model->attach(root);
+			mat = Material::create();
+			mat->roughness = 1;
+			mat->metallic = 0;
+			mat->reflection = 0;
+			mat->diffuse = { 0,1, 0 };
+			model->setMaterial(mat);
 
-		////		float sin = std::sin(i * theta) * 4;
-		////		float cos = std::cos(i* theta) * 10;
-		////		model->getNode()->setPosition({ cos , cos * 0.5f + 6, sin });
-		////		model->setCastShadow(true);
-		////		model->attach(root);
+			model = mScene->createModel("wall3", params, [this](const Parameters& p)
+			{
+				return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+			});
+			model->getNode()->setPosition({ 24,0,0 });
+			model->getNode()->rotate(0, 0, 3.1415926 * 0.5);
+			model->setCastShadow(true);
+			model->attach(root);
+			mat = Material::create();
+			mat->roughness = 1;
+			mat->metallic = 0;
+			mat->reflection = 0;
+			mat->diffuse = { 0,0, 1 };
+			model->setMaterial(mat);
+		}
 
-		////	}
-		////}													
+		{
+			int spherecount = 10;
+			Parameters params;
+			params["geom"] = "sphere";
+			params["radius"] = "1";
+			auto sphere = Mesh::Ptr(new GeometryMesh(params, mRenderer));
+			Material::Ptr mat = Material::create();
+			mat->reflection = 0;
+			std::vector<std::string> textures = {
+			"media/streaked/streaked-metal1-albedo.png",
+			"",
+			"media/streaked/streaked-metal1-rough.png",
+			"media/streaked/streaked-metal1-metalness.png",
+			"media/streaked/streaked-metal1-ao.png",
+			};
+			for (int i = 0; i < textures.size(); ++i)
+				if (!textures[i].empty())
+					mat->setTexture(i, mRenderer->createTexture(textures[i]));
+			sphere->setMaterial(mat);
+			for (int i = 0; i < spherecount; ++i)
+			{
+				auto model = mScene->createModel(Common::format("sphere", i), params, [this, sphere](const Parameters& p)
+				{
+					return sphere;
+				});
+
+				float theta = 3.14159265358  * 2.0f / spherecount;
+
+				float sin = std::sin(i * theta) * 4;
+				float cos = std::cos(i* theta) * 10;
+				model->getNode()->setPosition({ cos , cos * 0.5f + 6, sin });
+				model->setCastShadow(true);
+				model->attach(root);
+
+			}
+		}													
 
 		//{
 		//	Parameters params;
@@ -131,10 +161,10 @@ public:
 		auto cam = mScene->createOrGetCamera("main");
 		DirectX::XMFLOAT3 eye(aabb.second);
 		DirectX::XMFLOAT3 at(aabb.first);
-		//cam->lookat(eye, at);
+		cam->lookat({ -20,10,0 }, {0,0,0});
 		//cam->lookat((aabb.first + aabb.second) * 0.5, { 0,0,0 });
-		cam->getNode()->setPosition((aabb.first + aabb.second) * 0.5);
-		cam->setDirection({ 0, -1, 0 });
+		//cam->getNode()->setPosition((aabb.first + aabb.second) * 0.5);
+		//cam->setDirection({ 0, -1, 0 });
 		cam->setViewport(0, 0, mRenderer->getWidth(), mRenderer->getHeight());
 		cam->setNearFar(1, vec.Length() + 1);
 		cam->setFOVy(0.785398185);
@@ -145,8 +175,9 @@ public:
 		light->setCastingShadow(true);
 
 
+		int numprobes = 1;
 		auto half = vec * 0.5f;
-		auto dx = vec.x / 10.0f;
+		auto dx = vec.x / numprobes;
 		auto pos = (aabb.first + aabb.second) * 0.5f;
 		std::uniform_real_distribution<float> rand(0.0f, 1.0f);
 		std::default_random_engine gen;
@@ -156,13 +187,13 @@ public:
 		params["radius"] = "1";
 		auto sphere = Mesh::Ptr(new GeometryMesh(params, mRenderer));
 		sphere->getMesh(0).material->roughness = 0;
-		for (int i = 0; i < 10; ++i)
+		for (int i = 0; i < numprobes; ++i)
 		{
 			auto probe = mScene->createProbe(Common::format(i));
 			probe->setDebugObject(sphere);
 			Vector3 offset = { dx * 0.5f + i * dx - half.x, 0,0 };
 
-			probe->setProjectionBox(Vector3(vec.x, vec.y, 400), offset);
+			probe->setProjectionBox(Vector3(vec.x, vec.y, vec.z), offset);
 			//probe->setInfluence(Vector3(dx , vec.y + 1, vec.z));
 			probe->setInfluence(vec + Vector3(0,1,0), offset);
 			probe->getNode()->setPosition(-offset + Vector3(pos.x, 1, pos.z));
@@ -227,12 +258,12 @@ public:
 		auto aabb = mScene->getRoot()->getWorldAABB();
 
 		mPipeline->pushStage<GBuffer>();
-		mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
+		//mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
 		mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
 		mPipeline->pushStage<EnvironmentMapping>(EnvironmentMapping::T_ONCE, "media/Ditch-River_2k.hdr");
 
 		//mPipeline->pushStage<AO>();
-		//mPipeline->pushStage<SSR>();
+		mPipeline->pushStage<SSR>();
 		mPipeline->pushStage<SkyBox>("media/Ditch-River_2k.hdr", false);
 		mPipeline->pushStage<HDR>();
 		mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");

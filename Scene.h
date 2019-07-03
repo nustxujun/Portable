@@ -212,6 +212,8 @@ public:
 		void setColor(const Vector3& c) { mColor = c; }
 		const Vector3& getColor()const { return mColor; }
 		void setDebugObject(Mesh::Ptr m);
+
+		bool intersect(const Vector3& p);
 	private:
 		Box mBox = { {0,0,0}, {0,0,0} };
 		Box mInfluence = { {0,0,0}, {0,0,0} };

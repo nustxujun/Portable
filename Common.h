@@ -12,6 +12,10 @@
 #include <unordered_map>
 #include <sstream>
 
+#include "d3dx11effect.h"
+#include <D3D11.h>
+#include <D3DX11.h>
+
 using Parameters = std::map<std::string, std::string>;
 
 template<class Container>
@@ -87,4 +91,14 @@ private:
 	{
 		return {};
 	}
+};
+
+
+#include "SimpleMath.h"
+struct Vector3A : public DirectX::SimpleMath::Vector3
+{
+	template<class ... Args>
+	Vector3A(Args ... args) :Vector3(args...) {}
+private:
+	float unused;
 };

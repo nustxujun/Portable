@@ -420,15 +420,15 @@ void Scene::Probe::setDebugObject(Mesh::Ptr m)
 	mDebugObject = m; 
 }
 
-//bool Scene::Probe::intersectAABB(const Vector3 & min, const Vector3 & max)
-//{
-//	auto aabb = getWorldAABB();
-//
-//	return
-//		!(aabb.second.x < min.x || aabb.first.x > max.x ||
-//			aabb.second.y < min.y || aabb.first.y > max.y ||
-//			aabb.second.z < min.z || aabb.first.z > max.z);
-//}
+bool Scene::Probe::intersect(const Vector3 & point)
+{
+	auto aabb = getWorldAABB();
+
+	return
+		!(aabb.second.x < point.x || aabb.first.x > point.x ||
+			aabb.second.y < point.y || aabb.first.y > point.y ||
+			aabb.second.z < point.z || aabb.first.z > point.z);
+}
 
 void Scene::Probe::visitRenderable(std::function<void(const Renderable&)> v)
 {

@@ -582,6 +582,11 @@ Renderer::Sampler::Ptr Renderer::createSampler(const std::string& name, D3D11_FI
 
 Renderer::Texture2D::Ptr Renderer::createTexture(const std::string & filename, UINT miplevels )
 {
+	auto ret = mTextureMap.find(filename);
+	if (ret != mTextureMap.end())
+		return ret->second;
+
+
 	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;
 
 	void *data = 0;

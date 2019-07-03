@@ -9,14 +9,21 @@
 static auto constexpr MAX_NUM_PROBES = 10;
 
 
-void EnvironmentMapping::init()
+void EnvironmentMapping::init(bool ibl)
 {
+	mIBL = ibl;
 	setValue("envmap", true);
 	mName = "EnvironmentMapping";
 	auto renderer = getRenderer();
 
-	std::vector<D3D10_SHADER_MACRO> norm = { {"IBL", "1"},  {NULL,NULL} };
-	std::vector<D3D10_SHADER_MACRO> corr = { {"IBL", "1"}, {"CORRECTED", "1"}, {NULL,NULL} };
+	std::vector<D3D10_SHADER_MACRO> norm = {   {NULL,NULL} };
+	std::vector<D3D10_SHADER_MACRO> corr = {  {"CORRECTED", "1"}, {NULL,NULL} };
+
+	if (ibl)
+	{
+		norm.insert(norm.begin(), { "IBL", "1" });
+		corr.insert(corr.begin(), { "IBL", "1" });
+	}
 
 	mPS[0] = renderer->createPixelShader("hlsl/environmentmapping.hlsl", "main", norm.data());
 	mPS[1] = renderer->createPixelShader("hlsl/environmentmapping.hlsl", "main", corr.data());
@@ -26,32 +33,32 @@ void EnvironmentMapping::init()
 
 	mConstants = renderer->createConstantBuffer(sizeof(Constants));
 
-	mProbeInfos = renderer->createRWBuffer(sizeof(Vector3) * 6 * MAX_NUM_PROBES, sizeof(Vector3), DXGI_FORMAT_R32G32B32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+	//mProbeInfos = renderer->createRWBuffer(sizeof(Vector3) * 6 * MAX_NUM_PROBES, sizeof(Vector3), DXGI_FORMAT_R32G32B32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 }
 
 void EnvironmentMapping::init(const std::string& cubemap )
 {
-	init();
+	init(true);
 	set("envIntensity", { {"type","set"}, {"value",1},{"min","0"},{"max",2.0f},{"interval", "0.01"} });
 
 	mIrradianceProcessor = ImageProcessing::create<IrradianceCubemap>(getRenderer(), ImageProcessing::RT_COPY, false);
 	mPrefilteredProcessor = ImageProcessing::create<PrefilterCubemap>(getRenderer(), ImageProcessing::RT_COPY, false);
-	mCube = getRenderer()->createTexture(cubemap, 1);
-	mIrradiance.push_back( mIrradianceProcessor->process(mCube));
-	mPrefiltered.push_back( mPrefilteredProcessor->process(mCube));
-	mNumProbes = 1;
+	mCube.push_back(getRenderer()->createTexture(cubemap, 1));
+	mIrradiance.push_back( mIrradianceProcessor->process(mCube[0]));
+	mPrefiltered.push_back( mPrefilteredProcessor->process(mCube[0]));
 
-	auto aabb = getScene()->getRoot()->getWorldAABB();
-	Vector3 raw[6] = { (aabb.first + aabb.second)* 0.5f, aabb.first , aabb.second,  aabb.first, aabb.second , {1,1,1} };
+	mSkyOnly = true;
+	//auto aabb = getScene()->getRoot()->getWorldAABB();
+	//Vector3 raw[6] = { (aabb.first + aabb.second)* 0.5f, aabb.first , aabb.second,  aabb.first, aabb.second , {1,1,1} };
 
-	mProbeInfos.lock()->blit(raw, sizeof(raw));
+	//mProbeInfos.lock()->blit(raw, sizeof(raw));
 }
 
 
 void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolution)
 {
 	mType = type;
-	init();
+	init(true);
 	set("envIntensity", { {"type","set"}, {"value",1},{"min","0"},{"max",2.0f},{"interval", "0.01"} });
 	set("envCubeScale", { {"type","set"}, {"value",1},{"min","0"},{"max",2.0f},{"interval", "0.01"} });
 	set("boxProjection", { {"type","set"}, {"value",1},{"min","0"},{"max",1},{"interval", "1"} });
@@ -72,8 +79,8 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 
 	auto renderer = getRenderer();
 
-	mIrradianceProcessor = ImageProcessing::create<IrradianceCubemap>(getRenderer(), ImageProcessing::RT_COPY, true);
-	mPrefilteredProcessor = ImageProcessing::create<PrefilterCubemap>(getRenderer(), ImageProcessing::RT_COPY, true);
+	mIrradianceProcessor = ImageProcessing::create<IrradianceCubemap>(getRenderer(), mType == T_EVERYFRAME? ImageProcessing::RT_TEMP: ImageProcessing::RT_COPY, true);
+	mPrefilteredProcessor = ImageProcessing::create<PrefilterCubemap>(getRenderer(), mType == T_EVERYFRAME ? ImageProcessing::RT_TEMP : ImageProcessing::RT_COPY,  true);
 
 	mCubePipeline = decltype(mCubePipeline)(new Pipeline(renderer, getScene()));
 	mCubePipeline->setCamera(cam);
@@ -136,56 +143,41 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 
 
 
-	D3D11_TEXTURE2D_DESC cubedesc;
-	cubedesc.Width = cubesize;
-	cubedesc.Height = cubesize;
-	cubedesc.MipLevels = 1;
-	cubedesc.ArraySize = 6;
-	cubedesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-	cubedesc.SampleDesc.Count = 1;
-	cubedesc.SampleDesc.Quality = 0;
-	cubedesc.Usage = D3D11_USAGE_DEFAULT;
-	cubedesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE ;
-	cubedesc.CPUAccessFlags = 0;
-	cubedesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
-
-	mCube = renderer->createTexture(cubedesc);
-
-
-
-
 	auto frame = renderer->createRenderTarget(cubesize, cubesize, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	mCubePipeline->setFrameBuffer(frame);
 
-
-
-	mUpdate = [this,cam, renderer,frame](bool force) {
+	mUpdate = [this,cam, renderer,frame, cubesize](bool force) {
 		auto scene = getScene();
 		auto campos = scene->createOrGetCamera("main")->getNode()->getRealPosition();
 		auto probes = scene->getProbes();
 		std::vector<Vector3> raw;
-		mNumProbes = 0;
+		//mNumProbes = 0;
 		float sumdist = 0;
 		float mindist = FLT_MAX;
 		std::vector<float> dists;
-		for (auto& p : probes)
+		int nums = 0;
+		if (force || mType == T_EVERYFRAME)
 		{
-			mNumProbes++;
-			auto pos = p.second->getNode()->getRealPosition();
-			float d = (pos - campos).Length();
-			mindist = std::min(d, mindist);
-			dists.push_back(d);
-			sumdist += d;
-			raw.push_back(pos);
-			auto box = p.second->getProjectionBox();
-			raw.push_back(pos + box.second - box.first * 0.5);
-			raw.push_back(pos + box.second + box.first * 0.5);
-			auto influence = p.second->getInfluence();
-			raw.push_back(pos + influence.second - influence.first * 0.5);
-			raw.push_back(pos + influence.second + influence.first * 0.5);
-			raw.push_back({ 1,1,1 });
-			if (force || mType == T_EVERYFRAME)
+			mCube.clear();
+			mIrradiance.clear();
+			mPrefiltered.clear();
+			for (auto& p : probes)
 			{
+				auto pos = p.second->getNode()->getRealPosition();
+				D3D11_TEXTURE2D_DESC cubedesc;
+				cubedesc.Width = cubesize;
+				cubedesc.Height = cubesize;
+				cubedesc.MipLevels = 1;
+				cubedesc.ArraySize = 6;
+				cubedesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+				cubedesc.SampleDesc.Count = 1;
+				cubedesc.SampleDesc.Quality = 0;
+				cubedesc.Usage = D3D11_USAGE_DEFAULT;
+				cubedesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+				cubedesc.CPUAccessFlags = 0;
+				cubedesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+				mCube.push_back(renderer->createTexture(cubedesc));
+
 				cam->getNode()->setPosition(pos);
 				Matrix viewMats[6] = {
 					MathUtilities::makeMatrixFromAxis(-Vector3::UnitZ, Vector3::UnitY, Vector3::UnitX),
@@ -201,25 +193,17 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 					Quaternion rot = Quaternion::CreateFromRotationMatrix(d);
 					cam->getNode()->setOrientation(rot);
 					mCubePipeline->render();
-
-					renderer->getContext()->CopySubresourceRegion(mCube->getTexture(), index++, 0, 0, 0, frame->getTexture(), 0, 0);
+					renderer->getContext()->CopySubresourceRegion(mCube[nums]->getTexture(), index++, 0, 0, 0, frame->getTexture(), 0, 0);
 				}
 
-				mIrradiance.push_back(mIrradianceProcessor->process(mCube));
-				mPrefiltered.push_back(mPrefilteredProcessor->process(mCube));
+				mIrradiance.push_back(mIrradianceProcessor->process(mCube[nums]));
+				mPrefiltered.push_back(mPrefilteredProcessor->process(mCube[nums]));
+				nums++;
+
 			}
 		}
-
-		for (size_t i = 0; i < dists.size(); ++i)
-		{
-			raw[i * 6 + 5] = Vector3(1, 1, 1) * ( dists[i] > mindist ? 0: 1);
-		}
 	
-		mNumProbes = std::min((int)MAX_NUM_PROBES, mNumProbes);
 
-		mProbeInfos.lock()->blit(raw.data(), raw.size() * sizeof(Vector3));
-
-		//D3DX11SaveTextureToFile(renderer->getContext(), mCube->getTexture(), D3DX11_IFF_DDS, L"test.dds");
 	};
 	
 	mUpdate(true);
@@ -241,18 +225,9 @@ void EnvironmentMapping::render(Renderer::Texture2D::Ptr rt)
 	Constants constants;
 	constants.invertViewProj = (cam->getViewMatrix() * cam->getProjectionMatrix()).Invert().Transpose();
 	constants.campos = cam->getNode()->getRealPosition();
-	constants.envIntensity = getValue<float>("envIntensity");
-	constants.numprobes = mNumProbes;
-	mConstants.lock()->blit(constants);
-
+	constants.intensity = { 1,1,1 };
+	int selected = 0;
 	auto quad = getQuad();
-	//quad->setDefaultBlend(false);
-	quad->setBlendColorAdd();
-	quad->setDefaultSampler();
-	quad->setViewport(cam->getViewport());
-	quad->setPixelShader(mPS[getValue<int>("boxProjection")]);
-	quad->setConstant(mConstants);
-
 	if (has("ssr"))
 	{
 		getRenderer()->clearRenderTarget(mFrame, { 0,0,0,0 });
@@ -261,22 +236,72 @@ void EnvironmentMapping::render(Renderer::Texture2D::Ptr rt)
 	else
 		quad->setRenderTarget(rt);
 
+	if (!mSkyOnly)
+	{
+		auto probes = getScene()->getProbes();
+
+		int index = 0;
+		Scene::Probe::Ptr probe;
+		float mindist = FLT_MAX;
+		for (auto& p : probes)
+		{
+			auto pos = p.second->getNode()->getPosition();
+			float d = (constants.campos - pos).LengthSquared();
+			if (d < mindist 
+				//&& p.second->intersect(constants.campos)
+				)
+			{
+				mindist = d;
+				probe = p.second;
+				selected = index;
+			}
+
+			index++;
+		}
+
+		if (!probe)
+			return;
+
+		auto node = probe->getNode();
+		auto pos = node->getRealPosition();
+		constants.probepos = { pos.x, pos.y, pos.z };
+		auto box = probe->getProjectionBox();
+		constants.boxmin = { pos + box.second - box.first * 0.5f };
+		constants.boxmax = { pos + box.second + box.first * 0.5f };
+		auto inf = probe->getInfluence();
+		constants.infmin = { pos + inf.second - inf.first * 0.5f };
+		constants.infmax = { pos + inf.second + inf.first * 0.5f };
+	}
+
+	mConstants.lock()->blit(constants);
+
+	//quad->setDefaultBlend(false);
+	quad->setBlendColorAdd();
+	quad->setDefaultSampler();
+	quad->setViewport(cam->getViewport());
+	quad->setPixelShader(mSkyOnly ? mPS[0] : mPS[getValue<int>("boxProjection")]);
+	quad->setConstant(mConstants);
+
+
+
 
 	std::vector<Renderer::ShaderResource::Ptr> srvs = {
 		getShaderResource("albedo"),
 		getShaderResource("normal"),
 		getShaderResource("material"),
 		getShaderResource("depth"),
-		mProbeInfos,
-		mLUT,
+		//mLUT,
 	};
 
-	srvs.resize(30);
-	for (size_t i = 0; i < mNumProbes; ++i)
+	if (mIBL)
 	{
-		srvs[i + 10] = mIrradiance[i];
-		srvs[i + 20] = mPrefiltered[i];
+		srvs.push_back(mLUT);
+		srvs.push_back(mIrradiance[selected]);
+		srvs.push_back(mPrefiltered[selected]);
 	}
+	else
+		srvs.push_back(mCube[selected]);
+
 	quad->setTextures(srvs);
 	quad->draw();
 

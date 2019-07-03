@@ -567,6 +567,7 @@ private:
 	std::vector<std::shared_ptr<Layout>> mLayouts;
 
 	std::vector<std::shared_ptr<Texture>> mTextures;
+	std::unordered_map<std::string, Texture2D::Ptr> mTextureMap;
 	std::unordered_map<std::string,std::shared_ptr<Sampler>> mSamplers;
 	std::unordered_map<size_t,VertexShader::Shared> mVSs;
 	std::unordered_map<size_t, PixelShader::Shared> mPSs;

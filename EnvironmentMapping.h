@@ -9,9 +9,14 @@ class EnvironmentMapping : public Pipeline::Stage
 		struct Constants
 	{
 		Matrix invertViewProj;
-		Vector3 campos;
-		float envIntensity;
-		int numprobes;
+		Vector3A campos;
+		Vector3A probepos;
+		Vector3A boxmin;
+		Vector3A boxmax;
+		Vector3A infmin;
+		Vector3A infmax;
+		Vector3A intensity;
+
 	};
 public:
 	enum Type
@@ -27,21 +32,23 @@ public:
 	void init(const std::string& cubemap);
 	void render(Renderer::Texture2D::Ptr rt)  override final;
 private:
-	void init();
+	void init(bool ibl);
 private:
 	Type mType = T_ONCE;
-	Renderer::Texture2D::Ptr mCube;
+	std::vector<Renderer::Texture2D::Ptr> mCube;
 	std::vector<Renderer::Texture2D::Ptr> mIrradiance;
 	std::vector<Renderer::Texture2D::Ptr> mPrefiltered;
 	Renderer::Texture2D::Ptr mLUT;
 	IrradianceCubemap::Ptr mIrradianceProcessor;
 	PrefilterCubemap::Ptr mPrefilteredProcessor;
-	Renderer::Buffer::Ptr mProbeInfos;
-	int mNumProbes = 0;
+	//Renderer::Buffer::Ptr mProbeInfos;
+	//int mNumProbes = 0;
 
 	std::shared_ptr<Pipeline> mCubePipeline;
 	std::function<void(bool)> mUpdate;
 	Renderer::PixelShader::Weak mPS[2];
 	Renderer::Buffer::Ptr mConstants;
 	Renderer::Texture2D::Ptr mFrame;
+	bool mIBL = true;
+	bool mSkyOnly = false;
 };
