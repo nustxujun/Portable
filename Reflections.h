@@ -60,7 +60,7 @@ public:
 			{
 				return Mesh::Ptr(new GeometryMesh(p, mRenderer));
 			});
-			model->getNode()->setPosition({ 0,0,24 });
+			model->getNode()->setPosition({ 0,25,24 });
 			model->getNode()->rotate( -3.1415926 * 0.5, 0, 0);
 			model->setCastShadow(true);
 			model->attach(root);
@@ -76,7 +76,7 @@ public:
 			{
 				return Mesh::Ptr(new GeometryMesh(p, mRenderer));
 			});
-			model->getNode()->setPosition({ 0,0,-24 });
+			model->getNode()->setPosition({ 0,25,-24 });
 			model->getNode()->rotate(3.1415926 * 0.5, 0, 0);
 			model->setCastShadow(true);
 			model->attach(root);
@@ -91,7 +91,7 @@ public:
 			{
 				return Mesh::Ptr(new GeometryMesh(p, mRenderer));
 			});
-			model->getNode()->setPosition({ 24,0,0 });
+			model->getNode()->setPosition({ 24,25,0 });
 			model->getNode()->rotate(0, 0, 3.1415926 * 0.5);
 			model->setCastShadow(true);
 			model->attach(root);
@@ -196,7 +196,7 @@ public:
 			probe->setProjectionBox(Vector3(vec.x, vec.y, vec.z), offset);
 			//probe->setInfluence(Vector3(dx , vec.y + 1, vec.z));
 			probe->setInfluence(vec + Vector3(0,1,0), offset);
-			probe->getNode()->setPosition(-offset + Vector3(pos.x, 1, pos.z));
+			probe->getNode()->setPosition(-offset + Vector3(pos.x, pos.y, pos.z));
 			probe->setColor({0, float(i % 2), 1.0f - i % 2});
 			probe->attach(root);
 
