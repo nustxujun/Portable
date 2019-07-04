@@ -306,6 +306,7 @@ extern "C"
 			catch (std::exception& e)
 			{
 				MessageBoxA(NULL, e.what(), NULL, NULL);
+				throw;
 			}
 
 
@@ -350,6 +351,7 @@ int main()
 	catch (std::exception& e)
 	{
 		MessageBoxA(NULL, e.what(), NULL, NULL);
+		throw;
 	}
 	return 0;
 }

@@ -37,18 +37,7 @@ void SSR::render(Renderer::Texture2D::Ptr rt)
 	renderDepthBack();
 	renderRaytrace(rt);
 	renderColor(rt);
-	//auto ret = mFrame;
-	//int count = 0;
-	//for (int i = 0; i < count; ++i)
-	//{
-	//	ret = mSample->process(ret, ImageProcessing::DOWN);
-	//	ret = mGaussian->process(ret);
-	//}
 
-	//for (int i = 0; i < count; ++i)
-	//{
-	//	ret = mSample->process(ret, ImageProcessing::UP);
-	//}
 
 	auto quad = getQuad();
 	quad->setTextures({(mFrame)});
@@ -56,19 +45,7 @@ void SSR::render(Renderer::Texture2D::Ptr rt)
 	quad->setDefaultPixelShader();
 	quad->setBlendColorAdd();
 
-	//D3D11_BLEND_DESC desc = { 0 };
-	//desc.RenderTarget[0] = {
-	//	TRUE,
-	//	D3D11_BLEND_ONE,
-	//	D3D11_BLEND_ONE,
-	//	D3D11_BLEND_OP_ADD,
-	//	D3D11_BLEND_ONE,
-	//	D3D11_BLEND_ONE,
-	//	D3D11_BLEND_OP_ADD,
-	//	D3D11_COLOR_WRITE_ENABLE_ALL
-	//};
 
-	//quad->setBlend(desc);
 	quad->draw();
 }
 

@@ -60,7 +60,6 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 	mType = type;
 	init(true);
 	set("envIntensity", { {"type","set"}, {"value",1},{"min","0"},{"max",2.0f},{"interval", "0.01"} });
-	set("envCubeScale", { {"type","set"}, {"value",1},{"min","0"},{"max",2.0f},{"interval", "0.01"} });
 	set("boxProjection", { {"type","set"}, {"value",1},{"min","0"},{"max",1},{"interval", "1"} });
 
 
@@ -125,9 +124,10 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 
 
 
-	mCubePipeline->pushStage("clear rt", [this, renderer](Renderer::Texture2D::Ptr rt)
+	mCubePipeline->pushStage("clear rt", [this, renderer,depth](Renderer::Texture2D::Ptr rt)
 	{
 		renderer->clearRenderTarget(rt, { 0,0,0,0 });
+		renderer->clearDepth(depth, 1.0f);
 	});
 
 	mCubePipeline->pushStage<GBuffer>();

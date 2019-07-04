@@ -767,7 +767,6 @@ Renderer::Buffer::Ptr Renderer::createConstantBuffer(int size, void* data , size
 Renderer::SharedCompiledData Renderer::compileFile(const std::string& filename, const std::string& entryPoint, const std::string& shaderModel, const D3D10_SHADER_MACRO* macro)
 {
 
-
 	std::string hashstr = filename + entryPoint + shaderModel;
 	auto M = macro;
 	while (M && M->Name)
@@ -785,6 +784,8 @@ Renderer::SharedCompiledData Renderer::compileFile(const std::string& filename, 
 #endif
 
 	std::fstream shaderfile(filename, std::ios::in | std::ios::binary);
+	if (!shaderfile)
+		error(Common::format("cannot find shader file ", filename));
 	shaderfile.seekg(0, std::ios::end);
 	size_t datasize = shaderfile.tellg();
 	shaderfile.seekg(0);

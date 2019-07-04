@@ -156,6 +156,12 @@
     <ClInclude Include="EnvironmentMapping.h">
       <Filter>Pipeline\Stage</Filter>
     </ClInclude>
+    <ClInclude Include="MotionBlur.h">
+      <Filter>Pipeline\Stage</Filter>
+    </ClInclude>
+    <ClInclude Include="PreZ.h">
+      <Filter>Pipeline\Stage</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -239,17 +245,23 @@
     <ClCompile Include="dll.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Overlay.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="ImageProcessing.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="SSR.cpp">
       <Filter>Pipeline\Stage</Filter>
     </ClCompile>
     <ClCompile Include="EnvironmentMapping.cpp">
       <Filter>Pipeline\Stage</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageProcessing.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Overlay.cpp">
+      <Filter>Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="MotionBlur.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="PreZ.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

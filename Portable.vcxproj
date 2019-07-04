@@ -187,6 +187,7 @@
     <ClInclude Include="MathUtilities.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="MeshBuilder.h" />
+    <ClInclude Include="MotionBlur.h" />
     <ClInclude Include="MultipleLights.h" />
     <ClInclude Include="Observer.h" />
     <ClInclude Include="Overlay.h" />
@@ -194,6 +195,7 @@
     <ClInclude Include="PBRMaterial.h" />
     <ClInclude Include="Pipeline.h" />
     <ClInclude Include="PostProcessing.h" />
+    <ClInclude Include="PreZ.h" />
     <ClInclude Include="Quad.h" />
     <ClInclude Include="Reflections.h" />
     <ClInclude Include="renderer.h" />
@@ -227,11 +229,13 @@
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="MeshBuilder.cpp" />
+    <ClCompile Include="MotionBlur.cpp" />
     <ClCompile Include="MultipleLights.cpp" />
     <ClCompile Include="Overlay.cpp" />
     <ClCompile Include="PBR.cpp" />
     <ClCompile Include="Pipeline.cpp" />
     <ClCompile Include="PostProcessing.cpp" />
+    <ClCompile Include="PreZ.cpp" />
     <ClCompile Include="Quad.cpp" />
     <ClCompile Include="renderer.cpp" />
     <ClCompile Include="Scene.cpp" />

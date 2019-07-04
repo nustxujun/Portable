@@ -56,12 +56,36 @@ void GBuffer::render(Renderer::Texture2D::Ptr rt)
 	renderer->clearRenderTarget(getRenderTarget("material"), { 0,0,0,0 });
 
 
-	renderer->clearDepthStencil(mDepth, 1.0f);
+	//renderer->clearDepthStencil(mDepth, 1.0f);
 	renderer->setRenderTargets(rts, mDepth);
-	renderer->setDefaultDepthStencilState();
 	renderer->setDefaultRasterizer();
 	renderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	renderer->setDefaultBlendState();
+
+
+	D3D11_DEPTH_STENCIL_DESC dsdesc =
+	{
+		TRUE,
+		D3D11_DEPTH_WRITE_MASK_ALL,
+		D3D11_COMPARISON_LESS_EQUAL,
+		FALSE,
+		D3D11_DEFAULT_STENCIL_READ_MASK,
+		D3D11_DEFAULT_STENCIL_WRITE_MASK,
+		{
+			D3D11_STENCIL_OP_KEEP,
+			D3D11_STENCIL_OP_KEEP,
+			D3D11_STENCIL_OP_KEEP,
+			D3D11_COMPARISON_ALWAYS,
+		},
+		{
+			D3D11_STENCIL_OP_KEEP,
+			D3D11_STENCIL_OP_KEEP,
+			D3D11_STENCIL_OP_KEEP,
+			D3D11_COMPARISON_ALWAYS
+		}
+	};
+	renderer->setDepthStencilState(dsdesc);
+
 
 	getScene()->visitRenderables([this,cam](const Renderable& r)
 	{

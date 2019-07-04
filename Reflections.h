@@ -12,7 +12,10 @@
 #include "SSR.h"
 #include "EnvironmentMapping.h"
 #include "AO.h"
+#include "MotionBlur.h"
+
 #include <random>
+
 class Reflections :public Framework
 {
 public:
@@ -263,7 +266,8 @@ public:
 		mPipeline->pushStage<EnvironmentMapping>(EnvironmentMapping::T_ONCE, "media/Ditch-River_2k.hdr");
 
 		//mPipeline->pushStage<AO>();
-		mPipeline->pushStage<SSR>();
+		//mPipeline->pushStage<SSR>();
+		mPipeline->pushStage<MotionBlur>();
 		mPipeline->pushStage<SkyBox>("media/Ditch-River_2k.hdr", false);
 		mPipeline->pushStage<HDR>();
 		mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
@@ -273,6 +277,23 @@ public:
 			quad->setRenderTarget(bb);
 			quad->drawTexture(rt, false);
 		});
+
+	}
+
+
+	void framemove()
+	{
+		Framework::framemove();
+		float time = GetTickCount() * 0.001f;
+
+		for (int i = 0; i < 10; ++i)
+		{
+			auto s = mScene->getModel(Common::format("sphere", i));
+			float sin = std::sin(time + i) * 10;
+			float cos = std::cos(time + i) * 10;
+
+			s->getNode()->setPosition(cos, sin + 25, sin);
+		}
 	}
 
 };

@@ -10,6 +10,9 @@
 #include "PostProcessing.h"
 #include "SkyBox.h"
 #include "SSR.h"
+#include "EnvironmentMapping.h"
+#include "MotionBlur.h"
+#include "PreZ.h"
 
 Framework::Framework(HWND win):mWindow(win)
 {
@@ -120,12 +123,15 @@ void Framework::initPipeline()
 		mRenderer->clearRenderTarget(rt, { 0,0,0,0 });
 	});
 
+	mPipeline->pushStage<PreZ>();
 	mPipeline->pushStage<GBuffer>();
 	mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
 	mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
-	mPipeline->pushStage<SSR>();
+	mPipeline->pushStage<EnvironmentMapping>(std::string("media/Ditch-River_2k.hdr"));
+	//mPipeline->pushStage<SSR>();
 	//mPipeline->pushStage<AO>(3.0f);
 	mPipeline->pushStage<SkyBox>("media/Ditch-River_2k.hdr", false);
+	mPipeline->pushStage<MotionBlur>();
 	mPipeline->pushStage<HDR>();
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
@@ -146,73 +152,73 @@ void Framework::initScene()
 	set("dirradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
 
 	auto root = mScene->getRoot();
-	{
-		std::vector<std::string> textures = {
-				"media/rustediron/rustediron2_basecolor.png",
-				"media/rustediron/rustediron2_normal.png",
-				"media/rustediron/rustediron2_roughness.png",
-				"media/rustediron/rustediron2_metallic.png",
-		};
-		Parameters params;
-		params["geom"] = "plane";
-		params["size"] = "100";
-		auto model = mScene->createModel("plane", params, [this](const Parameters& p)
-		{
-			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		});
-		model->setCastShadow(false);
-		model->attach(root);
-		Material::Ptr mat = Material::create();
-		mat->roughness = 0;
-		mat->metallic = 0;
-		for (int i = 0; i < textures.size(); ++i)
-			if (!textures[i].empty())
-				mat->setTexture(i, mRenderer->createTexture(textures[i]));
-		model->setMaterial(mat);
-	}
-	{
-		std::vector<std::string> textures = {
-				"media/streaked/streaked-metal1-albedo.png",
-				"",
-				"media/streaked/streaked-metal1-rough.png",
-				"media/streaked/streaked-metal1-metalness.png",
-				"media/streaked/streaked-metal1-ao.png",
-		};
-
-		Parameters params;
-		params["geom"] = "sphere";
-		params["radius"] = "1";
-		auto model = mScene->createModel("sphere", params, [this](const Parameters& p)
-		{
-			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		});
-		model->getNode()->setPosition({ 0, 1, 0 });
-		model->setCastShadow(false);
-		model->attach(root);
-		Material::Ptr mat = Material::create();
-		//mat->roughness = 0.2;
-
-		for (int i = 0; i < textures.size(); ++i)
-			if (!textures[i].empty())
-				mat->setTexture(i, mRenderer->createTexture(textures[i]));
-		model->setMaterial(mat);
-	}
-
-
 	//{
+	//	std::vector<std::string> textures = {
+	//			"media/rustediron/rustediron2_basecolor.png",
+	//			"media/rustediron/rustediron2_normal.png",
+	//			"media/rustediron/rustediron2_roughness.png",
+	//			"media/rustediron/rustediron2_metallic.png",
+	//	};
 	//	Parameters params;
-	//	//params["file"] = "tiny.x";
-	//	params["file"] = "media/sponza/sponza.obj";
-	//	auto model = mScene->createModel("test", params, [this](const Parameters& p) {
-	//		return Mesh::Ptr(new Mesh(p, mRenderer));
+	//	params["geom"] = "plane";
+	//	params["size"] = "100";
+	//	auto model = mScene->createModel("plane", params, [this](const Parameters& p)
+	//	{
+	//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
 	//	});
-
 	//	model->setCastShadow(true);
-	//	model->attach(mScene->getRoot());
-	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-	//	Matrix mat = Matrix::CreateFromYawPitchRoll(0, -3.14 / 2, 0);
-	//	//model->getNode()->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
+	//	model->attach(root);
+	//	Material::Ptr mat = Material::create();
+	//	mat->roughness = 0;
+	//	mat->metallic = 0;
+	//	for (int i = 0; i < textures.size(); ++i)
+	//		if (!textures[i].empty())
+	//			mat->setTexture(i, mRenderer->createTexture(textures[i]));
+	//	model->setMaterial(mat);
 	//}
+	//{
+	//	std::vector<std::string> textures = {
+	//			"media/streaked/streaked-metal1-albedo.png",
+	//			"",
+	//			"media/streaked/streaked-metal1-rough.png",
+	//			"media/streaked/streaked-metal1-metalness.png",
+	//			"media/streaked/streaked-metal1-ao.png",
+	//	};
+
+	//	Parameters params;
+	//	params["geom"] = "sphere";
+	//	params["radius"] = "1";
+	//	auto model = mScene->createModel("sphere", params, [this](const Parameters& p)
+	//	{
+	//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+	//	});
+	//	model->getNode()->setPosition({ 0, 1, 0 });
+	//	model->setCastShadow(true);
+	//	model->attach(root);
+	//	Material::Ptr mat = Material::create();
+	//	//mat->roughness = 0.2;
+
+	//	for (int i = 0; i < textures.size(); ++i)
+	//		if (!textures[i].empty())
+	//			mat->setTexture(i, mRenderer->createTexture(textures[i]));
+	//	model->setMaterial(mat);
+	//}
+
+
+	{
+		Parameters params;
+		//params["file"] = "tiny.x";
+		params["file"] = "media/sponza/sponza.obj";
+		auto model = mScene->createModel("test", params, [this](const Parameters& p) {
+			return Mesh::Ptr(new Mesh(p, mRenderer));
+		});
+
+		model->setCastShadow(true);
+		model->attach(mScene->getRoot());
+		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+		Matrix mat = Matrix::CreateFromYawPitchRoll(0, -3.14 / 2, 0);
+		//model->getNode()->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
+	}
 	auto aabb = root->getWorldAABB();
 
 	Vector3 vec = aabb.second - aabb.first;
