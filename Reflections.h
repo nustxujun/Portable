@@ -99,8 +99,8 @@ public:
 			model->setCastShadow(true);
 			model->attach(root);
 			mat = Material::create();
-			mat->roughness = 1;
-			mat->metallic = 0;
+			mat->roughness = 0;
+			mat->metallic = 1;
 			mat->reflection = 0;
 			mat->diffuse = { 0,0, 1 };
 			model->setMaterial(mat);
@@ -267,8 +267,8 @@ public:
 
 		//mPipeline->pushStage<AO>();
 		//mPipeline->pushStage<SSR>();
-		mPipeline->pushStage<MotionBlur>();
 		mPipeline->pushStage<SkyBox>("media/Ditch-River_2k.hdr", false);
+		mPipeline->pushStage<MotionBlur>();
 		mPipeline->pushStage<HDR>();
 		mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 		Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
@@ -284,15 +284,15 @@ public:
 	void framemove()
 	{
 		Framework::framemove();
-		float time = GetTickCount() * 0.001f;
-
+		float time = GetTickCount() * 0.005f;
+		float d = 3.1415926f * 2.0f / 10;
 		for (int i = 0; i < 10; ++i)
 		{
 			auto s = mScene->getModel(Common::format("sphere", i));
-			float sin = std::sin(time + i) * 10;
-			float cos = std::cos(time + i) * 10;
-
-			s->getNode()->setPosition(cos, sin + 25, sin);
+			float sin = std::sin(time + d * i) * 10;
+			float cos = std::cos(time + d * i) * 10;
+			float sin2 = std::sin(time + i * i + d * i) * 10;
+			s->getNode()->setPosition(cos, sin2 + 25, sin);
 		}
 	}
 

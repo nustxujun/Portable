@@ -3,6 +3,8 @@
 #include "MeshBuilder.h"
 #include "D3D11Helper.h"
 
+size_t Renderable::ID_GEN = 0;
+
 Mesh::Mesh(const Parameters& params, Renderer::Ptr r)
 {
 

@@ -1,6 +1,6 @@
 Texture2D frameTex: register(t0);
 Texture2D depthTex: register(t1);
-
+Texture2D motionvecTex: register(t2);
 
 
 SamplerState sampPoint : register(s0);
@@ -36,6 +36,7 @@ float4 main(PS_INPUT Input) : SV_TARGET
 {
 	float2 uv = Input.Tex;
 	float depth  = depthTex.SampleLevel(sampPoint, uv, 0).r;
+	//float2 mvec = motionvecTex.SampleLevel(sampPoint, uv, 0).rg;
 	float2 pos_ss = uv;
 	float3 pos_ws = toWorld(toNDC(uv, depth));
 	float4 oldpos_ss = mul(mul(float4(pos_ws,1), lastView), proj);
@@ -52,6 +53,26 @@ float4 main(PS_INPUT Input) : SV_TARGET
 	for (uint i = 0; i < NUM_SAMPLES; ++i)
 	{
 		float2 offset = vel * ((float)i / float(NUM_SAMPLES ));
+		color += frameTex.SampleLevel(sampPoint, uv + offset, 0).rgb;
+
+		uv += vel;
+	}
+	color /= (float)NUM_SAMPLES;
+
+	return float4(color, 1);
+}
+
+
+float4 dynamic(PS_INPUT Input) : SV_TARGET
+{
+	float2 uv = Input.Tex;
+	float depth = depthTex.SampleLevel(sampPoint, uv, 0).r;
+	float2 mvec = motionvecTex.SampleLevel(sampPoint, uv, 0).rg;
+	float2 vel = -mvec;
+
+	for (uint i = 0; i < NUM_SAMPLES; ++i)
+	{
+		float2 offset = vel * ((float)i / float(NUM_SAMPLES));
 		color += frameTex.SampleLevel(sampPoint, uv + offset, 0).rgb;
 
 		uv += vel;
