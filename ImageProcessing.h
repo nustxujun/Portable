@@ -7,12 +7,7 @@
 class ImageProcessing
 {
 public:
-	enum SampleType
-	{
-		DEFAULT,
-		DOWN,
-		UP
-	};
+
 
 	enum ResultType
 	{
@@ -33,9 +28,9 @@ public:
 	}
 
 
-	virtual Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr ptr, SampleType st = DEFAULT) = 0;
+	virtual Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr ptr, float scaling = 1.0f) = 0;
 protected:
-	Renderer::Texture2D::Ptr createOrGet(Renderer::Texture2D::Ptr ptr, SampleType st);
+	Renderer::Texture2D::Ptr createOrGet(Renderer::Texture2D::Ptr ptr, float scaling = 1.0f);
 	Renderer::Texture2D::Ptr createOrGet(const D3D11_TEXTURE2D_DESC & texDesc);
 
 
@@ -56,7 +51,7 @@ public:
 	using ImageProcessing::ImageProcessing;
 	void init();
 
-	virtual Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr tex, SampleType st = DEFAULT);
+	virtual Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr tex, float scaling = 1.0f);
 	void setScale(float ws, float hs) { mScale = { ws, hs }; };
 private:
 	Renderer::PixelShader::Weak mPS;
@@ -73,7 +68,7 @@ public:
 	using ImageProcessing::ImageProcessing;
 	void init();
 
-	virtual Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr tex, SampleType st = DEFAULT);
+	virtual Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr tex, float scaling = 1.0f);
 private:
 	Renderer::PixelShader::Weak mPS[2];
 };
@@ -88,7 +83,7 @@ public:
 	virtual void init(bool cube);
 
 
-	Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr tex, SampleType st = DEFAULT);
+	Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr tex, float scaling = 1.0f);
 protected:
 	Renderer::Effect::Ptr mEffect;
 	GeometryMesh::Ptr mCube;
@@ -113,6 +108,49 @@ public:
 	using CubeMapProcessing::CubeMapProcessing;
 
 	void init(bool iscube);
-	Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr tex, SampleType st = DEFAULT);
+	Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr tex, float scaling = 1.0f);
 private:
+};
+
+class TileMaxFilter :public ImageProcessing
+{
+	__declspec(align(16))
+		struct Constants
+	{
+		DirectX::SimpleMath::Vector2 texelsize;
+		DirectX::SimpleMath::Vector2  offset;
+		float maxradius;
+		int loop;
+	};
+public:
+	using Ptr = std::shared_ptr<TileMaxFilter>;
+	using ImageProcessing::ImageProcessing;
+
+	void init(bool normalization, float radius = 1);
+	void init(const DirectX::SimpleMath::Vector2 offset, int loop);
+	Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr tex, float scaling = 1.0f);
+private:
+	Renderer::PixelShader::Weak mPS;
+	Renderer::Buffer::Ptr mConstants;
+	DirectX::SimpleMath::Vector2 mOffset;
+	float mRadius;
+	int mLoop;
+};
+
+class NeighborMaxFilter : public ImageProcessing
+{
+	__declspec(align(16))
+		struct Constants
+	{
+		DirectX::SimpleMath::Vector2 texelsize;
+	};
+public:
+	using Ptr = std::shared_ptr<NeighborMaxFilter>;
+	using ImageProcessing::ImageProcessing;
+
+	void init();
+	Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr tex, float scaling = 1.0f);
+private:
+	Renderer::PixelShader::Weak mPS;
+	Renderer::Buffer::Ptr mConstants;
 };

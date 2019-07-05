@@ -6,24 +6,17 @@ ImageProcessing::ImageProcessing(Renderer::Ptr r, ResultType type):mRenderer(r),
 {
 }
 
-Renderer::Texture2D::Ptr ImageProcessing::createOrGet(Renderer::Texture2D::Ptr ptr, SampleType st)
+Renderer::Texture2D::Ptr ImageProcessing::createOrGet(Renderer::Texture2D::Ptr ptr,float scaling)
 {
 	auto desc = ptr.lock()->getDesc();
-	if (st == DOWN)
-	{
-		desc.Width = desc.Width >> 1;
-		desc.Height = desc.Height >> 1;
-		if ((desc.Width == 0 && desc.Height == 0))
-			return {};
-	}
-	else if (st == UP)
-	{
-		desc.Width = desc.Width << 1;
-		desc.Height = desc.Height << 1;
+	
+	desc.Width = desc.Width * scaling;
+	desc.Height = desc.Height* scaling;
 
-		if (desc.Width > 8192 || desc.Height > 8192)
-			return {};
-	}
+	if ((desc.Width == 0 && desc.Height == 0))
+		return {};
+	if (desc.Width > 8192 || desc.Height > 8192)
+		return {};
 
 	desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
 
@@ -89,9 +82,9 @@ void SamplingBox::init()
 	mConstants = mRenderer->createBuffer(sizeof(DirectX::SimpleMath::Vector4), D3D11_BIND_CONSTANT_BUFFER);
 }
 
-Renderer::Texture2D::Ptr SamplingBox::process(Renderer::Texture2D::Ptr tex, SampleType st)
+Renderer::Texture2D::Ptr SamplingBox::process(Renderer::Texture2D::Ptr tex, float scaling)
 {
-	auto ret = createOrGet(tex, st);
+	auto ret = createOrGet(tex, scaling);
 	if (ret.expired())
 		return tex;
 
@@ -120,9 +113,9 @@ void Gaussian::init()
 
 }
 
-Renderer::Texture2D::Ptr Gaussian::process(Renderer::Texture2D::Ptr tex, SampleType st)
+Renderer::Texture2D::Ptr Gaussian::process(Renderer::Texture2D::Ptr tex, float scaling)
 {
-	auto ret = createOrGet(tex, st);
+	auto ret = createOrGet(tex, scaling);
 	if (ret.expired())
 		return tex;
 	auto desc = ret.lock()->getDesc();
@@ -136,7 +129,7 @@ Renderer::Texture2D::Ptr Gaussian::process(Renderer::Texture2D::Ptr tex, SampleT
 	mQuad.draw();
 
 	mQuad.setTextures({ ret });
-	ret = createOrGet(ret, st);
+	ret = createOrGet(ret, scaling);
 	mQuad.setRenderTarget(ret);
 	mQuad.setPixelShader(mPS[1]);
 	mQuad.draw();
@@ -171,7 +164,7 @@ void CubeMapProcessing::init(bool cube)
 	}
 }
 
-Renderer::Texture2D::Ptr CubeMapProcessing::process(Renderer::Texture2D::Ptr tex, SampleType st)
+Renderer::Texture2D::Ptr CubeMapProcessing::process(Renderer::Texture2D::Ptr tex, float scaling)
 {
 	using namespace DirectX;
 	using namespace DirectX::SimpleMath;
@@ -261,7 +254,7 @@ void PrefilterCubemap::init(bool iscube)
 	mEffect.lock()->setTech("prefilter");
 }
 
-Renderer::Texture2D::Ptr PrefilterCubemap::process(Renderer::Texture2D::Ptr tex, SampleType st)
+Renderer::Texture2D::Ptr PrefilterCubemap::process(Renderer::Texture2D::Ptr tex, float scaling)
 {
 	using namespace DirectX;
 	using namespace DirectX::SimpleMath;
@@ -350,6 +343,79 @@ Renderer::Texture2D::Ptr PrefilterCubemap::process(Renderer::Texture2D::Ptr tex,
 		}
 	}
 
+
+	return ret;
+}
+
+void TileMaxFilter::init(bool normalization, float radius)
+{
+	mRadius = radius;
+	std::string entry = "frag_TileMax2";
+	if (normalization)
+		entry = "frag_TileMax1";
+	mPS = mRenderer->createPixelShader("hlsl/tilemaxfilter.hlsl", entry);
+	mConstants = mRenderer->createConstantBuffer(sizeof(Constants));
+}
+
+void TileMaxFilter::init(const DirectX::SimpleMath::Vector2 offset, int loop)
+{
+	mLoop = loop;
+	mOffset = offset;
+	mPS = mRenderer->createPixelShader("hlsl/tilemaxfilter.hlsl", "frag_TileMaxV");
+	mConstants = mRenderer->createConstantBuffer(sizeof(Constants));
+}
+
+Renderer::Texture2D::Ptr TileMaxFilter::process(Renderer::Texture2D::Ptr tex, float scaling)
+{
+	auto ret = createOrGet(tex, scaling);
+	
+
+	auto desc = tex.lock()->getDesc();
+	Constants c;
+	c.texelsize = { desc.Width, desc.Height };
+	c.offset =  mOffset;
+	c.maxradius = mRadius;
+	c.loop = mLoop;
+	mConstants.lock()->blit(c);
+	mQuad.setConstant(mConstants);
+
+	desc = ret.lock()->getDesc();
+	mQuad.setViewport({ 0.0f, 0.0f, (float)desc.Width, (float)desc.Height, 0.0f, 0.1f });
+	mQuad.setTextures({ tex });
+	mQuad.setRenderTarget(ret);
+	mQuad.setDefaultBlend(false);
+	mQuad.setDefaultSampler();
+	mQuad.setPixelShader(mPS);
+	mQuad.draw();
+
+	return ret;
+}
+
+void NeighborMaxFilter::init()
+{
+	mPS = mRenderer->createPixelShader("hlsl/tilemaxfilter.hlsl", "frag_NeighborMax");
+	mConstants = mRenderer->createConstantBuffer(sizeof(Constants));
+}
+
+Renderer::Texture2D::Ptr NeighborMaxFilter::process(Renderer::Texture2D::Ptr tex, float scaling)
+{
+	auto ret = createOrGet(tex, scaling);
+
+
+	auto desc = tex.lock()->getDesc();
+	Constants c;
+	c.texelsize = { desc.Width, desc.Height };
+	mConstants.lock()->blit(c);
+	mQuad.setConstant(mConstants);
+
+	desc = ret.lock()->getDesc();
+	mQuad.setViewport({ 0.0f, 0.0f, (float)desc.Width, (float)desc.Height, 0.0f, 0.1f });
+	mQuad.setTextures({ tex });
+	mQuad.setRenderTarget(ret);
+	mQuad.setDefaultBlend(false);
+	mQuad.setDefaultSampler();
+	mQuad.setPixelShader(mPS);
+	mQuad.draw();
 
 	return ret;
 }

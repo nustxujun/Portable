@@ -11,8 +11,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-
+#ifndef WIN32
 #define USE_PROFILE
+#endif
 
 void Renderer::checkResult(HRESULT hr)
 {
@@ -792,7 +793,7 @@ Renderer::SharedCompiledData Renderer::compileFile(const std::string& filename, 
 	std::vector<char> mem(datasize);
 	shaderfile.read(mem.data(), datasize);
 	size_t rawhash = Common::hash(mem.data(), datasize);
-
+	shaderfile.close();
 	size_t hash = Common::hash(hashstr);
 	auto shader = mCompiledShader.find(hash);
 	if (shader != mCompiledShader.end())

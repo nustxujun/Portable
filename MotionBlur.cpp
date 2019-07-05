@@ -3,8 +3,8 @@
 void MotionBlur::init()
 {
 	mName = "camera motion blur";
-	mPS = getRenderer()->createPixelShader("hlsl/motionblur.hlsl");
-	mConstants = getRenderer()->createConstantBuffer(sizeof(Constants));
+	//mPS = getRenderer()->createPixelShader("hlsl/motionblur.hlsl");
+	//mConstants = getRenderer()->createConstantBuffer(sizeof(Constants));
 
 	mMotionVectorEffect = getRenderer()->createEffect("hlsl/motionvector.fx");
 	auto cam = getCamera();
@@ -17,6 +17,21 @@ void MotionBlur::init()
 	};
 
 	mLayout = getRenderer()->createLayout(layout, ARRAYSIZE(layout));
+
+	auto maxBlurPixels = (int)(100 * vp.Height / 100);
+	auto tileSize = ((maxBlurPixels - 1) / 8 + 1) * 8;
+
+	auto r = getRenderer();
+	mTileMaxNormlaize = ImageProcessing::create<TileMaxFilter>(r, ImageProcessing::RT_TEMP, true);
+	mTileMax2 = ImageProcessing::create<TileMaxFilter>(r, ImageProcessing::RT_TEMP, false);
+
+	auto tileMaxOffs = Vector2::One * (tileSize / 8.0f - 1) * -0.5f;
+	mTileMaxVariable = ImageProcessing::create<TileMaxFilter>(r, ImageProcessing::RT_TEMP, tileMaxOffs, tileSize / 8);
+
+	mNeighborMax = ImageProcessing::create<NeighborMaxFilter>(r, ImageProcessing::RT_TEMP);
+
+	mVelocitySetup = r->createPixelShader("hlsl/motionblur.hlsl", "frag_VelocitySetup");
+	mReconstruct = r->createPixelShader("hlsl/motionblur.hlsl", "frag_Reconstruction");
 }
 
 void MotionBlur::render(Renderer::Texture2D::Ptr rt)
@@ -99,4 +114,21 @@ void MotionBlur::renderMotionVector()
 	});
 
 
+}
+
+void MotionBlur::reconstruct(Renderer::Texture2D::Ptr rt)
+{
+	auto quad = getQuad();
+	quad->setDefaultBlend(false);
+	quad->setDefaultSampler();
+	quad->setDefaultViewport();
+	quad->setPixelShader(mVelocitySetup);
+	quad->setRenderTarget(mFrame);
+	quad->setConstant(mConstants);
+	quad->setTextures({
+		rt,
+		getShaderResource("depth"),
+		mMotionVector
+		});
+	quad->draw();
 }
