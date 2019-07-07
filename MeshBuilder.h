@@ -29,7 +29,7 @@ public:
 			std::string albedo;
 			std::string normal;
 
-			std::array<float, 3> diffuse;
+			std::array<float, 3> diffuse = {1,1,1};
 		};
 
 		std::vector<Mesh> meshs;
