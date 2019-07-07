@@ -16,6 +16,9 @@
 #include <D3D11.h>
 #include <D3DX11.h>
 
+#define ALIGN16 __declspec(align(16))
+#define ALIGN(x,y) (((x + y - 1) & ~(y - 1)) )
+
 using Parameters = std::map<std::string, std::string>;
 
 template<class Container>

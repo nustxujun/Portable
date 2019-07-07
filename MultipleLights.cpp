@@ -15,7 +15,6 @@
 
 #include <random>
 
-#define ALIGN(x,y) (((x + y - 1) & ~(y - 1)) )
 #define SLICE(x,y) ALIGN(x, y) / y
 #define SLICE16(x) SLICE(x,16)
 
@@ -61,7 +60,11 @@ void MultipleLights::initPipeline()
 
 void MultipleLights::initScene()
 {
+#ifdef _DEBUG
 	int numpoints = 100;
+#else
+	int numpoints = 1000;
+#endif
 	int numspots = 0;
 	int numdirs = 1;
 
@@ -75,82 +78,82 @@ void MultipleLights::initScene()
 	set("dirradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
 
 
-	set("lightRange", { {"value", 50}, {"min", 1}, {"max", 1000}, {"interval", 1}, {"type","set"} });
+	set("lightRange", { {"value", 100}, {"min", 1}, {"max", 1000}, {"interval", 1}, {"type","set"} });
 	set("fovy", { {"value", 0.785398185f}, {"min", "0.1"}, {"max", "2"}, {"interval", "0.01"}, {"type","set"} });
 
 	auto root = mScene->getRoot();
 
-	{
-		Parameters params;
-		params["geom"] = "room";
-		params["size"] = "100";
-		auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
-		{
-			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		});
-		model->setCastShadow(false);
-		model->attach(root);
-		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-		Material::Ptr mat = Material::create();
-		mat->metallic = 1.0f;
-		mat->roughness = 1.0f;
-	
-		model->setMaterial(mat);
-	}
-	
+	//{
+	//	Parameters params;
+	//	params["geom"] = "room";
+	//	params["size"] = "100";
+	//	auto model = mScene->createModel(params["geom"], params, [this](const Parameters& p)
+	//	{
+	//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+	//	});
+	//	model->setCastShadow(false);
+	//	model->attach(root);
+	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+	//	Material::Ptr mat = Material::create();
+	//	mat->metallic = 1.0f;
+	//	mat->roughness = 1.0f;
+	//
+	//	model->setMaterial(mat);
+	//}
+	//
 
 
-	
-
-
-	{
-
-		Parameters params;
-		params["geom"] = "sphere";
-		params["radius"] = "10";
-		params["resolution"] = "20";
-		params["size"] = "1";
-		std::stringstream ss;
-		ss << "sphere"; 
-		auto model = mScene->createModel(ss.str(), params, [this](const Parameters& p)
-		{
-			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		});
-		model->setCastShadow(false);
-		model->attach(root);
-		model->getNode()->setPosition(0,0,0);
-		Material::Ptr mat = Material::create();
-		//mat->metallic = 1;
-		//mat->roughness = 0;
-		mat->setTexture(0, mRenderer->createTexture("media/streaked/streaked-metal1-albedo.png"));
-		mat->setTexture(1, mRenderer->createTexture("media/streaked/streaked-metal1-normal-dx.png"));
-		mat->setTexture(2, mRenderer->createTexture("media/streaked/streaked-metal1-rough.png"));
-		mat->setTexture(3, mRenderer->createTexture("media/streaked/streaked-metal1-metalness.png"));
-		mat->setTexture(4, mRenderer->createTexture("media/streaked/streaked-metal1-ao.png"));
-
-		model->setMaterial(mat);
-	}
+	//
 
 
 	//{
+
 	//	Parameters params;
-	//	//params["file"] = "Cerberus/Cerberus.fbx";
-	//	params["file"] = "media/sponza/sponza.obj";
-	//	auto model = mScene->createModel("test", params, [this](const Parameters& p) {
-	//		return Mesh::Ptr(new Mesh(p, mRenderer));
-	//	});
-
-	//	model->attach(mScene->getRoot());
-	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-	//	auto m = model->getMesh()->getMesh(0).material;
-
-	//	for (int i = 0; i < model->getMesh()->getNumMesh(); ++i)
+	//	params["geom"] = "sphere";
+	//	params["radius"] = "10";
+	//	params["resolution"] = "20";
+	//	params["size"] = "1";
+	//	std::stringstream ss;
+	//	ss << "sphere"; 
+	//	auto model = mScene->createModel(ss.str(), params, [this](const Parameters& p)
 	//	{
-	//		auto m = model->getMesh()->getMesh(i).material;
-	//		m->setTexture(0, {});
-	//	}
+	//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+	//	});
+	//	model->setCastShadow(false);
+	//	model->attach(root);
+	//	model->getNode()->setPosition(0,0,0);
+	//	Material::Ptr mat = Material::create();
+	//	//mat->metallic = 1;
+	//	//mat->roughness = 0;
+	//	mat->setTexture(0, mRenderer->createTexture("media/streaked/streaked-metal1-albedo.png"));
+	//	mat->setTexture(1, mRenderer->createTexture("media/streaked/streaked-metal1-normal-dx.png"));
+	//	mat->setTexture(2, mRenderer->createTexture("media/streaked/streaked-metal1-rough.png"));
+	//	mat->setTexture(3, mRenderer->createTexture("media/streaked/streaked-metal1-metalness.png"));
+	//	mat->setTexture(4, mRenderer->createTexture("media/streaked/streaked-metal1-ao.png"));
 
+	//	model->setMaterial(mat);
 	//}
+
+
+	{
+		Parameters params;
+		//params["file"] = "Cerberus/Cerberus.fbx";
+		params["file"] = "media/sponza/sponza.obj";
+		auto model = mScene->createModel("test", params, [this](const Parameters& p) {
+			return Mesh::Ptr(new Mesh(p, mRenderer));
+		});
+
+		model->attach(mScene->getRoot());
+		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+		auto m = model->getMesh()->getMesh(0).material;
+
+		for (int i = 0; i < model->getMesh()->getNumMesh(); ++i)
+		{
+			auto m = model->getMesh()->getMesh(i).material;
+			m->setTexture(0, {});
+		}
+
+	}
 
 	//{
 	//	Parameters params;
@@ -393,9 +396,11 @@ void MultipleLights::initDRPipeline()
 
 	mPipeline->setFrameBuffer(frame);
 	auto bb = mRenderer->getBackbuffer();
-	mPipeline->pushStage("clear rt",[bb,this](Renderer::Texture2D::Ptr rt)
+	auto depth = mPipeline->getDepthStencil("depth");
+	mPipeline->pushStage("clear rt",[bb,this, depth](Renderer::Texture2D::Ptr rt)
 	{
 		mRenderer->clearRenderTarget(rt, { 0,0,0,0 });
+		mRenderer->clearDepth(depth, 1.0f);
 	});
 
 	mPipeline->pushStage<GBuffer>();
@@ -467,8 +472,11 @@ void MultipleLights::initTBDRPipeline()
 
 	mPipeline->setFrameBuffer(frame);
 	auto bb = mRenderer->getBackbuffer();
-	mPipeline->pushStage("clear rt",[bb,this](Renderer::Texture2D::Ptr rt)
+	auto depth = mPipeline->getDepthStencil("depth");
+
+	mPipeline->pushStage("clear rt",[bb,this, depth](Renderer::Texture2D::Ptr rt)
 	{
+		mRenderer->clearDepth(depth, 1.0f);
 		mRenderer->clearRenderTarget(rt, { 0,0,0,0 });
 	});
 
@@ -562,9 +570,12 @@ void MultipleLights::initCDRPipeline()
 
 	mPipeline->setFrameBuffer(frame);
 	auto bb = mRenderer->getBackbuffer();
-	mPipeline->pushStage("clear rt", [bb,this](Renderer::Texture2D::Ptr rt)
+	auto depth = mPipeline->getDepthStencil("depth");
+
+	mPipeline->pushStage("clear rt", [bb,this, depth](Renderer::Texture2D::Ptr rt)
 	{
 		mRenderer->clearRenderTarget(rt, { 0,0,0,0 });
+		mRenderer->clearDepth(depth, 1.0f);
 	});
 
 	mPipeline->pushStage<GBuffer>();
@@ -581,7 +592,7 @@ void MultipleLights::initCDRPipeline()
 	//std::vector<std::string> files = { "media/uffizi_cross.dds" };
 	mPipeline->pushStage<SkyBox>(hdrenvfile, false);
 
-	mPipeline->pushStage<HDR>();
+	//mPipeline->pushStage<HDR>();
 
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);

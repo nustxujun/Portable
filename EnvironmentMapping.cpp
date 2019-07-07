@@ -41,11 +41,11 @@ void EnvironmentMapping::init(const std::string& cubemap )
 	init(true);
 	set("envIntensity", { {"type","set"}, {"value",1},{"min","0"},{"max",2.0f},{"interval", "0.01"} });
 
-	mIrradianceProcessor = ImageProcessing::create<IrradianceCubemap>(getRenderer(), ImageProcessing::RT_COPY, false);
-	mPrefilteredProcessor = ImageProcessing::create<PrefilterCubemap>(getRenderer(), ImageProcessing::RT_COPY, false);
-	mCube.push_back(getRenderer()->createTexture(cubemap, 1));
-	mIrradiance.push_back( mIrradianceProcessor->process(mCube[0]));
-	mPrefiltered.push_back( mPrefilteredProcessor->process(mCube[0]));
+	mIrradianceProcessor = ImageProcessing::create<IrradianceCubemap>(getRenderer(), false);
+	mPrefilteredProcessor = ImageProcessing::create<PrefilterCubemap>(getRenderer(), false);
+	mCube = getRenderer()->createTexture(cubemap, 1);
+	mIrradiance.push_back( mIrradianceProcessor->process(mCube));
+	mPrefiltered.push_back( mPrefilteredProcessor->process(mCube));
 
 	mSkyOnly = true;
 	//auto aabb = getScene()->getRoot()->getWorldAABB();
@@ -78,8 +78,8 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 
 	auto renderer = getRenderer();
 
-	mIrradianceProcessor = ImageProcessing::create<IrradianceCubemap>(getRenderer(), mType == T_EVERYFRAME? ImageProcessing::RT_TEMP: ImageProcessing::RT_COPY, true);
-	mPrefilteredProcessor = ImageProcessing::create<PrefilterCubemap>(getRenderer(), mType == T_EVERYFRAME ? ImageProcessing::RT_TEMP : ImageProcessing::RT_COPY,  true);
+	mIrradianceProcessor = ImageProcessing::create<IrradianceCubemap>(getRenderer(),  true);
+	mPrefilteredProcessor = ImageProcessing::create<PrefilterCubemap>(getRenderer(),   true);
 
 	mCubePipeline = decltype(mCubePipeline)(new Pipeline(renderer, getScene()));
 	mCubePipeline->setCamera(cam);
@@ -146,7 +146,21 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 	auto frame = renderer->createRenderTarget(cubesize, cubesize, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	mCubePipeline->setFrameBuffer(frame);
 
-	mUpdate = [this,cam, renderer,frame, cubesize](bool force) {
+	D3D11_TEXTURE2D_DESC cubedesc;
+	cubedesc.Width = cubesize;
+	cubedesc.Height = cubesize;
+	cubedesc.MipLevels = 1;
+	cubedesc.ArraySize = 6;
+	cubedesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	cubedesc.SampleDesc.Count = 1;
+	cubedesc.SampleDesc.Quality = 0;
+	cubedesc.Usage = D3D11_USAGE_DEFAULT;
+	cubedesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	cubedesc.CPUAccessFlags = 0;
+	cubedesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+	mCube = renderer->createTexture(cubedesc);
+
+	mUpdate = [this,cam, renderer,frame](bool force) {
 		auto scene = getScene();
 		auto campos = scene->createOrGetCamera("main")->getNode()->getRealPosition();
 		auto probes = scene->getProbes();
@@ -158,25 +172,12 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 		int nums = 0;
 		if (force || mType == T_EVERYFRAME)
 		{
-			mCube.clear();
 			mIrradiance.clear();
 			mPrefiltered.clear();
 			for (auto& p : probes)
 			{
 				auto pos = p.second->getNode()->getRealPosition();
-				D3D11_TEXTURE2D_DESC cubedesc;
-				cubedesc.Width = cubesize;
-				cubedesc.Height = cubesize;
-				cubedesc.MipLevels = 1;
-				cubedesc.ArraySize = 6;
-				cubedesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-				cubedesc.SampleDesc.Count = 1;
-				cubedesc.SampleDesc.Quality = 0;
-				cubedesc.Usage = D3D11_USAGE_DEFAULT;
-				cubedesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-				cubedesc.CPUAccessFlags = 0;
-				cubedesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
-				mCube.push_back(renderer->createTexture(cubedesc));
+
 
 				cam->getNode()->setPosition(pos);
 				Matrix viewMats[6] = {
@@ -193,13 +194,14 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 					Quaternion rot = Quaternion::CreateFromRotationMatrix(d);
 					cam->getNode()->setOrientation(rot);
 					mCubePipeline->render();
-					renderer->getContext()->CopySubresourceRegion(mCube[nums]->getTexture(), index++, 0, 0, 0, frame->getTexture(), 0, 0);
+					renderer->getContext()->CopySubresourceRegion(mCube->getTexture(), index++, 0, 0, 0, frame->getTexture(), 0, 0);
 				}
-
-				mIrradiance.push_back(mIrradianceProcessor->process(mCube[nums]));
-				mPrefiltered.push_back(mPrefilteredProcessor->process(mCube[nums]));
+				if (mIBL)
+				{
+					mIrradiance.push_back(mIrradianceProcessor->process(mCube));
+					mPrefiltered.push_back(mPrefilteredProcessor->process(mCube));
+				}
 				nums++;
-
 			}
 		}
 	
@@ -296,11 +298,11 @@ void EnvironmentMapping::render(Renderer::Texture2D::Ptr rt)
 	if (mIBL)
 	{
 		srvs.push_back(mLUT);
-		srvs.push_back(mIrradiance[selected]);
-		srvs.push_back(mPrefiltered[selected]);
+		srvs.push_back(mIrradiance[selected]->get());
+		srvs.push_back(mPrefiltered[selected]->get());
 	}
 	else
-		srvs.push_back(mCube[selected]);
+		srvs.push_back(mCube);
 
 	quad->setTextures(srvs);
 	quad->draw();

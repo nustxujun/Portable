@@ -17,29 +17,26 @@ public:
 
 
 	using Ptr = std::shared_ptr<ImageProcessing>;
-	ImageProcessing(Renderer::Ptr r, ResultType type);
+	ImageProcessing(Renderer::Ptr r);
 
 	template<class T, class ... Args>
-	static std::shared_ptr<T> create(Renderer::Ptr r, ResultType type, const Args& ... args)
+	static std::shared_ptr<T> create(Renderer::Ptr r, const Args& ... args)
 	{
-		std::shared_ptr<T> p = std::shared_ptr<T>(new T(r, type));
+		std::shared_ptr<T> p = std::shared_ptr<T>(new T(r));
 		p->init(args...);
 		return p;
 	}
 
 
-	virtual Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr ptr, float scaling = 1.0f) = 0;
+	virtual Renderer::TemporaryRT::Ptr process(Renderer::Texture2D::Ptr ptr, float scaling = 1.0f) = 0;
 protected:
-	Renderer::Texture2D::Ptr createOrGet(Renderer::Texture2D::Ptr ptr, float scaling = 1.0f);
-	Renderer::Texture2D::Ptr createOrGet(const D3D11_TEXTURE2D_DESC & texDesc);
+	Renderer::TemporaryRT::Ptr createOrGet(Renderer::Texture2D::Ptr ptr, float scaling = 1.0f);
+	Renderer::TemporaryRT::Ptr createOrGet(const D3D11_TEXTURE2D_DESC & texDesc);
 
 
 protected:
 	Renderer::Ptr mRenderer;
 	Quad mQuad;
-	ResultType mType = RT_TEMP;
-private:
-	static std::unordered_map<size_t,std::vector< Renderer::Texture2D::Ptr>> mTextures;
 };
 
 
@@ -51,7 +48,7 @@ public:
 	using ImageProcessing::ImageProcessing;
 	void init();
 
-	virtual Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr tex, float scaling = 1.0f);
+	virtual Renderer::TemporaryRT::Ptr process(Renderer::Texture2D::Ptr tex, float scaling = 1.0f);
 	void setScale(float ws, float hs) { mScale = { ws, hs }; };
 private:
 	Renderer::PixelShader::Weak mPS;
@@ -68,7 +65,7 @@ public:
 	using ImageProcessing::ImageProcessing;
 	void init();
 
-	virtual Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr tex, float scaling = 1.0f);
+	virtual Renderer::TemporaryRT::Ptr process(Renderer::Texture2D::Ptr tex, float scaling = 1.0f);
 private:
 	Renderer::PixelShader::Weak mPS[2];
 };
@@ -83,7 +80,7 @@ public:
 	virtual void init(bool cube);
 
 
-	Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr tex, float scaling = 1.0f);
+	Renderer::TemporaryRT::Ptr process(Renderer::Texture2D::Ptr tex, float scaling = 1.0f);
 protected:
 	Renderer::Effect::Ptr mEffect;
 	GeometryMesh::Ptr mCube;
@@ -108,7 +105,7 @@ public:
 	using CubeMapProcessing::CubeMapProcessing;
 
 	void init(bool iscube);
-	Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr tex, float scaling = 1.0f);
+	Renderer::TemporaryRT::Ptr process(Renderer::Texture2D::Ptr tex, float scaling = 1.0f);
 private:
 };
 
@@ -128,7 +125,7 @@ public:
 
 	void init(bool normalization, float radius = 1);
 	void init(const DirectX::SimpleMath::Vector2 offset, int loop);
-	Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr tex, float scaling = 1.0f);
+	Renderer::TemporaryRT::Ptr process(Renderer::Texture2D::Ptr tex, float scaling = 1.0f);
 private:
 	Renderer::PixelShader::Weak mPS;
 	Renderer::Buffer::Ptr mConstants;
@@ -149,7 +146,7 @@ public:
 	using ImageProcessing::ImageProcessing;
 
 	void init();
-	Renderer::Texture2D::Ptr process(Renderer::Texture2D::Ptr tex, float scaling = 1.0f);
+	Renderer::TemporaryRT::Ptr process(Renderer::Texture2D::Ptr tex, float scaling = 1.0f);
 private:
 	Renderer::PixelShader::Weak mPS;
 	Renderer::Buffer::Ptr mConstants;

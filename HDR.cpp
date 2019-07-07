@@ -58,8 +58,8 @@ void HDR::init()
 	mGaussianBlur[1] = r->createPixelShader("hlsl/gaussianblur.hlsl", "main", macros);
 	mBloomConstants = r->createBuffer(sizeof(Vector4), D3D11_BIND_CONSTANT_BUFFER);
 
-	mDownsample = ImageProcessing::create<SamplingBox>(getRenderer(), ImageProcessing::RT_TEMP);
-	mGaussian = ImageProcessing::create<Gaussian>(getRenderer(), ImageProcessing::RT_TEMP);
+	mDownsample = ImageProcessing::create<SamplingBox>(getRenderer());
+	mGaussian = ImageProcessing::create<Gaussian>(getRenderer());
 }
 
 
@@ -136,13 +136,13 @@ void HDR::renderHDR(Renderer::Texture2D::Ptr frame)
 
 void HDR::renderBrightness(Renderer::Texture2D::Ptr rt)
 {
-	if (mBloomRT.expired())
+	if (!mBloomRT)
 	{
-		mBloomRT = getRenderer()->createTexture(rt.lock()->getDesc());
+		mBloomRT = getRenderer()->createTemporaryRT(rt.lock()->getDesc());
 	}
 	auto quad = getQuad();
 	quad->setTextures({ rt , mExposure});
-	quad->setRenderTarget(mBloomRT);
+	quad->setRenderTarget(mBloomRT->get());
 	quad->setDefaultBlend(false);
 	quad->setDefaultSampler();
 	quad->setDefaultViewport();
@@ -159,16 +159,16 @@ void HDR::renderBloom(Renderer::Texture2D::Ptr rt)
 {
 	if (getValue<int>("blurcount") == 0)
 		return;
-	Renderer::Texture2D::Ptr ret = mBloomRT;
+	mBloomRT;
 	mDownsample->setScale(getValue<float>("samplescale"), getValue<float>("samplescale"));
 	for (int i = 0; i < getValue<int>("blurcount"); ++i)
 	{
-		ret = mDownsample->process(ret, ImageProcessing::DOWN);
-		ret = mGaussian->process(ret);
+		mBloomRT = mDownsample->process(mBloomRT->get(), 0.5);
+		mBloomRT = mGaussian->process(mBloomRT->get());
 	}
 	for (int i = 0; i < getValue<int>("blurcount"); ++i)
 	{
-		ret = mDownsample->process(ret, ImageProcessing::UP);
+		mBloomRT = mDownsample->process(mBloomRT->get(), 2);
 	}
 	auto quad = getQuad();
 
@@ -191,6 +191,6 @@ void HDR::renderBloom(Renderer::Texture2D::Ptr rt)
 	};
 	quad->setBlend(desc);
 	quad->setRenderTarget(rt);
-	quad->setTextures({ ret });
+	quad->setTextures({ mBloomRT->get() });
 	quad->draw();
 }

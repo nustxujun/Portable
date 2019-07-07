@@ -78,3 +78,29 @@ float4 frag_TileMaxV(v2f_img i) : SV_Target
 
 	return float4(vo, 0, 0);
 }
+
+
+float4 frag_NeighborMax(v2f_img i) : SV_Target
+{
+	const float cw = 1.01f; // center weight tweak
+
+	float4 d = _MainTex_TexelSize.xyxy * float4(1, 1, -1, 0);
+
+	float2 v1 = tex2D(_MainTex, i.uv - d.xy).rg;
+	float2 v2 = tex2D(_MainTex, i.uv - d.wy).rg;
+	float2 v3 = tex2D(_MainTex, i.uv - d.zy).rg;
+
+	float2 v4 = tex2D(_MainTex, i.uv - d.xw).rg;
+	float2 v5 = tex2D(_MainTex, i.uv).rg * cw;
+	float2 v6 = tex2D(_MainTex, i.uv + d.xw).rg;
+
+	float2 v7 = tex2D(_MainTex, i.uv + d.zy).rg;
+	float2 v8 = tex2D(_MainTex, i.uv + d.wy).rg;
+	float2 v9 = tex2D(_MainTex, i.uv + d.xy).rg;
+
+	float2 va = VMax(v1, VMax(v2, v3));
+	float2 vb = VMax(v4, VMax(v5, v6));
+	float2 vc = VMax(v7, VMax(v8, v9));
+
+	return float4(VMax(va, VMax(vb, vc)) / cw, 0, 0);
+}

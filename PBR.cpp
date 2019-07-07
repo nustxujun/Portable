@@ -348,6 +348,7 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 		dsdesc.StencilEnable = true;
 		renderer->setDepthStencilState(dsdesc, 1);
 		
+		//rasterDesc.FillMode = D3D11_FILL_WIREFRAME;
 		rasterDesc.CullMode = D3D11_CULL_FRONT;
 		renderer->setRasterizer(rasterDesc);
 		renderer->setPixelShader(mPSs[Scene::Light::LT_POINT]);

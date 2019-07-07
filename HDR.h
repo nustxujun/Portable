@@ -32,7 +32,7 @@ private:
 	Renderer::PixelShader::Weak mCalExposure;
 	Renderer::Buffer::Ptr mConstants;
 
-	Renderer::Texture2D::Ptr mBloomRT;
+	Renderer::TemporaryRT::Ptr mBloomRT;
 	Renderer::PixelShader::Weak mBrightPass;
 	Renderer::PixelShader::Weak mGaussianBlur[2];
 	Renderer::Buffer::Ptr mBloomConstants;

@@ -1,12 +1,11 @@
 #include "ImageProcessing.h"
 
-std::unordered_map<size_t, std::vector< Renderer::Texture2D::Ptr>> ImageProcessing::mTextures = {};
 
-ImageProcessing::ImageProcessing(Renderer::Ptr r, ResultType type):mRenderer(r), mQuad(r), mType(type)
+ImageProcessing::ImageProcessing(Renderer::Ptr r):mRenderer(r), mQuad(r)
 {
 }
 
-Renderer::Texture2D::Ptr ImageProcessing::createOrGet(Renderer::Texture2D::Ptr ptr,float scaling)
+Renderer::TemporaryRT::Ptr ImageProcessing::createOrGet(Renderer::Texture2D::Ptr ptr,float scaling)
 {
 	auto desc = ptr.lock()->getDesc();
 	
@@ -34,45 +33,15 @@ Renderer::Texture2D::Ptr ImageProcessing::createOrGet(Renderer::Texture2D::Ptr p
 		}
 		desc.BindFlags &= ~D3D11_BIND_DEPTH_STENCIL;
 	}
-	if (mType == RT_TEMP)
-	{
-		size_t hash = Common::hash(desc);
-		auto ret = mTextures.find(hash);
-		if (ret != mTextures.end())
-		{
-			for (auto& i : ret->second)
-				if (i.lock() != ptr.lock())
-					return i;
-		}
-		auto newtex = mRenderer->createTexture(desc);
-		mTextures[hash].push_back(newtex);
-		return newtex;
-	}
-	else
-		return mRenderer->createTexture(desc);
+	return mRenderer->createTemporaryRT(desc);
 }
 
-Renderer::Texture2D::Ptr ImageProcessing::createOrGet(const D3D11_TEXTURE2D_DESC & texDesc)
+Renderer::TemporaryRT::Ptr ImageProcessing::createOrGet(const D3D11_TEXTURE2D_DESC & texDesc)
 {
 	auto desc = texDesc;
 	desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
 
-	if (mType == RT_TEMP)
-	{
-		size_t hash = Common::hash(desc);
-		auto ret = mTextures.find(hash);
-		if (ret != mTextures.end())
-			return ret->second[0];
-
-		auto newtex = mRenderer->createTexture(desc);
-		mTextures[hash].push_back(newtex);
-		return newtex;
-	}
-	else
-	{
-		auto newtex = mRenderer->createTexture(desc);
-		return newtex;
-	}
+	return mRenderer->createTemporaryRT(desc);
 }
 
 
@@ -82,21 +51,19 @@ void SamplingBox::init()
 	mConstants = mRenderer->createBuffer(sizeof(DirectX::SimpleMath::Vector4), D3D11_BIND_CONSTANT_BUFFER);
 }
 
-Renderer::Texture2D::Ptr SamplingBox::process(Renderer::Texture2D::Ptr tex, float scaling)
+Renderer::TemporaryRT::Ptr SamplingBox::process(Renderer::Texture2D::Ptr tex, float scaling)
 {
 	auto ret = createOrGet(tex, scaling);
-	if (ret.expired())
-		return tex;
 
 	auto desc = tex.lock()->getDesc();
 	DirectX::SimpleMath::Vector4 constants = { 1.0f / (float)desc.Width, 1.0f / (float)desc.Height, mScale[0], mScale[1] };
 	mConstants.lock()->blit(constants);
 	mQuad.setConstant(mConstants);
 
-	desc = ret.lock()->getDesc();
+	desc = (*ret)->getDesc();
 	mQuad.setViewport({ 0.0f, 0.0f, (float)desc.Width, (float)desc.Height, 0.0f, 0.1f });
 	mQuad.setTextures({ tex });
-	mQuad.setRenderTarget(ret);
+	mQuad.setRenderTarget(ret->get());
 	mQuad.setDefaultBlend(false);
 	mQuad.setDefaultSampler();
 	mQuad.setPixelShader(mPS);
@@ -113,24 +80,23 @@ void Gaussian::init()
 
 }
 
-Renderer::Texture2D::Ptr Gaussian::process(Renderer::Texture2D::Ptr tex, float scaling)
+Renderer::TemporaryRT::Ptr Gaussian::process(Renderer::Texture2D::Ptr tex, float scaling)
 {
 	auto ret = createOrGet(tex, scaling);
-	if (ret.expired())
-		return tex;
-	auto desc = ret.lock()->getDesc();
+
+	auto desc = (*ret)->getDesc();
 	mQuad.setViewport({ 0.0f, 0.0f, (float)desc.Width, (float)desc.Height, 0.0f, 0.1f });
 	mQuad.setDefaultBlend(false);
 	mQuad.setDefaultSampler();
 
 	mQuad.setTextures({ tex });
-	mQuad.setRenderTarget(ret);
+	mQuad.setRenderTarget(ret->get());
 	mQuad.setPixelShader(mPS[0]);
 	mQuad.draw();
 
-	mQuad.setTextures({ ret });
-	ret = createOrGet(ret, scaling);
-	mQuad.setRenderTarget(ret);
+	mQuad.setTextures({ ret->get() });
+	ret = createOrGet(ret->get(), scaling);
+	mQuad.setRenderTarget(ret->get());
 	mQuad.setPixelShader(mPS[1]);
 	mQuad.draw();
 
@@ -164,7 +130,7 @@ void CubeMapProcessing::init(bool cube)
 	}
 }
 
-Renderer::Texture2D::Ptr CubeMapProcessing::process(Renderer::Texture2D::Ptr tex, float scaling)
+Renderer::TemporaryRT::Ptr CubeMapProcessing::process(Renderer::Texture2D::Ptr tex, float scaling)
 {
 	using namespace DirectX;
 	using namespace DirectX::SimpleMath;
@@ -225,11 +191,11 @@ Renderer::Texture2D::Ptr CubeMapProcessing::process(Renderer::Texture2D::Ptr tex
 
 	for (auto i = 0U; i < 6; ++i)
 	{
-		auto rt = ret->Renderer::RenderTarget::getView(i);
+		auto rt = (*ret)->Renderer::RenderTarget::getView(i);
 		mRenderer->setRenderTarget(rt, {});
 		view->SetMatrix((const float*)&viewMats[i]);
 
-		e->render(mRenderer, [this,ret, tex,rend,view, viewMats](ID3DX11EffectPass* pass)
+		e->render(mRenderer, [this, tex,rend,view, viewMats](ID3DX11EffectPass* pass)
 		{
 			mRenderer->setTexture(tex);
 			mRenderer->setLayout(mLayout.lock()->bind(pass));
@@ -254,7 +220,7 @@ void PrefilterCubemap::init(bool iscube)
 	mEffect.lock()->setTech("prefilter");
 }
 
-Renderer::Texture2D::Ptr PrefilterCubemap::process(Renderer::Texture2D::Ptr tex, float scaling)
+Renderer::TemporaryRT::Ptr PrefilterCubemap::process(Renderer::Texture2D::Ptr tex, float scaling)
 {
 	using namespace DirectX;
 	using namespace DirectX::SimpleMath;
@@ -328,11 +294,11 @@ Renderer::Texture2D::Ptr PrefilterCubemap::process(Renderer::Texture2D::Ptr tex,
 		roughness->SetFloat(rs[r]);
 		for (auto i = 0U; i < 6; ++i)
 		{
-			auto rt = ret->Renderer::RenderTarget::getView(i + r * 6);
+			auto rt = (*ret)->Renderer::RenderTarget::getView(i + r * 6);
 			mRenderer->setRenderTarget(rt, {});
 			view->SetMatrix((const float*)&viewMats[i]);
 
-			e->render(mRenderer, [this, ret, tex, rend, view, viewMats](ID3DX11EffectPass* pass)
+			e->render(mRenderer, [this,  tex, rend, view, viewMats](ID3DX11EffectPass* pass)
 			{
 				mRenderer->setTexture(tex);
 				mRenderer->setLayout(mLayout.lock()->bind(pass));
@@ -365,24 +331,28 @@ void TileMaxFilter::init(const DirectX::SimpleMath::Vector2 offset, int loop)
 	mConstants = mRenderer->createConstantBuffer(sizeof(Constants));
 }
 
-Renderer::Texture2D::Ptr TileMaxFilter::process(Renderer::Texture2D::Ptr tex, float scaling)
+Renderer::TemporaryRT::Ptr TileMaxFilter::process(Renderer::Texture2D::Ptr tex, float scaling)
 {
-	auto ret = createOrGet(tex, scaling);
+	//auto ret = createOrGet(tex, scaling);
+	auto desc = tex->getDesc();
+	desc.Format = DXGI_FORMAT_R16G16_FLOAT;
+	desc.Width = desc.Width * scaling;
+	desc.Height = desc.Height * scaling;
+	auto ret = mRenderer->createTemporaryRT(desc);
 	
 
-	auto desc = tex.lock()->getDesc();
 	Constants c;
-	c.texelsize = { desc.Width, desc.Height };
+	c.texelsize = {1.0f/(float) desc.Width, 1.0f/(float)desc.Height };
 	c.offset =  mOffset;
 	c.maxradius = mRadius;
 	c.loop = mLoop;
 	mConstants.lock()->blit(c);
 	mQuad.setConstant(mConstants);
 
-	desc = ret.lock()->getDesc();
+	desc = (*ret)->getDesc();
 	mQuad.setViewport({ 0.0f, 0.0f, (float)desc.Width, (float)desc.Height, 0.0f, 0.1f });
 	mQuad.setTextures({ tex });
-	mQuad.setRenderTarget(ret);
+	mQuad.setRenderTarget(ret->get());
 	mQuad.setDefaultBlend(false);
 	mQuad.setDefaultSampler();
 	mQuad.setPixelShader(mPS);
@@ -397,21 +367,28 @@ void NeighborMaxFilter::init()
 	mConstants = mRenderer->createConstantBuffer(sizeof(Constants));
 }
 
-Renderer::Texture2D::Ptr NeighborMaxFilter::process(Renderer::Texture2D::Ptr tex, float scaling)
+Renderer::TemporaryRT::Ptr NeighborMaxFilter::process(Renderer::Texture2D::Ptr tex, float scaling)
 {
-	auto ret = createOrGet(tex, scaling);
+	//auto ret = createOrGet(tex, scaling);
 
 
-	auto desc = tex.lock()->getDesc();
+	//auto desc = tex.lock()->getDesc();
+
+	auto desc = tex->getDesc();
+	desc.Format = DXGI_FORMAT_R16G16_FLOAT;
+	desc.Width = desc.Width * scaling;
+	desc.Height = desc.Height * scaling;
+	auto ret = mRenderer->createTemporaryRT(desc);
+
 	Constants c;
-	c.texelsize = { desc.Width, desc.Height };
+	c.texelsize = { 1.0f/(float)desc.Width, 1.0f/(float)desc.Height };
 	mConstants.lock()->blit(c);
 	mQuad.setConstant(mConstants);
 
-	desc = ret.lock()->getDesc();
+	desc = (*ret)->getDesc();
 	mQuad.setViewport({ 0.0f, 0.0f, (float)desc.Width, (float)desc.Height, 0.0f, 0.1f });
 	mQuad.setTextures({ tex });
-	mQuad.setRenderTarget(ret);
+	mQuad.setRenderTarget(ret->get());
 	mQuad.setDefaultBlend(false);
 	mQuad.setDefaultSampler();
 	mQuad.setPixelShader(mPS);

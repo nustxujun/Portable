@@ -19,7 +19,7 @@ using namespace nlohmann;
 #define EXPORT
 #endif
 
-using FRAMEWORK = Reflections;
+using FRAMEWORK = MultipleLights;
 using Ptr = std::shared_ptr<FRAMEWORK>;
 Ptr framework;
 std::shared_ptr<std::thread> loop;
@@ -113,6 +113,8 @@ public:
 	Quad::Ptr mQuad;
 	HWND window;
 	bool visible = true;
+	Renderer::Font::Ptr mFont;
+	std::unordered_map<std::string, std::string> mContents;
 
 	void init(int width, int height)
 	{
@@ -131,6 +133,7 @@ public:
 
 		mTarget = mRenderer->createTexture(desc);
 		mQuad = Quad::Ptr(new Quad(mRenderer));
+		mFont = mRenderer->createOrGetFont(L"default.sf");
 	}
 
 	bool isKeyUp(const Input::Keyboard& k, DirectX::Keyboard::Keys key)
@@ -225,6 +228,15 @@ public:
 		mQuad->setRenderTarget(mRenderer->getBackbuffer());
 		mQuad->draw();
 
+#ifndef _WINDLL
+		mFont.lock()->setRenderTarget(mRenderer->getBackbuffer());
+		float height = 0;
+		for (auto& i : mContents)
+		{
+			mFont.lock()->drawText(Common::format(i.first, " : ",i.second), { 10.0f, height });
+			height += 20;
+		}
+#endif
 	}
 
 	void refresh()
@@ -243,6 +255,10 @@ public:
 		if (j["type"] == "set" || j["type"] == "stage")
 			j["key"] = key;
 		callElectron(j);
+#ifndef _WINDLL
+		if (j["type"] == "stage")
+			mContents[key] = j["cost"];
+#endif
 	}
 
 	void receive(const char* s, size_t size)

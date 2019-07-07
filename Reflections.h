@@ -68,10 +68,10 @@ public:
 			model->setCastShadow(true);
 			model->attach(root);
 			Material::Ptr mat = Material::create();
-			mat->roughness = 1;
-			mat->metallic = 0;
+			mat->roughness = 0;
+			mat->metallic = 1;
 			mat->reflection = 0;
-			mat->diffuse = { 1,0, 0};
+			mat->diffuse = { 0,1, 0};
 			model->setMaterial(mat);
 
 
@@ -84,10 +84,10 @@ public:
 			model->setCastShadow(true);
 			model->attach(root);
 			mat = Material::create();
-			mat->roughness = 1;
-			mat->metallic = 0;
+			mat->roughness = 0;
+			mat->metallic = 1;
 			mat->reflection = 0;
-			mat->diffuse = { 0,1, 0 };
+			mat->diffuse = { 0,0, 1 };
 			model->setMaterial(mat);
 
 			model = mScene->createModel("wall3", params, [this](const Parameters& p)
@@ -102,7 +102,7 @@ public:
 			mat->roughness = 0;
 			mat->metallic = 1;
 			mat->reflection = 0;
-			mat->diffuse = { 0,0, 1 };
+			mat->diffuse = { 1,0, 0 };
 			model->setMaterial(mat);
 		}
 
@@ -111,7 +111,6 @@ public:
 			Parameters params;
 			params["geom"] = "sphere";
 			params["radius"] = "1";
-			auto sphere = Mesh::Ptr(new GeometryMesh(params, mRenderer));
 			Material::Ptr mat = Material::create();
 			mat->reflection = 0;
 			std::vector<std::string> textures = {
@@ -124,11 +123,13 @@ public:
 			for (int i = 0; i < textures.size(); ++i)
 				if (!textures[i].empty())
 					mat->setTexture(i, mRenderer->createTexture(textures[i]));
-			sphere->setMaterial(mat);
 			for (int i = 0; i < spherecount; ++i)
 			{
-				auto model = mScene->createModel(Common::format("sphere", i), params, [this, sphere](const Parameters& p)
+				auto model = mScene->createModel(Common::format("sphere", i), params, [this, mat](const Parameters& p)
 				{
+					auto sphere = Mesh::Ptr(new GeometryMesh(p, mRenderer));
+					sphere->setMaterial(mat);
+
 					return sphere;
 				});
 
@@ -139,7 +140,7 @@ public:
 				model->getNode()->setPosition({ cos , cos * 0.5f + 6, sin });
 				model->setCastShadow(true);
 				model->attach(root);
-
+				model->setStatic(false);
 			}
 		}													
 
@@ -266,9 +267,9 @@ public:
 		mPipeline->pushStage<EnvironmentMapping>(EnvironmentMapping::T_ONCE, "media/Ditch-River_2k.hdr");
 
 		//mPipeline->pushStage<AO>();
-		//mPipeline->pushStage<SSR>();
+		mPipeline->pushStage<SSR>();
 		mPipeline->pushStage<SkyBox>("media/Ditch-River_2k.hdr", false);
-		mPipeline->pushStage<MotionBlur>();
+		mPipeline->pushStage<MotionBlur>(true);
 		mPipeline->pushStage<HDR>();
 		mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 		Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
@@ -289,10 +290,12 @@ public:
 		for (int i = 0; i < 10; ++i)
 		{
 			auto s = mScene->getModel(Common::format("sphere", i));
+			if (!s)
+				continue;
 			float sin = std::sin(time + d * i) * 10;
 			float cos = std::cos(time + d * i) * 10;
 			float sin2 = std::sin(time + i * i + d * i) * 10;
-			s->getNode()->setPosition(cos, sin2 + 25, sin);
+			s->getNode()->setPosition(cos, sin2 + 10 , sin);
 		}
 	}
 

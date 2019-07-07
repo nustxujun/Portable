@@ -35,9 +35,9 @@ private:
 	void init(bool ibl);
 private:
 	Type mType = T_ONCE;
-	std::vector<Renderer::Texture2D::Ptr> mCube;
-	std::vector<Renderer::Texture2D::Ptr> mIrradiance;
-	std::vector<Renderer::Texture2D::Ptr> mPrefiltered;
+	Renderer::Texture2D::Ptr mCube;
+	std::vector<Renderer::TemporaryRT::Ptr> mIrradiance;
+	std::vector<Renderer::TemporaryRT::Ptr> mPrefiltered;
 	Renderer::Texture2D::Ptr mLUT;
 	IrradianceCubemap::Ptr mIrradianceProcessor;
 	PrefilterCubemap::Ptr mPrefilteredProcessor;

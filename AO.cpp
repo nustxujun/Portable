@@ -74,7 +74,7 @@ void AO::init(float radius)
 	mLinearWrap = r->createSampler("linear_wrap", D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
 	mPointWrap = r->createSampler("point_wrap", D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
 
-	mGaussianFilter = ImageProcessing::create<Gaussian>(getRenderer(), ImageProcessing::RT_TEMP);
+	mGaussianFilter = ImageProcessing::create<Gaussian>(getRenderer());
 }
 
 
@@ -115,7 +115,7 @@ void AO::render(Renderer::Texture2D::Ptr rt)
 	quad->setDefaultPixelShader();
 	quad->setDefaultSampler();
 	quad->setDefaultViewport();
-	quad->setTextures({ ret });
+	quad->setTextures({ ret->get() });
 	quad->draw();
 }
 

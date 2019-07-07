@@ -11,9 +11,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-#ifndef WIN32
 #define USE_PROFILE
-#endif
 
 void Renderer::checkResult(HRESULT hr)
 {
@@ -126,7 +124,7 @@ void Renderer::init(HWND win, int width, int height)
 
 	auto shared = std::shared_ptr<Texture2D>(new Texture2D(this, backbuffer));
 	mTextures.emplace_back(shared);
-	mBackbuffer = mTextures.back();
+	mBackbuffer = shared;
 
 
 
@@ -147,8 +145,16 @@ void Renderer::init(HWND win, int width, int height)
 
 void Renderer::present()
 {
-	checkResult(mSwapChain->Present(0,0));
+	HRESULT hr = mSwapChain->Present(0, DXGI_PRESENT_TEST);
 
+	switch (hr)
+	{
+	case S_OK: mSwapChain->Present(0, 0); break;
+	case DXGI_STATUS_OCCLUDED: break;
+	default:
+		checkResult(hr);
+		break;
+	}
 #ifdef USE_PROFILE
 
 	mContext->End(mDisjoint);
@@ -737,6 +743,33 @@ Renderer::Texture2D::Ptr Renderer::createRenderTarget(int width, int height, DXG
 	return createTexture(desc);
 }
 
+Renderer::TemporaryRT::Ptr Renderer::createTemporaryRT(const D3D11_TEXTURE2D_DESC & desc)
+{
+	if ((desc.BindFlags & D3D11_BIND_RENDER_TARGET) == 0)
+		error("need render target flag");
+
+	auto hash = Common::hash(desc);
+	auto ret = mTemporaryRTs.find(hash);
+	if (ret != mTemporaryRTs.end())
+	{
+		for (auto & t : ret->second)
+		{
+			if (*t.first == false)
+				return TemporaryRT::create(t.first, t.second);
+		}
+	}
+
+	auto rt = createTexture(desc);
+	auto ref = std::shared_ptr<bool>(new bool(false));
+	mTemporaryRTs[hash].push_back({ ref, rt });
+	return TemporaryRT::create(ref,rt);
+}
+
+void Renderer::destroyTemporaryRT(TemporaryRT::Ptr temp)
+{
+	// only pass unique ptr here and do nothing, then unique ptr will delete temporary rt and release the reference after leaving this function
+}
+
 Renderer::Buffer::Ptr Renderer::createBuffer(int size, D3D11_BIND_FLAG flag, const D3D11_SUBRESOURCE_DATA* initialdata, D3D11_USAGE usage, size_t CPUaccess)
 {
 	D3D11_BUFFER_DESC bd;
@@ -756,9 +789,11 @@ Renderer::Buffer::Ptr Renderer::createRWBuffer(int size, int stride, DXGI_FORMAT
 
 	return mBuffers.back();
 }
+#define ALIGN(x,y) (((x + y - 1) & ~(y - 1)) )
 
 Renderer::Buffer::Ptr Renderer::createConstantBuffer(int size, void* data , size_t datasize)
 {
+	size = ALIGN(size, 16);
 	D3D11_SUBRESOURCE_DATA initdata;
 	initdata.pSysMem = data;
 	return createBuffer(size, D3D11_BIND_CONSTANT_BUFFER, data? &initdata:nullptr, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
@@ -848,13 +883,8 @@ Renderer::Effect::Ptr Renderer::createEffect(const std::string& file, const D3D1
 
 Renderer::Effect::Ptr Renderer::createEffect(void* data, size_t size)
 {
-	auto hash = Common::hash(data, size);
-	auto ret = mEffects.find(hash);
-	if (ret != mEffects.end())
-		return ret->second;
-
 	auto ptr = std::shared_ptr<Effect>(new Effect(this, data, size));
-	mEffects[hash] = ptr;
+	mEffects.push_back(ptr);
 	return ptr;
 }
 
@@ -1062,6 +1092,51 @@ void Renderer::Buffer::blit(const void * data, size_t size)
 	}
 }
 
+void Renderer::Buffer::map()
+{
+	mCache.clear();
+}
+
+void Renderer::Buffer::unmap()
+{
+	blit(mCache.data(), mCache.size());
+}
+
+void Renderer::Buffer::write(const void * data, size_t size)
+{
+	auto f4count = size / 16;
+	auto left = size % 16;
+
+	if (f4count != 0 && left != 0)
+		error("do not cross the float4(single register) boundary");
+
+	auto curSize = mCache.size();
+
+	auto curf4count = curSize / 16;
+	auto curf4left = curSize % 16;
+
+	auto nextf4count = (curSize + size) / 16;
+	auto nextf4left = (curSize + size) % 16;
+
+	if (curf4count != nextf4count && nextf4left != 0)
+		error("do not cross the float4(single register) boundary");
+
+	const char* beg = (const char*)data;
+	const char* end = (const char*)data + size;
+	for (; beg != end; ++beg)
+		mCache.emplace_back(*beg);
+
+}
+
+void Renderer::Buffer::skip(size_t size)
+{
+	auto skipleft = (mCache.size() + size) % 16;
+	if (skipleft != 0)
+		error("next data should be at the beginning of a single register");
+
+	mCache.resize(mCache.size() + size);
+}
+
 
 
 Renderer::Effect::Effect(Renderer* renderer,const void* compiledshader, size_t size) :D3DObject(renderer)
@@ -1244,16 +1319,14 @@ Renderer::Font::~Font()
 void Renderer::Font::drawText(const std::string & text, const DirectX::SimpleMath::Vector2 & pos, const DirectX::SimpleMath::Color & color, float rotation, const DirectX::SimpleMath::Vector2 & origin, float scale, DirectX::SpriteEffects effect, float layerdepth)
 {
 	try {
-
-		ID3D11DepthStencilState* dss;
-		UINT ref = 0;
-		getContext()->OMGetDepthStencilState(&dss,&ref);
+		getRenderer()->setRenderTarget(mTarget);
+		getRenderer()->setViewport({ 0,0, (float)mTarget->getDesc().Width, (float)mTarget->getDesc().Height,0,1.0f });
 
 		mBatch->Begin();
 		mFont->DrawString(mBatch.get(), text.c_str(), pos, color, rotation, origin, scale, effect, layerdepth);
 		mBatch->End();
 
-		getContext()->OMSetDepthStencilState(dss, ref);
+		getRenderer()->removeRenderTargets();
 	}
 	catch (std::exception& e)
 	{

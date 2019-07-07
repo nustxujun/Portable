@@ -88,9 +88,12 @@ public:
 		bool isCastShadow()const { return mCastShadow; }
 		void setCastShadow(bool s) { mCastShadow = s; }
 
+		bool isStatic()const { return mStatic; }
+		void setStatic(bool v) { mStatic = v; }
 	private:
 		Node::Ptr mNode;
 		bool mCastShadow = true;
+		bool mStatic = true;
 	};
 
 	class Model : public Entity

@@ -4,6 +4,7 @@ cbuffer ConstantBuffer: register(b0)
 	matrix View;
 	matrix Projection;
 	matrix lastWorld;
+	matrix lastView;
 }
 
 SamplerState sampLinear
@@ -32,7 +33,7 @@ VertexShaderOutput vs(VertexShaderInput input)
 
 	output.Position = mul(mul(mul(float4(input.Position, 1), World), View), Projection);
 	output.Pos_ss = output.Position.xyz / output.Position.w;
-	float4 lp = mul(mul(mul(float4(input.Position, 1), lastWorld), View), Projection);
+	float4 lp = mul(mul(mul(float4(input.Position, 1), lastWorld), lastView), Projection);
 	output.lastPos_ss = lp.xyz / lp.w;
 	return output;
 }

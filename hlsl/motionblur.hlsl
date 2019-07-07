@@ -67,6 +67,29 @@ float4 main(PS_INPUT Input) : SV_TARGET
 
 #else
 
+Texture2D _MainTex:register(t0);
+Texture2D depthTex:register(t1);
+Texture2D _CameraMotionVectorsTexture:register(t2);
+Texture2D _VelocityTex:register(t3);
+Texture2D _NeighborMaxTex:register(t4);
+
+
+cbuffer ConstantBuffer: register(b0)
+{
+	matrix invertProj;
+
+	float2 _CameraMotionVectorsTexture_TextureSize;
+	float2 _VelocityScale;
+
+	float2 _VelocityTex_TexelSize;
+	float2 _NeighborMaxTex_TexelSize;
+
+	float2 _MainTex_TexelSize;
+	float _MaxBlurRadius;
+	float _RcpMaxBlurRadius;
+	int _LoopCount;
+}
+
 SamplerState sampPoint : register(s0);
 
 #define PI 3.14159265358f
@@ -98,18 +121,7 @@ struct v2f_img
 	float2 uv: TEXCOORD0;
 };
 
-cbuffer ConstantBuffer: register(b0)
-{
-	matrix invertProj;
 
-	float2 _CameraMotionVectorsTexture_TexelSize;
-	float2 _VelocityScale;
-	float _MaxBlurRadius;
-	float2 _VelocityTex_TexelSize;
-	float2 _NeighborMaxTex_TexelSize;
-	float2 _MainTex_TexelSize;
-	int _LoopCount;
-}
 
 // Fragment shader: Velocity texture setup
 float4 frag_VelocitySetup(v2f_img i) : SV_Target
@@ -118,16 +130,16 @@ float4 frag_VelocitySetup(v2f_img i) : SV_Target
 	float2 v = tex2D(_CameraMotionVectorsTexture, i.uv).rg;
 
 	// Apply the exposure time and convert to the pixel space.
-	v *= (_VelocityScale * 0.5) * _CameraMotionVectorsTexture_TexelSize;
+	v *= (_VelocityScale * float2(0.5, -0.5)) * _CameraMotionVectorsTexture_TextureSize;
 
 	// Clamp the vector with the maximum blur radius.
-	v /= max(1, length(v) * _MaxBlurRadius);
+	v /= max(1, length(v) * _RcpMaxBlurRadius);
 
 	// Sample the depth of the pixel.
 	float d = LinearizeDepth(SAMPLE_DEPTH_TEXTURE(depthTex, i.uv));
 
 	// Pack into 10/10/10/2 format.
-	return float4((v * _MaxBlurRadius + 1) / 2, d, 0);
+	return float4((v * _RcpMaxBlurRadius + 1) / 2, d, 0);
 }
 
 // Returns true or false with a given interval.
@@ -139,7 +151,7 @@ bool Interval(float phase, float interval)
 // Interleaved gradient function from Jimenez 2014 http://goo.gl/eomGso
 float GradientNoise(float2 uv)
 {
-	uv = floor(uv  * _ScreenParams.xy);
+	uv = floor(uv  * _MainTex_TexelSize.xy);
 	float f = dot(float2(0.06711056f, 0.00583715f), uv);
 	return frac(52.9829189f * frac(f));
 }
@@ -155,15 +167,15 @@ float2 JitterTile(float2 uv)
 // Velocity sampling function
 float3 SampleVelocity(float2 uv)
 {
-	float3 v = tex2D(_VelocityTex, float4(uv, 0, 0)).xyz;
-	return float3((v.xy ) * _MaxBlurRadius, v.z);
+	float3 v = tex2D(_VelocityTex, uv).xyz;
+	return float3((v.xy * 2 - 1) * _MaxBlurRadius, v.z);
 }
 
 // Reconstruction fragment shader
 float4 frag_Reconstruction(v2f_img i) : SV_Target
 {
 	// Color sample at the center point
-	const float4 c_p = tex2D(_MainTex, i.uv0);
+	const float4 c_p = tex2D(_MainTex, i.uv);
 
 	// Velocity/Depth sample at the center point
 	const float3 vd_p = SampleVelocity(i.uv);
@@ -214,13 +226,13 @@ float4 frag_Reconstruction(v2f_img i) : SV_Target
 		const float2 uv1 = i.uv + v_s * t_s * _VelocityTex_TexelSize.xy;
 
 		// Color sample
-		const float3 c = tex2Dlod(_MainTex, float4(uv0, 0, 0)).rgb;
+		const float3 c = tex2D(_MainTex, uv0).rgb;
 
 		// Velocity/Depth sample
 		const float3 vd = SampleVelocity(uv1);
 
 		// Background/Foreground separation
-		const float fg = saturate((vd_p.z - vd.z) * 20 * rcp_d_p);
+		const float fg = saturate((vd_p.z - vd.z)/* * 20*/ * rcp_d_p);
 
 		// Length of the velocity vector
 		const float l_v = lerp(l_v_bg, length(vd.xy), fg);

@@ -116,5 +116,23 @@ float3 indirectBRDF(float3 irradiance,float3 prefilter, float3 lut, float roughn
 float attenuate(float distance, float range)
 {
 	float att = saturate(1.0f - (distance * distance / (range * range)));
-	return att * att;
+	return att * att /*/ ( distance * distance)*/;
 }
+
+//// http://imdoingitwrong.wordpress.com/2011/01/31/light-attenuation/
+//float attenuate(float distance, float range)
+//{
+//	float r = range;
+//	float3 L = distance;
+//	float dist = length(L);
+//	float d = max(dist - r, 0);
+//	L /= dist;
+//	float denom = d / r + 1.0f;
+//	float attenuation = 1.0f / (denom*denom);
+//	float cutoff = 0.0052f;
+//	attenuation = (attenuation - cutoff) / (1 - cutoff);
+//	attenuation = max(attenuation, 0);
+//
+//	return attenuation;
+//}
+

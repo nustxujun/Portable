@@ -293,20 +293,21 @@ public:
 
 		auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 		mPipeline->setFrameBuffer(frame);
-
+		
 		std::string hdrenvfile = "media/Ditch-River_Env.hdr";
 
 		auto bb = mRenderer->getBackbuffer();
-		mPipeline->pushStage("clear rt", [bb, this](Renderer::Texture2D::Ptr rt)
+		mPipeline->pushStage("clear rt", [bb, this, depth](Renderer::Texture2D::Ptr rt)
 		{
 			mRenderer->clearRenderTarget(rt, { 0,0,0,0 });
+			mRenderer->clearDepth(depth, 1.0f);
 		});
 
 		mPipeline->pushStage<GBuffer>();
 		mPipeline->pushStage<PBR>();
 		//mPipeline->pushStage<AO>(3.0f);
 		//mPipeline->pushStage<SSR>();
-		mPipeline->pushStage<EnvironmentMapping>(hdrenvfile);
+		mPipeline->pushStage<EnvironmentMapping>(std::string( "media/Ditch-River_2k.hdr" ));
 		mPipeline->pushStage<SkyBox>(hdrenvfile, false);
 		mPipeline->pushStage<HDR>();
 		mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");

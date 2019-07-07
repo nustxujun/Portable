@@ -12,15 +12,31 @@ class MotionBlur : public Pipeline::Stage
 		Matrix proj;
 	};
 
+	
+	ALIGN16 struct RecotConstants
+	{
+		Matrix invertProj;
 
+		Vector2 _CameraMotionVectorsTexture_TextureSize;
+		Vector2 _VelocityScale;
+
+		Vector2 _VelocityTex_TexelSize;
+		Vector2 _NeighborMaxTex_TexelSize;
+
+		Vector2 _MainTex_TexelSize;
+		float _MaxBlurRadius;
+		float _RcpMaxBlurRadius;
+		int _LoopCount;
+	};
 public:
 	using Pipeline::Stage::Stage;
 
-	void init();
+	void init(bool cameraonly = true);
 	void render(Renderer::Texture2D::Ptr rt)  override final;
 private:
 	void renderMotionVector();
 	void reconstruct(Renderer::Texture2D::Ptr rt);
+	void renderCameraMB(Renderer::Texture2D::Ptr rt);
 private:
 	Matrix mLastViewMatrix = Matrix::Identity;
 	Renderer::PixelShader::Weak mPS;
@@ -37,5 +53,7 @@ private:
 	ImageProcessing::Ptr mTileMax2;
 	ImageProcessing::Ptr mTileMaxVariable;
 	ImageProcessing::Ptr mNeighborMax;
-
+	Renderer::Buffer::Ptr mRecotConstants;
+	size_t mTileSize;
+	float mMaxBlurRadius;
 };

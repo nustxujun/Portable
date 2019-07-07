@@ -117,7 +117,7 @@ public:
 	class Buffer :public D3DObject, public ShaderResource, public UnorderedAccess
 	{
 	public: 
-		using Ptr = std::weak_ptr<Buffer>;
+		using Ptr = WeakWrapper<Buffer>;
 	public:
 		Buffer(Renderer* renderer, int size, int stride, DXGI_FORMAT format,  size_t bindflags, D3D11_USAGE usage, size_t cpuaccess);
 		Buffer(Renderer* renderer, const D3D11_BUFFER_DESC& desc, const D3D11_SUBRESOURCE_DATA* data);
@@ -129,14 +129,26 @@ public:
 			blit(&value, sizeof(value));
 		}
 		void blit(const void* data, size_t size);
+		void map();
+		void unmap();
+		void write(const void*data, size_t size);
+		void skip(size_t size);
+		template<class T>
+		void write(const T& data)
+		{
+			write(&data, sizeof(data));
+		}
+
 
 
 		operator ID3D11Buffer* ()const {return mBuffer;}
 		ID3D11Buffer* getBuffer()const { return mBuffer; }
+
+
 	private:
 		ID3D11Buffer* mBuffer;
 		D3D11_BUFFER_DESC mDesc;
-
+		std::vector<char> mCache;
 	};
 
 	class Effect final: public NODefault, public D3DObject
@@ -249,6 +261,45 @@ public:
 		void initTexture();
 	};
 
+	class TemporaryRT
+	{
+	public:
+		using Ptr = std::unique_ptr<TemporaryRT>;
+		static Ptr create(std::shared_ptr<bool> ref, Texture2D::Ptr tex)
+		{
+			return Ptr(new TemporaryRT(ref, tex));
+		}
+
+		TemporaryRT(std::shared_ptr<bool> ref, Texture2D::Ptr tex):
+			mRef(ref),mRT(tex)
+		{
+			*ref = true;
+		}
+
+		operator Texture2D::Ptr()const
+		{
+			return mRT;
+		}
+
+		Texture2D::Ptr operator->()const
+		{
+			return mRT;
+		}
+
+		Texture2D::Ptr get()const
+		{
+			return mRT;
+		}
+
+		~TemporaryRT()
+		{
+			*mRef = false;
+		}
+	private:
+		std::shared_ptr<bool> mRef;
+		Texture2D::Ptr mRT;
+	};
+
 
 	class Sampler final : public NODefault
 	{
@@ -322,12 +373,14 @@ public:
 			float scale = 1,
 			DirectX::SpriteEffects effect = DirectX::SpriteEffects_None,
 			float layerdepth = 0);
+
+		void setRenderTarget(Texture2D::Ptr rt) { mTarget = rt; }
 	private:
 		std::unique_ptr<DirectX::SpriteFont> mFont;
 		std::unique_ptr<DirectX::SpriteBatch> mBatch;
 		float x = 0;
 		float y = 0;
-
+		Texture2D::Ptr mTarget;
 	};
 
 	class Rasterizer:public NODefault, public D3DObject
@@ -443,7 +496,7 @@ public:
 	int getHeight()const { return mHeight; }
 
 	ID3D11DeviceContext* getContext() { return mContext; };
-	Texture::Ptr getBackbuffer() { return mBackbuffer; }
+	Texture2D::Ptr getBackbuffer() { return mBackbuffer; }
 	Texture2D::Ptr getDefaultDepthStencil() { return mDefaultDepthStencil; };
 
 	void present();
@@ -516,6 +569,9 @@ public:
 	void destroyTexture(Texture::Ptr tex);
 
 	Texture2D::Ptr createRenderTarget(int width, int height, DXGI_FORMAT format, D3D11_USAGE usage = D3D11_USAGE_DEFAULT);
+	TemporaryRT::Ptr createTemporaryRT(const D3D11_TEXTURE2D_DESC& desc);
+	void destroyTemporaryRT(TemporaryRT::Ptr temp);
+	
 	Buffer::Ptr createBuffer(int size, D3D11_BIND_FLAG bindflag, const D3D11_SUBRESOURCE_DATA* initialdata = NULL,D3D11_USAGE usage = D3D11_USAGE_DEFAULT, size_t CPUaccess = 0);
 	Buffer::Ptr createRWBuffer(int size, int stride, DXGI_FORMAT format, size_t bindflag,  D3D11_USAGE usage = D3D11_USAGE_DEFAULT, size_t CPUaccess = 0);
 	Buffer::Ptr createConstantBuffer(int size, void* data = 0, size_t datasize = 0);
@@ -556,17 +612,18 @@ private:
 
 	Texture2D::Ptr mDefaultDepthStencil;
 	Rasterizer::Ptr mRasterizer;
-	Texture::Ptr mBackbuffer;
+	Texture2D::Ptr mBackbuffer;
 
 	size_t mSamplersState = 0;
 	size_t mSRVState = 0;
 	size_t mConstantState = 0;
 
 	std::vector<std::shared_ptr<Buffer>> mBuffers;
-	std::unordered_map<size_t,std::shared_ptr<Effect>> mEffects;
+	std::vector<std::shared_ptr<Effect>> mEffects;
 	std::vector<std::shared_ptr<Layout>> mLayouts;
 
 	std::vector<std::shared_ptr<Texture>> mTextures;
+	std::unordered_map<size_t, std::vector<std::pair<std::shared_ptr<bool>, Texture2D::Ptr>>> mTemporaryRTs;
 	std::unordered_map<std::string, Texture2D::Ptr> mTextureMap;
 	std::unordered_map<std::string,std::shared_ptr<Sampler>> mSamplers;
 	std::unordered_map<size_t,VertexShader::Shared> mVSs;

@@ -56,9 +56,6 @@ void Framework::update()
 	ss.precision(4);
 	ss << getFPS();
 
-	auto cam = mScene->createOrGetCamera("main");
-	auto pos = cam->getNode()->getRealPosition();
-	SetWindowTextA(mWindow, Common::format(ss.str(), "(", pos.x, ",", pos.y, ",",pos.z,")").c_str());
 }
 
 //void Framework::initOverlay(int width, int height)
@@ -325,10 +322,9 @@ void Framework::showFPS()
 	ss << (float)1000.0f / (float)mFPS << ")";
 	set("msg", { {"msg",ss.str()} });
 
-	//mRenderer->setRenderTarget(mRenderer->getBackbuffer());
 	//auto font = mRenderer->createOrGetFont(L"myfile.spritefont");
+	//font.lock()->setRenderTarget(mRenderer->getBackbuffer());
 
-	//std::stringstream ss;
 	//ss << mFPS;
 	//
 	//mRenderer->setViewport({
@@ -339,6 +335,11 @@ void Framework::showFPS()
 	//	}
 	//);
 	//font.lock()->drawText(ss.str().c_str(), Vector2(10, 10));
+
+	auto cam = mScene->createOrGetCamera("main");
+	auto pos = cam->getNode()->getRealPosition();
+	SetWindowTextA(mWindow, Common::format(ss.str(), "(", pos.x, ",", pos.y, ",", pos.z, ")").c_str());
+
 }
 
 void Framework::calFPS()
