@@ -162,6 +162,12 @@
     <ClInclude Include="PreZ.h">
       <Filter>Pipeline\Stage</Filter>
     </ClInclude>
+    <ClInclude Include="TAA.h">
+      <Filter>Pipeline\Stage</Filter>
+    </ClInclude>
+    <ClInclude Include="MotionVector.h">
+      <Filter>Pipeline\Stage</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -258,9 +264,15 @@
       <Filter>Framework</Filter>
     </ClCompile>
     <ClCompile Include="MotionBlur.cpp">
-      <Filter>源文件</Filter>
+      <Filter>Pipeline\Stage</Filter>
     </ClCompile>
     <ClCompile Include="PreZ.cpp">
+      <Filter>Pipeline\Stage</Filter>
+    </ClCompile>
+    <ClCompile Include="TAA.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MotionVector.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

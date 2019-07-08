@@ -147,6 +147,8 @@ public:
 
 		void setProjectType(ProjectionType type) { mProjectionType = type; };
 		const Matrix & getProjectionMatrix();
+		// using for taa
+		void setProjectionOffset(const Vector3& offset);
 		const D3D11_VIEWPORT& getViewport()const { return mViewport; }
 		std::array<Corner, 8> getWorldCorners();
 
@@ -160,6 +162,7 @@ public:
 		Matrix mProjection;
 		bool mDirty;
 		Scene* mScene;
+		Vector3 mProjectionOffset = Vector3::Zero;
 	};
 
 	class Light : public Entity

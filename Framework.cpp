@@ -13,6 +13,8 @@
 #include "EnvironmentMapping.h"
 #include "MotionBlur.h"
 #include "PreZ.h"
+#include "TAA.h"
+#include "MotionVector.h"
 
 Framework::Framework(HWND win):mWindow(win)
 {
@@ -115,22 +117,25 @@ void Framework::initPipeline()
 		shadowmaps.push_back(mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32_FLOAT));
 
 	auto bb = mRenderer->getBackbuffer();
-	mPipeline->pushStage("clear rt", [bb, this](Renderer::Texture2D::Ptr rt)
+	mPipeline->pushStage("clear rt", [bb, this,depth](Renderer::Texture2D::Ptr rt)
 	{
 		mRenderer->clearRenderTarget(rt, { 0,0,0,0 });
+		mRenderer->clearDepth(depth, 1.0f);
 	});
 
-	mPipeline->pushStage<PreZ>();
+	//mPipeline->pushStage<PreZ>();
 	mPipeline->pushStage<GBuffer>();
 	mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
 	mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
 	mPipeline->pushStage<EnvironmentMapping>(std::string("media/Ditch-River_2k.hdr"));
 	//mPipeline->pushStage<SSR>();
-	//mPipeline->pushStage<AO>(3.0f);
+	mPipeline->pushStage<AO>(3.0f);
 	mPipeline->pushStage<SkyBox>("media/Ditch-River_2k.hdr", false);
+	mPipeline->pushStage<MotionVector>();
 	mPipeline->pushStage<MotionBlur>();
 	mPipeline->pushStage<HDR>();
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
+	mPipeline->pushStage<TAA>();
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
 	mPipeline->pushStage("draw to backbuffer", [bb, quad](Renderer::Texture2D::Ptr rt)
 	{
@@ -213,7 +218,7 @@ void Framework::initScene()
 		model->setCastShadow(true);
 		model->attach(mScene->getRoot());
 		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-		Matrix mat = Matrix::CreateFromYawPitchRoll(0, -3.14 / 2, 0);
+		//Matrix mat = Matrix::CreateFromYawPitchRoll(0, -3.14 / 2, 0);
 		//model->getNode()->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
 	}
 	auto aabb = root->getWorldAABB();
@@ -223,10 +228,10 @@ void Framework::initScene()
 	auto cam = mScene->createOrGetCamera("main");
 	DirectX::XMFLOAT3 eye(aabb.second);
 	DirectX::XMFLOAT3 at(aabb.first);
-	//cam->lookat(eye, at);
-	cam->lookat({ 10,10,0 }, { 10,0,0 });
+	cam->lookat(eye, at);
+	//cam->lookat({ 10,10,0 }, { 10,0,0 });
 	cam->setViewport(0, 0, mRenderer->getWidth(), mRenderer->getHeight());
-	cam->setNearFar(1, vec.Length() + 1);
+	cam->setNearFar(vec.Length() * 0.01f, vec.Length() + 1);
 	cam->setFOVy(0.785398185);
 
 
@@ -237,6 +242,17 @@ void Framework::initScene()
 
 void Framework::framemove()
 {
+
+	auto model = mScene->getModel("sphere");
+	if (model)
+	{
+		float time = GetTickCount() * 0.005;
+		float sin = std::sin(time) * 10;
+		float cos = std::cos(time) * 10;
+		model->getNode()->setPosition(cos, 1, sin);
+	}
+
+
 	auto lightbuffer = mPipeline->getBuffer("dirlights");
 	Vector4 lightinfo[2];
 	auto l = mScene->createOrGetLight("main");

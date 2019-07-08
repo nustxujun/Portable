@@ -383,8 +383,17 @@ const Matrix & Scene::Camera::getProjectionMatrix()
 			mat = XMMatrixPerspectiveFovLH(mFOVy, mViewport.Width / mViewport.Height, mNear, mFar);
 		}
 		XMStoreFloat4x4(&mProjection, mat);
+		// == Proj * offsetMat;
+		mProjection._31 = mProjectionOffset.x;
+		mProjection._32 = mProjectionOffset.y;
 	}
 	return mProjection;
+}
+
+void Scene::Camera::setProjectionOffset(const Vector3 & offset)
+{
+	mDirty = true;
+	mProjectionOffset = offset;
 }
 
 std::array<Scene::Camera::Corner, 8> Scene::Camera::getWorldCorners()

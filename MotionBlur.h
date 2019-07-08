@@ -42,12 +42,8 @@ private:
 	Renderer::PixelShader::Weak mPS;
 	Renderer::PixelShader::Weak mVelocitySetup;
 	Renderer::PixelShader::Weak mReconstruct;
-	Renderer::Effect::Ptr mMotionVectorEffect;
-	Renderer::Layout::Ptr mLayout;
 	Renderer::Buffer::Ptr mConstants;
 	Renderer::Texture2D::Ptr mFrame;
-	Renderer::Texture2D::Ptr mMotionVector;
-	std::unordered_map<size_t, Matrix> mLastWorld;
 
 	ImageProcessing::Ptr mTileMaxNormlaize;
 	ImageProcessing::Ptr mTileMax2;
