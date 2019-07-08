@@ -51,26 +51,44 @@ MeshBuilder::Data MeshBuilder::buildByAssimp(const std::string & filename)
 			auto m = scene->mMaterials[i];
 			Data::Material mat;
 
+			auto getTex = [&](auto type) {
+				if (m->GetTextureCount(type))
+				{
+					aiString path;
+					aiTextureMapping mapping;
+					UINT index;
+					m->GetTexture(type, 0, &path, &mapping, &index);
+					std::string realpath = totalpath + path.C_Str();
+					return realpath;
+				}
+				return std::string();
+			};
 
-			if (m->GetTextureCount(aiTextureType_DIFFUSE) > 0)
-			{
-				aiString path;
-				aiTextureMapping mapping;
-				UINT index;
-				m->GetTexture(aiTextureType_DIFFUSE, 0, &path, &mapping, &index);
-				std::string realpath = totalpath + path.C_Str();
-				mat.albedo = realpath;
-			}
+			mat.albedo = getTex(aiTextureType_DIFFUSE);
+			mat.normal = getTex(aiTextureType_NORMALS);
+			mat.ambient = getTex(aiTextureType_AMBIENT);
+			mat.height = getTex(aiTextureType_HEIGHT);
+			mat.shininess = getTex(aiTextureType_SHININESS);
 
-			if (m->GetTextureCount(aiTextureType_NORMALS) > 0)
-			{
-				aiString path;
-				aiTextureMapping mapping;
-				UINT index;
-				m->GetTexture(aiTextureType_NORMALS, 0, &path, &mapping, &index);
-				std::string realpath = totalpath + path.C_Str();
-				mat.normal = realpath;
-			}
+			//if (m->GetTextureCount(aiTextureType_DIFFUSE) > 0)
+			//{
+			//	aiString path;
+			//	aiTextureMapping mapping;
+			//	UINT index;
+			//	m->GetTexture(aiTextureType_DIFFUSE, 0, &path, &mapping, &index);
+			//	std::string realpath = totalpath + path.C_Str();
+			//	mat.albedo = realpath;
+			//}
+
+			//if (m->GetTextureCount(aiTextureType_NORMALS) > 0)
+			//{
+			//	aiString path;
+			//	aiTextureMapping mapping;
+			//	UINT index;
+			//	m->GetTexture(aiTextureType_NORMALS, 0, &path, &mapping, &index);
+			//	std::string realpath = totalpath + path.C_Str();
+			//	mat.normal = realpath;
+			//}
 
 			ret.materials.push_back(mat);
 		}

@@ -137,7 +137,7 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 		mCubePipeline->pushStage<EnvironmentMapping>(cubemap);
 		mCubePipeline->pushStage<SkyBox>(cubemap, false);
 	}
-	//mCubePipeline->setValue("ambient", 1.0f);
+	mCubePipeline->setValue("ambient", 1.0f);
 	//mCubePipeline->setValue("numdirs", 1.0f);
 	//mCubePipeline->setValue("dirradiance", 1.0f);
 

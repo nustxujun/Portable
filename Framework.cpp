@@ -127,12 +127,12 @@ void Framework::initPipeline()
 	mPipeline->pushStage<GBuffer>();
 	mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
 	mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
-	mPipeline->pushStage<EnvironmentMapping>(std::string("media/Ditch-River_2k.hdr"));
-	//mPipeline->pushStage<SSR>();
+	mPipeline->pushStage<EnvironmentMapping>(EnvironmentMapping::T_ONCE, std::string("media/Ditch-River_2k.hdr"));
+	mPipeline->pushStage<SSR>();
 	mPipeline->pushStage<AO>(3.0f);
 	mPipeline->pushStage<SkyBox>("media/Ditch-River_2k.hdr", false);
 	mPipeline->pushStage<MotionVector>();
-	mPipeline->pushStage<MotionBlur>();
+	//mPipeline->pushStage<MotionBlur>();
 	mPipeline->pushStage<HDR>();
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 	mPipeline->pushStage<TAA>();
@@ -210,7 +210,7 @@ void Framework::initScene()
 	{
 		Parameters params;
 		//params["file"] = "tiny.x";
-		params["file"] = "media/sponza/sponza.obj";
+		params["file"] = "media/sponza_pbr/sponza.obj";
 		auto model = mScene->createModel("test", params, [this](const Parameters& p) {
 			return Mesh::Ptr(new Mesh(p, mRenderer));
 		});
@@ -220,6 +220,7 @@ void Framework::initScene()
 		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
 		//Matrix mat = Matrix::CreateFromYawPitchRoll(0, -3.14 / 2, 0);
 		//model->getNode()->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
+
 	}
 	auto aabb = root->getWorldAABB();
 
@@ -238,6 +239,13 @@ void Framework::initScene()
 	auto light = mScene->createOrGetLight("main");
 	light->setDirection({0,-1,0 });
 	light->setCastingShadow(true);
+
+
+	auto probe = mScene->createProbe("main");
+	probe->setProjectionBox(vec);
+	probe->getNode()->setPosition((aabb.second + aabb.first) * 0.5f);
+	probe->setInfluence(vec);
+
 }
 
 void Framework::framemove()

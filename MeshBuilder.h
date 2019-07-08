@@ -28,6 +28,9 @@ public:
 		struct Material {
 			std::string albedo;
 			std::string normal;
+			std::string ambient;
+			std::string height;
+			std::string shininess;
 
 			std::array<float, 3> diffuse = {1,1,1};
 		};
