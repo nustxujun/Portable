@@ -12,10 +12,10 @@
 
 MeshBuilder::Data MeshBuilder::build(const std::string & filename)
 {
-	std::regex obj("^.+\\.obj$");
-	if (std::regex_match(filename, obj))
-		return buildByTinyobj(filename);
-	else
+	//std::regex obj("^.+\\.obj$");
+	//if (std::regex_match(filename, obj))
+	//	return buildByTinyobj(filename);
+	//else
 		return buildByAssimp(filename);
 
 
@@ -27,7 +27,7 @@ MeshBuilder::Data MeshBuilder::buildByAssimp(const std::string & filename)
 	Data ret;
 	ret.aabb = { FLT_MAX,FLT_MAX,FLT_MAX,FLT_MIN, FLT_MIN,FLT_MIN };
 	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(filename, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_JoinIdenticalVertices | aiProcess_CalcTangentSpace);
+	const aiScene* scene = importer.ReadFile(filename, aiProcess_Triangulate  | aiProcess_JoinIdenticalVertices | aiProcess_CalcTangentSpace | aiProcess_PreTransformVertices | aiProcess_ConvertToLeftHanded);
 	if (!scene)
 	{
 		::MessageBoxA(NULL, importer.GetErrorString(), NULL, NULL);
