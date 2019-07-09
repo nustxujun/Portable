@@ -6,6 +6,9 @@ TextureCube
 #endif
 diffuseTex: register(t0);
 
+#include "spherical_harmonics.hlsl"
+RWBuffer<float3> coefs;
+
 cbuffer ConstantBuffer: register(b0)
 {
 	matrix World;
@@ -16,6 +19,11 @@ cbuffer ConstantBuffer: register(b0)
 cbuffer PrefilterConstants: register(b1)
 {
 	float roughnessCb;
+}
+
+cbuffer SHConstants : register(b2)
+{
+	float sampleCount;
 }
 
 SamplerState sampLinear
@@ -190,6 +198,14 @@ float4 prefilterMap(VertexShaderOutput pin) : SV_TARGET
 	return float4(prefilteredColor, 1.0f);
 }
 
+
+void SphericalHarmonics(VertexShaderOutput pin)
+{
+	float3 N = normalize(pin.TexCoord);
+	float3 C = sampleTex(input.TexCoord);
+
+	
+}
 
 float4 testps(VertexShaderOutput pin) : SV_TARGET
 {

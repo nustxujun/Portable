@@ -17,53 +17,52 @@ float HarmonicBasis0() {
 	return HARMONIC_COEFFICIENT0;
 }
 
-// harmonic band 1
-
-float HarmonicBasis1(float3 v) {
-	return HARMONIC_COEFFICIENT1 * v.y;
-}
-
-float HarmonicBasis2(float3 v) {
-	return HARMONIC_COEFFICIENT1 * v.z;
-}
-
-float HarmonicBasis3(float3 v) {
-	return HARMONIC_COEFFICIENT1 * v.x;
-}
-
-// harmonic band 2
-
-float HarmonicBasis4(float3 v) {
-	return HARMONIC_COEFFICIENT2 * v.x * v.y;
-}
-
-float HarmonicBasis5(float3 v) {
-	return HARMONIC_COEFFICIENT2 * v.y * v.z;
-}
-
-float HarmonicBasis6(float3 v) {
-	return HARMONIC_COEFFICIENT3 * -(v.x * v.x + v.y * v.y - 2.f * v.z * v.z);
-}
-
-float HarmonicBasis7(float3 v) {
-	return HARMONIC_COEFFICIENT2 * v.z * v.x;
-}
-
-float HarmonicBasis8(float3 v) {
-	return HARMONIC_COEFFICIENT2 * 0.5f * (v.x * v.x - v.y * v.y);
-}
 
 
-
-#ifndef NUM_COEFS
-#define NUM_COEFS 9
+#ifndef DEGREE
+#define DEGREE 3
 #endif
 
+#define NUM_COEFS (DEGREE + 1) * (DEGREE + 1)
 
+#define PI 3.14159265358f
 
-float HarmonicBasis(float3 vec) {
-	
+void HarmonicBasis(float3 vec, out float basis[NUM_COEFS]) {
+#if (DEGREE >= 0)
+	basis[0] = 1.f / 2.f * sqrt(1.f / PI);
+#endif
 
+#if (DEGREE >= 1)
+	basis[1] = sqrt(3.f / (4.f*PI))*y;
+	basis[2] = sqrt(3.f / (4.f*PI))*z;
+	basis[3] = sqrt(3.f / (4.f*PI))*x ;
+#endif
 
+#if (DEGREE >= 2)
+	basis[4] = 1.f / 2.f * sqrt(15.f / PI) * x * y;
+	basis[5] = 1.f / 2.f * sqrt(15.f / PI) * y * z;
+	basis[6] = 1.f / 4.f * sqrt(5.f / PI) * (-x * x - y * y + 2 * z*z);
+	basis[7] = 1.f / 2.f * sqrt(15.f / PI) * z * x ;
+	basis[8] = 1.f / 4.f * sqrt(15.f / PI) * (x*x - y * y) ;
+#endif
+
+#if (DEGREE >= 3)
+	basis[9] = 1.f / 4.f*sqrt(35.f / (2.f*PI))*(3 * x2 - y2)*y ;
+	basis[10] = 1.f / 2.f*sqrt(105.f / PI)*x*y*z / r3;
+	basis[11] = 1.f / 4.f*sqrt(21.f / (2.f*PI))*y*(4 * z2 - x2 - y2) ;
+	basis[12] = 1.f / 4.f*sqrt(7.f / PI)*z*(2 * z2 - 3 * x2 - 3 * y2) ;
+	basis[13] = 1.f / 4.f*sqrt(21.f / (2.f*PI))*x*(4 * z2 - x2 - y2) ;
+	basis[14] = 1.f / 4.f*sqrt(105.f / PI)*(x2 - y2)*z;
+	basis[15] = 1.f / 4.f*sqrt(35.f / (2 * PI))*(x2 - 3 * y2)*x ;
+#endif
 }
 
+void HarmonicEvaluate(float3 vec, float3 color, out float3 coefs[NUM_COEFS])
+{
+	float basis[NUM_COEFS];
+	HarmonicBasis(vec, basis);
+	for (int i = 0; i < NUM_COEFS; ++i)
+	{
+		coefs[i] = coefs[i] +  color * basis[i];
+	}
+}
