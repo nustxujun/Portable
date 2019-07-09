@@ -138,6 +138,7 @@ Renderer::TemporaryRT::Ptr CubeMapProcessing::process(Renderer::Texture2D::Ptr t
 	auto desc = tex.lock()->getDesc();
 	if (!mIsCubemap)
 	{
+		desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 		desc.ArraySize = 6;
 		desc.MipLevels = 1;
 		desc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
@@ -228,7 +229,7 @@ Renderer::TemporaryRT::Ptr PrefilterCubemap::process(Renderer::Texture2D::Ptr te
 
 	if (!mIsCubemap)
 	{
-
+		desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 		desc.ArraySize = 6;
 		desc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
 	}

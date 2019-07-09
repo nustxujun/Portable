@@ -74,11 +74,13 @@ void SSR::renderColor(Renderer::Texture2D::Ptr rt)
 		{} ,
 		getShaderResource("material"),
 		mBlueNoise,
-		mHitmap 
+		mHitmap ,
 	};
 
 	if (has("envmap"))
 		srvs.push_back(getShaderResource("envmap"));
+	else
+		srvs.push_back({});
 	quad->setTextures(srvs);
 	
 	quad->setPixelShader(mLighting);

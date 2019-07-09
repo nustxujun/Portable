@@ -133,7 +133,7 @@ void Framework::initPipeline()
 	mPipeline->pushStage<SkyBox>("media/Ditch-River_2k.hdr", false);
 	mPipeline->pushStage<MotionVector>();
 	//mPipeline->pushStage<MotionBlur>();
-	mPipeline->pushStage<HDR>();
+	//mPipeline->pushStage<HDR>();
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 	mPipeline->pushStage<TAA>();
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
@@ -171,8 +171,6 @@ void Framework::initScene()
 	//	model->setCastShadow(true);
 	//	model->attach(root);
 	//	Material::Ptr mat = Material::create();
-	//	mat->roughness = 0;
-	//	mat->metallic = 0;
 	//	for (int i = 0; i < textures.size(); ++i)
 	//		if (!textures[i].empty())
 	//			mat->setTexture(i, mRenderer->createTexture(textures[i]));
@@ -198,7 +196,6 @@ void Framework::initScene()
 	//	model->setCastShadow(true);
 	//	model->attach(root);
 	//	Material::Ptr mat = Material::create();
-	//	//mat->roughness = 0.2;
 
 	//	for (int i = 0; i < textures.size(); ++i)
 	//		if (!textures[i].empty())
@@ -210,7 +207,7 @@ void Framework::initScene()
 	{
 		Parameters params;
 		//params["file"] = "tiny.x";
-		params["file"] = "media/sponza_pbr/sponza.obj";
+		params["file"] = "media/sponza/sponza.obj";
 		auto model = mScene->createModel("test", params, [this](const Parameters& p) {
 			return Mesh::Ptr(new Mesh(p, mRenderer));
 		});
@@ -251,14 +248,14 @@ void Framework::initScene()
 void Framework::framemove()
 {
 
-	auto model = mScene->getModel("sphere");
-	if (model)
-	{
-		float time = GetTickCount() * 0.005;
-		float sin = std::sin(time) * 10;
-		float cos = std::cos(time) * 10;
-		model->getNode()->setPosition(cos, 1, sin);
-	}
+	//auto model = mScene->getModel("sphere");
+	//if (model)
+	//{
+	//	float time = GetTickCount() * 0.005;
+	//	float sin = std::sin(time) * 10;
+	//	float cos = std::cos(time) * 10;
+	//	model->getNode()->setPosition(cos, 1, sin);
+	//}
 
 
 	auto lightbuffer = mPipeline->getBuffer("dirlights");

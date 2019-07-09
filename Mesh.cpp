@@ -26,12 +26,12 @@ Mesh::Mesh(const Parameters& params, Renderer::Ptr r)
 			mat->setTexture(Material::TU_ALBEDO, r->createTexture(mraw.albedo));
 		if (!mraw.normal.empty())
 			mat->setTexture(Material::TU_NORMAL, r->createTexture(mraw.normal));
-		if (!mraw.ambient.empty())
-			mat->setTexture(Material::TU_METAL, r->createTexture(mraw.ambient));
-		if (!mraw.height.empty())
-			mat->setTexture(Material::TU_NORMAL, r->createTexture(mraw.height));
-		if (!mraw.shininess.empty())
-			mat->setTexture(Material::TU_ROUGH, r->createTexture(mraw.shininess));
+		//if (!mraw.ambient.empty())
+		//	mat->setTexture(Material::TU_METAL, r->createTexture(mraw.ambient));
+		//if (!mraw.height.empty())
+		//	mat->setTexture(Material::TU_NORMAL, r->createTexture(mraw.height));
+		//if (!mraw.shininess.empty())
+		//	mat->setTexture(Material::TU_ROUGH, r->createTexture(mraw.shininess));
 
 		mat->diffuse = DirectX::SimpleMath::Vector3( mraw.diffuse.data() );
 		materials.emplace_back(mat);
