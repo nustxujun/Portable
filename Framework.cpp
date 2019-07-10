@@ -187,38 +187,39 @@ void Framework::initScene()
 
 		Parameters params;
 		params["geom"] = "sphere";
-		params["radius"] = "1";
+		params["radius"] = "10";
+		params["size"] = "1";
 		auto model = mScene->createModel("sphere", params, [this](const Parameters& p)
 		{
 			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
 		});
 		model->getNode()->setPosition({ 0, 1, 0 });
-		model->setCastShadow(true);
+		model->setCastShadow(false);
 		model->attach(root);
-		Material::Ptr mat = Material::create();
+		//Material::Ptr mat = Material::create();
 
-		for (int i = 0; i < textures.size(); ++i)
-			if (!textures[i].empty())
-				mat->setTexture(i, mRenderer->createTexture(textures[i]));
-		model->setMaterial(mat);
+		//for (int i = 0; i < textures.size(); ++i)
+		//	if (!textures[i].empty())
+		//		mat->setTexture(i, mRenderer->createTexture(textures[i]));
+		//model->setMaterial(mat);
 	}
 
 
-	//{
-	//	Parameters params;
-	//	//params["file"] = "tiny.x";
-	//	params["file"] = "media/sponza/sponza.obj";
-	//	auto model = mScene->createModel("test", params, [this](const Parameters& p) {
-	//		return Mesh::Ptr(new Mesh(p, mRenderer));
-	//	});
+	{
+		Parameters params;
+		//params["file"] = "tiny.x";
+		params["file"] = "media/sponza/sponza.obj";
+		auto model = mScene->createModel("test", params, [this](const Parameters& p) {
+			return Mesh::Ptr(new Mesh(p, mRenderer));
+		});
 
-	//	model->setCastShadow(true);
-	//	model->attach(mScene->getRoot());
-	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-	//	//Matrix mat = Matrix::CreateFromYawPitchRoll(0, -3.14 / 2, 0);
-	//	//model->getNode()->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
+		model->setCastShadow(true);
+		model->attach(mScene->getRoot());
+		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+		//Matrix mat = Matrix::CreateFromYawPitchRoll(0, -3.14 / 2, 0);
+		//model->getNode()->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
 
-	//}
+	}
 	auto aabb = root->getWorldAABB();
 
 	Vector3 vec = aabb.second - aabb.first;
@@ -241,22 +242,33 @@ void Framework::initScene()
 	auto probe = mScene->createProbe("main");
 	probe->setProxyBox(vec);
 	probe->getNode()->setPosition((aabb.second + aabb.first) * 0.5f);
-	probe->setInfluence(vec);
+	probe->attach(root);
+	probe->setInfluence({500.0f,500.0f,500.0f});
+	probe->getNode()->setPosition({ -430,100,-100 });
 	probe->setType(Scene::Probe::PT_DIFFUSE);
+	//probe->setUsingProxy(true);
+	{
+		Parameters params;
+		params["geom"] = "sphere";
+		params["radius"] = "10";
+		auto sphere = Mesh::Ptr(new GeometryMesh(params, mRenderer));
+		sphere->getMesh(0).material->roughness = 0;
+		probe->setDebugObject(sphere);
+	}
 
 }
 
 void Framework::framemove()
 {
 
-	//auto model = mScene->getModel("sphere");
-	//if (model)
-	//{
-	//	float time = GetTickCount() * 0.005;
-	//	float sin = std::sin(time) * 10;
-	//	float cos = std::cos(time) * 10;
-	//	model->getNode()->setPosition(cos, 1, sin);
-	//}
+	auto model = mScene->getModel("sphere");
+	if (model)
+	{
+		float time = GetTickCount() * 0.005;
+		float sin = std::sin(time) * 100;
+		float cos = std::cos(time) * 100;
+		model->getNode()->setPosition(cos - 430, 100, sin - 100);
+	}
 
 
 	auto lightbuffer = mPipeline->getBuffer("dirlights");

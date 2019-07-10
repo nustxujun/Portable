@@ -99,7 +99,7 @@ float4 main(PS_INPUT Input) : SV_TARGET
 			float3 calcolor = 0;
 #if CORRECTED
 			float3 corrected = intersectBox(worldpos.xyz, R, boxmin, boxmax);
-			coord = normalize(corrected - probepos);
+			coord = normalize(corrected - probepos); 
 #endif
 
 
@@ -110,11 +110,15 @@ float4 main(PS_INPUT Input) : SV_TARGET
 			calcolor = indirectBRDF(irradiance, prefiltered, lut, roughness, metallic, F0_DEFAULT, albedo, N, V);
 			result = calcolor * intensity /** float3((i % 2), 0, (1.0f - i % 2)) */;
 #elif SH
-			float basis[NUM_COEFS];
-			HarmonicBasis(N,basis);
-			for (int i = 0; i < NUM_COEFS; ++i)
+			if (testBox(worldpos.xyz, infmin, infmax))
 			{
-				result += coefs[i] * basis[i];
+				float basis[NUM_COEFS];
+				HarmonicBasis(R, basis);
+				for (int i = 0; i < NUM_COEFS; ++i)
+				{
+					result += coefs[i] * basis[i];
+				}
+				result *= albedo * intensity;
 			}
 #else
 			calcolor = envTex.SampleLevel(sampLinear, coord, 0).rgb;
