@@ -4,14 +4,14 @@
 #include "PostProcessing.h"
 #include "SkyBox.h"
 #include "MathUtilities.h"
-
+#include "SphericalHarmonics.h"
 
 static auto constexpr MAX_NUM_PROBES = 10;
 
 
-void EnvironmentMapping::init(bool ibl)
+void EnvironmentMapping::init()
 {
-	mIBL = ibl;
+
 	setValue("envmap", true);
 	mName = "EnvironmentMapping";
 	auto renderer = getRenderer();
@@ -19,14 +19,26 @@ void EnvironmentMapping::init(bool ibl)
 	std::vector<D3D10_SHADER_MACRO> norm = {   {NULL,NULL} };
 	std::vector<D3D10_SHADER_MACRO> corr = {  {"CORRECTED", "1"}, {NULL,NULL} };
 
-	if (ibl)
+
+	for (int i = 0; i < 3; ++i)
 	{
-		norm.insert(norm.begin(), { "IBL", "1" });
-		corr.insert(corr.begin(), { "IBL", "1" });
+		std::vector<D3D10_SHADER_MACRO> macros;
+		switch (i)
+		{
+		case 0: break;
+		case 1: macros.push_back({ "SH", "1" }); break;
+		case 2: macros.push_back({ "IBL", "1" }); break;
+		default:
+			break;
+		}
+
+		macros.push_back({ NULL,NULL });
+		mPS[i][0] = renderer->createPixelShader("hlsl/environmentmapping.hlsl", "main", macros.data());
+		macros.insert(macros.end() - 1, { "CORRECTED", "1" });
+		mPS[i][1] = renderer->createPixelShader("hlsl/environmentmapping.hlsl", "main", macros.data());
 	}
 
-	mPS[0] = renderer->createPixelShader("hlsl/environmentmapping.hlsl", "main", norm.data());
-	mPS[1] = renderer->createPixelShader("hlsl/environmentmapping.hlsl", "main", corr.data());
+
 
 
 	mLUT = renderer->createTexture("media/IBL_BRDF_LUT.png", 1);
@@ -38,7 +50,7 @@ void EnvironmentMapping::init(bool ibl)
 
 void EnvironmentMapping::init(const std::string& cubemap )
 {
-	init(true);
+	init();
 	set("envIntensity", { {"type","set"}, {"value",1},{"min","0"},{"max",2.0f},{"interval", "0.01"} });
 
 	mIrradianceProcessor = ImageProcessing::create<IrradianceCubemap>(getRenderer(), false);
@@ -47,7 +59,6 @@ void EnvironmentMapping::init(const std::string& cubemap )
 	mIrradiance.push_back( mIrradianceProcessor->process(mCube));
 	mPrefiltered.push_back( mPrefilteredProcessor->process(mCube));
 
-	mSkyOnly = true;
 	//auto aabb = getScene()->getRoot()->getWorldAABB();
 	//Vector3 raw[6] = { (aabb.first + aabb.second)* 0.5f, aabb.first , aabb.second,  aabb.first, aabb.second , {1,1,1} };
 
@@ -58,7 +69,7 @@ void EnvironmentMapping::init(const std::string& cubemap )
 void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolution)
 {
 	mType = type;
-	init(true);
+	init();
 	set("envIntensity", { {"type","set"}, {"value",1},{"min","0"},{"max",2.0f},{"interval", "0.01"} });
 	set("boxProjection", { {"type","set"}, {"value",1},{"min","0"},{"max",1},{"interval", "1"} });
 
@@ -134,7 +145,7 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 	mCubePipeline->pushStage<PBR>();
 	if (!cubemap.empty())
 	{
-		mCubePipeline->pushStage<EnvironmentMapping>(cubemap);
+		//mCubePipeline->pushStage<EnvironmentMapping>(cubemap);
 		mCubePipeline->pushStage<SkyBox>(cubemap, false);
 	}
 	mCubePipeline->setValue("ambient", 1.0f);
@@ -196,10 +207,38 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 					mCubePipeline->render();
 					renderer->getContext()->CopySubresourceRegion(mCube->getTexture(), index++, 0, 0, 0, frame->getTexture(), 0, 0);
 				}
-				if (mIBL)
+				if (p.second->getType() == Scene::Probe::PT_IBL)
 				{
 					mIrradiance.push_back(mIrradianceProcessor->process(mCube));
 					mPrefiltered.push_back(mPrefilteredProcessor->process(mCube));
+				}
+				else if (p.second->getType() == Scene::Probe::PT_DIFFUSE)
+				{
+					mIrradiance.push_back({});
+					mPrefiltered.push_back({});
+
+
+					auto constexpr degree = 3;
+					auto constexpr num_coefs = (degree + 1) * (degree + 1);
+					std::vector<Vector3> coefs(num_coefs);
+
+					//float r[num_coefs] = { 0 };
+					//float g[num_coefs] = { 0 };
+					//float b[num_coefs] = { 0 };
+					//D3DX11SHProjectCubeMap(getRenderer()->getContext(), degree + 1 , mCube->getTexture(), r, g, b);
+
+					//for (int i = 0; i < num_coefs; ++i)
+					//{
+					//	coefs[i] = { r[i], g[i],b[i] };
+					//}
+					//D3DX11SaveTextureToFile(getRenderer()->getContext(), mCube->getTexture(), D3DX11_IFF_DDS, L"test.dds");
+					coefs = SphericalHarmonics::convert<degree>(mCube, getRenderer());
+
+					if (mCoefficients.size() <= nums)
+					{
+						mCoefficients.push_back(getRenderer()->createRWBuffer(sizeof(Vector3) * num_coefs, sizeof(Vector3), DXGI_FORMAT_R32G32B32_FLOAT,D3D11_BIND_SHADER_RESOURCE,D3D11_USAGE_DYNAMIC,D3D11_CPU_ACCESS_WRITE));
+					}
+					mCoefficients[nums]->blit(coefs.data(), sizeof(Vector3) * num_coefs);
 				}
 				nums++;
 			}
@@ -238,42 +277,39 @@ void EnvironmentMapping::render(Renderer::Texture2D::Ptr rt)
 	else
 		quad->setRenderTarget(rt);
 
-	if (!mSkyOnly)
+	auto probes = getScene()->getProbes();
+
+	int index = 0;
+	Scene::Probe::Ptr probe;
+	float mindist = FLT_MAX;
+	for (auto& p : probes)
 	{
-		auto probes = getScene()->getProbes();
-
-		int index = 0;
-		Scene::Probe::Ptr probe;
-		float mindist = FLT_MAX;
-		for (auto& p : probes)
+		auto pos = p.second->getNode()->getPosition();
+		float d = (constants.campos - pos).LengthSquared();
+		if (d < mindist 
+			//&& p.second->intersect(constants.campos)
+			)
 		{
-			auto pos = p.second->getNode()->getPosition();
-			float d = (constants.campos - pos).LengthSquared();
-			if (d < mindist 
-				//&& p.second->intersect(constants.campos)
-				)
-			{
-				mindist = d;
-				probe = p.second;
-				selected = index;
-			}
-
-			index++;
+			mindist = d;
+			probe = p.second;
+			selected = index;
 		}
 
-		if (!probe)
-			return;
-
-		auto node = probe->getNode();
-		auto pos = node->getRealPosition();
-		constants.probepos = { pos.x, pos.y, pos.z };
-		auto box = probe->getProjectionBox();
-		constants.boxmin = { pos + box.second - box.first * 0.5f };
-		constants.boxmax = { pos + box.second + box.first * 0.5f };
-		auto inf = probe->getInfluence();
-		constants.infmin = { pos + inf.second - inf.first * 0.5f };
-		constants.infmax = { pos + inf.second + inf.first * 0.5f };
+		index++;
 	}
+
+	if (!probe )
+		return;
+
+	auto node = probe->getNode();
+	auto pos = node->getRealPosition();
+	constants.probepos = { pos.x, pos.y, pos.z };
+	auto box = probe->getProxyBox();
+	constants.boxmin = { pos + box.second - box.first * 0.5f };
+	constants.boxmax = { pos + box.second + box.first * 0.5f };
+	auto inf = probe->getInfluence();
+	constants.infmin = { pos + inf.second - inf.first * 0.5f };
+	constants.infmax = { pos + inf.second + inf.first * 0.5f };
 
 	mConstants.lock()->blit(constants);
 
@@ -281,7 +317,7 @@ void EnvironmentMapping::render(Renderer::Texture2D::Ptr rt)
 	quad->setBlendColorAdd();
 	quad->setDefaultSampler();
 	quad->setViewport(cam->getViewport());
-	quad->setPixelShader(mSkyOnly ? mPS[0] : mPS[getValue<int>("boxProjection")]);
+	quad->setPixelShader( mPS[probe->getType()][probe->isUsingProxy()]);
 	quad->setConstant(mConstants);
 
 
@@ -295,11 +331,15 @@ void EnvironmentMapping::render(Renderer::Texture2D::Ptr rt)
 		//mLUT,
 	};
 
-	if (mIBL)
+	if (probe->getType() == Scene::Probe::PT_IBL)
 	{
 		srvs.push_back(mLUT);
 		srvs.push_back(mIrradiance[selected]->get());
 		srvs.push_back(mPrefiltered[selected]->get());
+	}
+	else if (probe->getType() == Scene::Probe::PT_DIFFUSE)
+	{
+		srvs.push_back(mCoefficients[selected]);
 	}
 	else
 		srvs.push_back(mCube);

@@ -12,6 +12,9 @@ Texture2D depthTex:register(t3);
 Texture2D lutTexture: register(t4);
 TextureCube irradianceTexture: register(t5);
 TextureCube prefilteredTexture: register(t6);
+#elif SH
+#include "spherical_harmonics.hlsl"
+Buffer<float3> coefs: register(t4);
 #else
 TextureCube envTex: register(t4);
 #endif
@@ -105,10 +108,17 @@ float4 main(PS_INPUT Input) : SV_TARGET
 			float3 prefiltered = prefilteredTexture.SampleLevel(sampLinear, coord, roughness * (PREFILTERED_MIP_LEVEL - 1)).rgb;
 			float3 irradiance = irradianceTexture.SampleLevel(sampLinear, N, 0).rgb;
 			calcolor = indirectBRDF(irradiance, prefiltered, lut, roughness, metallic, F0_DEFAULT, albedo, N, V);
-			result += calcolor * intensity /** float3((i % 2), 0, (1.0f - i % 2)) */;
+			result = calcolor * intensity /** float3((i % 2), 0, (1.0f - i % 2)) */;
+#elif SH
+			float basis[NUM_COEFS];
+			HarmonicBasis(N,basis);
+			for (int i = 0; i < NUM_COEFS; ++i)
+			{
+				result += coefs[i] * basis[i];
+			}
 #else
 			calcolor = envTex.SampleLevel(sampLinear, coord, 0).rgb;
-			result += calcolor * intensity * (1 - roughness) * metallic  ;
+			result = calcolor * intensity * (1 - roughness) * metallic  ;
 #endif
 		}
 	}

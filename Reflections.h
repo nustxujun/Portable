@@ -197,7 +197,7 @@ public:
 			probe->setDebugObject(sphere);
 			Vector3 offset = { dx * 0.5f + i * dx - half.x, 0,0 };
 
-			probe->setProjectionBox(Vector3(vec.x, vec.y, vec.z), offset);
+			probe->setProxyBox(Vector3(vec.x, vec.y, vec.z), offset);
 			//probe->setInfluence(Vector3(dx , vec.y + 1, vec.z));
 			probe->setInfluence(vec + Vector3(0,1,0), offset);
 			probe->getNode()->setPosition(-offset + Vector3(pos.x, pos.y, pos.z));

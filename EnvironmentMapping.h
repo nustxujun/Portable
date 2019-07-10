@@ -32,12 +32,13 @@ public:
 	void init(const std::string& cubemap);
 	void render(Renderer::Texture2D::Ptr rt)  override final;
 private:
-	void init(bool ibl);
+	void init();
 private:
 	Type mType = T_ONCE;
 	Renderer::Texture2D::Ptr mCube;
 	std::vector<Renderer::TemporaryRT::Ptr> mIrradiance;
 	std::vector<Renderer::TemporaryRT::Ptr> mPrefiltered;
+	std::vector<Renderer::Buffer::Ptr> mCoefficients;
 	Renderer::Texture2D::Ptr mLUT;
 	IrradianceCubemap::Ptr mIrradianceProcessor;
 	PrefilterCubemap::Ptr mPrefilteredProcessor;
@@ -46,9 +47,7 @@ private:
 
 	std::shared_ptr<Pipeline> mCubePipeline;
 	std::function<void(bool)> mUpdate;
-	Renderer::PixelShader::Weak mPS[2];
+	Renderer::PixelShader::Weak mPS[3][2];
 	Renderer::Buffer::Ptr mConstants;
 	Renderer::Texture2D::Ptr mFrame;
-	bool mIBL = true;
-	bool mSkyOnly = false;
 };

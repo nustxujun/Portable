@@ -206,6 +206,7 @@
     <ClInclude Include="Setting.h" />
     <ClInclude Include="ShadowMap.h" />
     <ClInclude Include="SkyBox.h" />
+    <ClInclude Include="SphericalHarmonics.h" />
     <ClInclude Include="SSR.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="TAA.h" />

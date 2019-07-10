@@ -205,14 +205,21 @@ public:
 	public:
 		using Box = std::pair<Vector3, Vector3>;
 		using Ptr = std::shared_ptr<Probe>;
+
+		enum Type
+		{
+			PT_SPECULAR,
+			PT_DIFFUSE,
+			PT_IBL,
+		};
 	public:
 		virtual void visitRenderable(std::function<void(const Renderable&)>);
 		virtual std::pair<Vector3, Vector3> getWorldAABB()const ;
 
 		Probe();
 
-		void setProjectionBox(const Vector3& size, const Vector3& offset = Vector3::Zero) { mBox = Box(size, offset); }
-		const Box& getProjectionBox() const { return mBox; }
+		void setProxyBox(const Vector3& size, const Vector3& offset = Vector3::Zero) { mBox = Box(size, offset); }
+		const Box& getProxyBox() const { return mBox; }
 		void setInfluence(const Vector3& size, const Vector3& offset = Vector3::Zero) { mInfluence = { size, offset }; }
 		const Box& getInfluence()const { return mInfluence; }
 		void setColor(const Vector3& c) { mColor = c; }
@@ -220,11 +227,17 @@ public:
 		void setDebugObject(Mesh::Ptr m);
 
 		bool intersect(const Vector3& p);
+		void setType(Type t) { mType = t; }
+		Type getType()const { return mType; }
+		void setUsingProxy(bool v) { mUsingProxy = v; }
+		bool isUsingProxy()const { return mUsingProxy; }
 	private:
 		Box mBox = { {0,0,0}, {0,0,0} };
 		Box mInfluence = { {0,0,0}, {0,0,0} };
 		Vector3 mColor = { 1,1,1 };
 		Mesh::Ptr mDebugObject;
+		Type mType = PT_SPECULAR;
+		bool mUsingProxy = false;
 	};
 public:
 	Scene();

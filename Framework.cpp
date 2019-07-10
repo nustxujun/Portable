@@ -127,15 +127,15 @@ void Framework::initPipeline()
 	mPipeline->pushStage<GBuffer>();
 	mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
 	mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
-	mPipeline->pushStage<EnvironmentMapping>(EnvironmentMapping::T_ONCE, std::string("media/Ditch-River_2k.hdr"));
-	mPipeline->pushStage<SSR>();
+	mPipeline->pushStage<EnvironmentMapping>(EnvironmentMapping::T_ONCE, std::string("media/Alexs_Apt_2k.hdr"));
+	//mPipeline->pushStage<SSR>();
 	mPipeline->pushStage<AO>(3.0f);
-	mPipeline->pushStage<SkyBox>("media/Ditch-River_2k.hdr", false);
+	mPipeline->pushStage<SkyBox>("media/Alexs_Apt_2k.hdr", false);
 	mPipeline->pushStage<MotionVector>();
 	//mPipeline->pushStage<MotionBlur>();
 	//mPipeline->pushStage<HDR>();
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
-	mPipeline->pushStage<TAA>();
+	//mPipeline->pushStage<TAA>();
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
 	mPipeline->pushStage("draw to backbuffer", [bb, quad](Renderer::Texture2D::Ptr rt)
 	{
@@ -147,7 +147,7 @@ void Framework::initPipeline()
 void Framework::initScene()
 {
 
-	int numdirs = 1;
+	int numdirs = 0;
 
 	set("time", { {"value", 3.14f}, {"min", "1.57"}, {"max", "4.71"}, {"interval", "0.001"}, {"type","set"} });
 	set("numdirs", { {"value", numdirs}, {"min", 0}, {"max", numdirs}, {"interval", 1}, {"type","set"} });
@@ -176,49 +176,49 @@ void Framework::initScene()
 	//			mat->setTexture(i, mRenderer->createTexture(textures[i]));
 	//	model->setMaterial(mat);
 	//}
-	//{
-	//	std::vector<std::string> textures = {
-	//			"media/streaked/streaked-metal1-albedo.png",
-	//			"",
-	//			"media/streaked/streaked-metal1-rough.png",
-	//			"media/streaked/streaked-metal1-metalness.png",
-	//			"media/streaked/streaked-metal1-ao.png",
-	//	};
-
-	//	Parameters params;
-	//	params["geom"] = "sphere";
-	//	params["radius"] = "1";
-	//	auto model = mScene->createModel("sphere", params, [this](const Parameters& p)
-	//	{
-	//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-	//	});
-	//	model->getNode()->setPosition({ 0, 1, 0 });
-	//	model->setCastShadow(true);
-	//	model->attach(root);
-	//	Material::Ptr mat = Material::create();
-
-	//	for (int i = 0; i < textures.size(); ++i)
-	//		if (!textures[i].empty())
-	//			mat->setTexture(i, mRenderer->createTexture(textures[i]));
-	//	model->setMaterial(mat);
-	//}
-
-
 	{
+		std::vector<std::string> textures = {
+				"media/streaked/streaked-metal1-albedo.png",
+				"",
+				"media/streaked/streaked-metal1-rough.png",
+				"media/streaked/streaked-metal1-metalness.png",
+				"media/streaked/streaked-metal1-ao.png",
+		};
+
 		Parameters params;
-		//params["file"] = "tiny.x";
-		params["file"] = "media/sponza/sponza.obj";
-		auto model = mScene->createModel("test", params, [this](const Parameters& p) {
-			return Mesh::Ptr(new Mesh(p, mRenderer));
+		params["geom"] = "sphere";
+		params["radius"] = "1";
+		auto model = mScene->createModel("sphere", params, [this](const Parameters& p)
+		{
+			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
 		});
-
+		model->getNode()->setPosition({ 0, 1, 0 });
 		model->setCastShadow(true);
-		model->attach(mScene->getRoot());
-		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-		//Matrix mat = Matrix::CreateFromYawPitchRoll(0, -3.14 / 2, 0);
-		//model->getNode()->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
+		model->attach(root);
+		Material::Ptr mat = Material::create();
 
+		for (int i = 0; i < textures.size(); ++i)
+			if (!textures[i].empty())
+				mat->setTexture(i, mRenderer->createTexture(textures[i]));
+		model->setMaterial(mat);
 	}
+
+
+	//{
+	//	Parameters params;
+	//	//params["file"] = "tiny.x";
+	//	params["file"] = "media/sponza/sponza.obj";
+	//	auto model = mScene->createModel("test", params, [this](const Parameters& p) {
+	//		return Mesh::Ptr(new Mesh(p, mRenderer));
+	//	});
+
+	//	model->setCastShadow(true);
+	//	model->attach(mScene->getRoot());
+	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+	//	//Matrix mat = Matrix::CreateFromYawPitchRoll(0, -3.14 / 2, 0);
+	//	//model->getNode()->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
+
+	//}
 	auto aabb = root->getWorldAABB();
 
 	Vector3 vec = aabb.second - aabb.first;
@@ -239,9 +239,10 @@ void Framework::initScene()
 
 
 	auto probe = mScene->createProbe("main");
-	probe->setProjectionBox(vec);
+	probe->setProxyBox(vec);
 	probe->getNode()->setPosition((aabb.second + aabb.first) * 0.5f);
 	probe->setInfluence(vec);
+	probe->setType(Scene::Probe::PT_DIFFUSE);
 
 }
 

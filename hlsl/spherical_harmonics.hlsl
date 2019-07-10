@@ -19,19 +19,25 @@ float HarmonicBasis0() {
 
 
 
-#ifndef DEGREE
 #define DEGREE 3
-#endif
-
 #define NUM_COEFS (DEGREE + 1) * (DEGREE + 1)
 
 #define PI 3.14159265358f
 
 void HarmonicBasis(float3 vec, out float basis[NUM_COEFS]) {
+	float x = vec.x;
+	float y = vec.y;
+	float z = vec.z;
+
+	float x2 = x * x;
+	float y2 = y * y;
+	float z2 = z * z;
+
 #if (DEGREE >= 0)
 	basis[0] = 1.f / 2.f * sqrt(1.f / PI);
 #endif
 
+	
 #if (DEGREE >= 1)
 	basis[1] = sqrt(3.f / (4.f*PI))*y;
 	basis[2] = sqrt(3.f / (4.f*PI))*z;
@@ -48,7 +54,7 @@ void HarmonicBasis(float3 vec, out float basis[NUM_COEFS]) {
 
 #if (DEGREE >= 3)
 	basis[9] = 1.f / 4.f*sqrt(35.f / (2.f*PI))*(3 * x2 - y2)*y ;
-	basis[10] = 1.f / 2.f*sqrt(105.f / PI)*x*y*z / r3;
+	basis[10] = 1.f / 2.f*sqrt(105.f / PI)*x*y*z;
 	basis[11] = 1.f / 4.f*sqrt(21.f / (2.f*PI))*y*(4 * z2 - x2 - y2) ;
 	basis[12] = 1.f / 4.f*sqrt(7.f / PI)*z*(2 * z2 - 3 * x2 - 3 * y2) ;
 	basis[13] = 1.f / 4.f*sqrt(21.f / (2.f*PI))*x*(4 * z2 - x2 - y2) ;
@@ -63,6 +69,6 @@ void HarmonicEvaluate(float3 vec, float3 color, out float3 coefs[NUM_COEFS])
 	HarmonicBasis(vec, basis);
 	for (int i = 0; i < NUM_COEFS; ++i)
 	{
-		coefs[i] = coefs[i] +  color * basis[i];
+		coefs[i] +=  color * basis[i];
 	}
 }

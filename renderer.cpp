@@ -745,9 +745,6 @@ Renderer::Texture2D::Ptr Renderer::createRenderTarget(int width, int height, DXG
 
 Renderer::TemporaryRT::Ptr Renderer::createTemporaryRT(const D3D11_TEXTURE2D_DESC & desc)
 {
-	if ((desc.BindFlags & D3D11_BIND_RENDER_TARGET) == 0)
-		error("need render target flag");
-
 	auto hash = Common::hash(desc);
 	auto ret = mTemporaryRTs.find(hash);
 	if (ret != mTemporaryRTs.end())
