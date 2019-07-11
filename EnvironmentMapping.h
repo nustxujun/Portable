@@ -8,15 +8,27 @@ class EnvironmentMapping : public Pipeline::Stage
 	__declspec(align(16))
 		struct Constants
 	{
+		Matrix proj;
+		Matrix view;
+		Matrix invertView;
+		Matrix invertProj;
 		Matrix invertViewProj;
-		Vector3A campos;
-		Vector3A probepos;
+		
+		Vector3 campos;
+		float nearZ;
+
+		Vector3 probepos;
+		float raylength;
+
+		Vector3 intensity;
+		float stepstride;
+
 		Vector3A boxmin;
 		Vector3A boxmax;
 		Vector3A infmin;
 		Vector3A infmax;
-		Vector3A intensity;
-
+		
+		Vector2 screenSize;
 	};
 public:
 	enum Type
@@ -39,6 +51,7 @@ private:
 	std::vector<Renderer::TemporaryRT::Ptr> mIrradiance;
 	std::vector<Renderer::TemporaryRT::Ptr> mPrefiltered;
 	std::vector<Renderer::Buffer::Ptr> mCoefficients;
+	std::vector<Renderer::TemporaryRT::Ptr> mDepthCorrected;
 	Renderer::Texture2D::Ptr mLUT;
 	IrradianceCubemap::Ptr mIrradianceProcessor;
 	PrefilterCubemap::Ptr mPrefilteredProcessor;
@@ -47,7 +60,10 @@ private:
 
 	std::shared_ptr<Pipeline> mCubePipeline;
 	std::function<void(bool)> mUpdate;
-	Renderer::PixelShader::Weak mPS[3][2];
+	Renderer::PixelShader::Weak mPS[3][3];
 	Renderer::Buffer::Ptr mConstants;
 	Renderer::Texture2D::Ptr mFrame;
+
+	Renderer::Sampler::Ptr mLinear;
+	Renderer::Sampler::Ptr mPoint;
 };

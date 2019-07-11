@@ -1,27 +1,5 @@
 #include "GBuffer.h"
 
-GBuffer::GBuffer(
-	Renderer::Ptr r,
-	Scene::Ptr s,
-	Quad::Ptr q,
-	Setting::Ptr st,
-	Pipeline* p):
-	Pipeline::Stage(r,s,q,st,p)
-
-{
-	mName = "gbuffer";
-
-	this->set("heightscale", { {"type","set"}, {"value",0.05f},{"min","0"},{"max",2},{"interval", "0.01"} }); 
-	this->set("minSampleCount", { {"type","set"}, {"value",8},{"min","1"},{"max",1000},{"interval", "1"} });
-	this->set("maxSampleCount", { {"type","set"}, {"value",100},{"min","1"},{"max",1000},{"interval", "1"} });
-
-
-
-	mAlbedo = getRenderTarget("albedo");
-	mNormal = getRenderTarget("normal");
-	mDepth = getDepthStencil("depth");
-}
-
 GBuffer::~GBuffer()
 {
 }
@@ -114,9 +92,26 @@ void GBuffer::render(Renderer::Texture2D::Ptr rt)
 			getRenderer()->getContext()->DrawIndexed(r.numIndices, 0, 0);
 		});
 
-	});
+	}, mRenderCond);
 
 	renderer->removeRenderTargets();
 
 
+}
+
+void GBuffer::init(std::function<bool(Scene::Entity::Ptr)> cond)
+{
+	mName = "gbuffer";
+
+	set("heightscale", { {"type","set"}, {"value",0.05f},{"min","0"},{"max",2},{"interval", "0.01"} });
+	set("minSampleCount", { {"type","set"}, {"value",8},{"min","1"},{"max",1000},{"interval", "1"} });
+	set("maxSampleCount", { {"type","set"}, {"value",100},{"min","1"},{"max",1000},{"interval", "1"} });
+
+
+
+	mAlbedo = getRenderTarget("albedo");
+	mNormal = getRenderTarget("normal");
+	mDepth = getDepthStencil("depth");
+
+	mRenderCond = cond;
 }

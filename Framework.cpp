@@ -196,12 +196,12 @@ void Framework::initScene()
 		model->getNode()->setPosition({ 0, 1, 0 });
 		model->setCastShadow(false);
 		model->attach(root);
-		//Material::Ptr mat = Material::create();
+		Material::Ptr mat = Material::create();
 
-		//for (int i = 0; i < textures.size(); ++i)
-		//	if (!textures[i].empty())
-		//		mat->setTexture(i, mRenderer->createTexture(textures[i]));
-		//model->setMaterial(mat);
+		for (int i = 0; i < textures.size(); ++i)
+			if (!textures[i].empty())
+				mat->setTexture(i, mRenderer->createTexture(textures[i]));
+		model->setMaterial(mat);
 	}
 
 
@@ -245,7 +245,7 @@ void Framework::initScene()
 	probe->attach(root);
 	probe->setInfluence({500.0f,500.0f,500.0f});
 	probe->getNode()->setPosition({ -430,100,-100 });
-	probe->setType(Scene::Probe::PT_DIFFUSE);
+	probe->setType(Scene::Probe::PT_IBL);
 	//probe->setUsingProxy(true);
 	{
 		Parameters params;
@@ -264,7 +264,7 @@ void Framework::framemove()
 	auto model = mScene->getModel("sphere");
 	if (model)
 	{
-		float time = GetTickCount() * 0.005;
+		float time = GetTickCount() * 0.0001;
 		float sin = std::sin(time) * 100;
 		float cos = std::cos(time) * 100;
 		model->getNode()->setPosition(cos - 430, 100, sin - 100);

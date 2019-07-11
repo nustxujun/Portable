@@ -1,5 +1,7 @@
 #include "pbr.hlsl"
 
+#define TEST_BACK 1
+#include "raymarch.hlsl"
 
 Texture2D colorTex: register(t0);
 Texture2D normalTex: register(t1);
@@ -74,95 +76,95 @@ float2 toScreen(float4 pos)
 const static float MAX_STEPS = 1024 ;
 
 
-bool raytrace(float3 origin, float3 dir, float jitter, out float3 hituv, out float numsteps, out float3 hitpoint)
-{
-	float raylen = (origin.z + dir.z * raylength) < nearZ ? ((nearZ - origin.z) / dir.z) : raylength;
-	float3 endpoint = dir * raylen + origin;
-	float4 H0 = mul(float4(origin, 1), proj);
-	float4 H1 = mul(float4(endpoint, 1), proj);
-
-	float k0 = 1 / H0.w;
-	float k1 = 1 / H1.w;
-
-	float2 P0 = toScreen(H0 * k0);
-	float2 P1 = toScreen(H1 * k1);
-	float3 Q0 = origin * k0;
-	float3 Q1 = endpoint * k1;
-
-
-	float yMax = screenSize.y - 0.5;
-	float yMin = 0.5;
-	float xMax = screenSize.x - 0.5;
-	float xMin = 0.5;
-	float alpha = 0;
-
-	if (P1.y > yMax || P1.y < yMin)
-	{
-		float yClip = (P1.y > yMax) ? yMax : yMin;
-		float yAlpha = (P1.y - yClip) / (P1.y - P0.y);
-		alpha = yAlpha;
-	}
-	if (P1.x > xMax || P1.x < xMin)
-	{
-		float xClip = (P1.x > xMax) ? xMax : xMin;
-		float xAlpha = (P1.x - xClip) / (P1.x - P0.x);
-		alpha = max(alpha, xAlpha);
-	}
-
-	P1 = lerp(P1, P0, alpha);
-	k1 = lerp(k1, k0, alpha);
-	Q1 = lerp(Q1, Q0, alpha);
-
-	P1 = dot(P1 - P0, P1 - P0) < 0.0001 ? P0 + 0.01 : P1;
-
-
-	float2 delta = P1 - P0;
-	float2 stepdir = normalize(delta);
-	float steplen = min(abs(1 / stepdir.x), abs(1 / stepdir.y));
-	delta /= steplen;
-	float maxsteps = max(abs(delta.x), abs(delta.y));
-	float invsteps = 1 / maxsteps * (1 + jitter);
-	float2 dP = (P1 - P0)  * invsteps;
-	float3 dQ = (Q1 - Q0) * invsteps;
-	float dk = (k1 - k0) * invsteps;
-	numsteps = 0;
-	maxsteps = min(maxsteps, MAX_STEPS);
-	hituv = 0;
-	hitpoint = 0;
-	float stride = stepstride;
-	float2 invsize = 1.0f / screenSize;
-	while (numsteps < maxsteps)
-	{
-		float curstep = numsteps + stride;
-		hituv.xy = P0 + dP * curstep;
-		hitpoint = (Q0 + dQ * curstep) / (k0 + dk * curstep);
-		float depth = hitpoint.z;
-		float fdepth = depthTex.SampleLevel(pointClamp, hituv.xy * invsize,0).r;
-		fdepth = toView(fdepth);
-		float bdepth = depthbackTex.SampleLevel(pointClamp, hituv.xy* invsize,0).r;
-		bdepth = toView(bdepth);
-
-		if (depth > fdepth )
-		{
-			if (depth < bdepth)
-			{
-				numsteps += stride;
-				return true;
-			}
-			if (stride <= 1)
-				numsteps = curstep;
-			else
-				stride = max(1, stride / 2);
-		}
-		else
-		{
-			numsteps = curstep;
-			stride = min(stepstride, stride * 2);
-		}
-	}
-
-	return false;
-}
+//bool raytrace(float3 origin, float3 dir, float jitter, out float3 hituv, out float numsteps, out float3 hitpoint)
+//{
+//	float raylen = (origin.z + dir.z * raylength) < nearZ ? ((nearZ - origin.z) / dir.z) : raylength;
+//	float3 endpoint = dir * raylen + origin;
+//	float4 H0 = mul(float4(origin, 1), proj);
+//	float4 H1 = mul(float4(endpoint, 1), proj);
+//
+//	float k0 = 1 / H0.w;
+//	float k1 = 1 / H1.w;
+//
+//	float2 P0 = toScreen(H0 * k0);
+//	float2 P1 = toScreen(H1 * k1);
+//	float3 Q0 = origin * k0;
+//	float3 Q1 = endpoint * k1;
+//
+//
+//	float yMax = screenSize.y - 0.5;
+//	float yMin = 0.5;
+//	float xMax = screenSize.x - 0.5;
+//	float xMin = 0.5;
+//	float alpha = 0;
+//
+//	if (P1.y > yMax || P1.y < yMin)
+//	{
+//		float yClip = (P1.y > yMax) ? yMax : yMin;
+//		float yAlpha = (P1.y - yClip) / (P1.y - P0.y);
+//		alpha = yAlpha;
+//	}
+//	if (P1.x > xMax || P1.x < xMin)
+//	{
+//		float xClip = (P1.x > xMax) ? xMax : xMin;
+//		float xAlpha = (P1.x - xClip) / (P1.x - P0.x);
+//		alpha = max(alpha, xAlpha);
+//	}
+//
+//	P1 = lerp(P1, P0, alpha);
+//	k1 = lerp(k1, k0, alpha);
+//	Q1 = lerp(Q1, Q0, alpha);
+//
+//	P1 = dot(P1 - P0, P1 - P0) < 0.0001 ? P0 + 0.01 : P1;
+//
+//
+//	float2 delta = P1 - P0;
+//	float2 stepdir = normalize(delta);
+//	float steplen = min(abs(1 / stepdir.x), abs(1 / stepdir.y));
+//	delta /= steplen;
+//	float maxsteps = max(abs(delta.x), abs(delta.y));
+//	float invsteps = 1 / maxsteps * (1 + jitter);
+//	float2 dP = (P1 - P0)  * invsteps;
+//	float3 dQ = (Q1 - Q0) * invsteps;
+//	float dk = (k1 - k0) * invsteps;
+//	numsteps = 0;
+//	maxsteps = min(maxsteps, MAX_STEPS);
+//	hituv = 0;
+//	hitpoint = 0;
+//	float stride = stepstride;
+//	float2 invsize = 1.0f / screenSize;
+//	while (numsteps < maxsteps)
+//	{
+//		float curstep = numsteps + stride;
+//		hituv.xy = P0 + dP * curstep;
+//		hitpoint = (Q0 + dQ * curstep) / (k0 + dk * curstep);
+//		float depth = hitpoint.z;
+//		float fdepth = depthTex.SampleLevel(pointClamp, hituv.xy * invsize,0).r;
+//		fdepth = toView(fdepth);
+//		float bdepth = depthbackTex.SampleLevel(pointClamp, hituv.xy* invsize,0).r;
+//		bdepth = toView(bdepth);
+//
+//		if (depth > fdepth )
+//		{
+//			if (depth < bdepth)
+//			{
+//				numsteps += stride;
+//				return true;
+//			}
+//			if (stride <= 1)
+//				numsteps = curstep;
+//			else
+//				stride = max(1, stride / 2);
+//		}
+//		else
+//		{
+//			numsteps = curstep;
+//			stride = min(stepstride, stride * 2);
+//		}
+//	}
+//
+//	return false;
+//}
 
 
 void raycast(PS_INPUT Input, out float4 hitResult: SV_Target0/*, out float4 mask: SV_Target1*/) 
@@ -195,7 +197,27 @@ void raycast(PS_INPUT Input, out float4 hitResult: SV_Target0/*, out float4 mask
 	float3 hitpoint = 0;
 	float3 hituv = 0;
 	float numsteps = 0;
-	bool hit = raytrace(ray_origin_vs/* + N * ray_bump*/, ray_dir_vs, (Xi.x + Xi.y) * 0.5f,hituv, numsteps, hitpoint);
+
+	RayParams rp;
+	rp.proj = proj;
+	rp.invertProj = invertProj;
+	rp.origin = ray_origin_vs;
+	rp.dir = ray_dir_vs;
+	rp.jitter = (Xi.x + Xi.y) * 0.5f;
+	rp.MAX_STEPS = MAX_STEPS;
+	rp.depthTex = depthTex;
+#if TEST_BACK
+	rp.depthbackTex = depthbackTex;
+#else
+	rp.thickness = 1;
+#endif
+	rp.samp = pointClamp;
+	rp.raylength = raylength;
+	rp.nearZ = nearZ;
+	rp.screenSize = screenSize;
+	rp.stepstride = stepstride;
+
+	bool hit = raymarch(rp,hituv, numsteps, hitpoint);
 	float hitmask = 0;
 	if (hit)
 	{ 
@@ -263,7 +285,8 @@ float4 resolve(PS_INPUT Input) :SV_TARGET
 	float metallic = material.g;
 	float3 env = envTex.Load(int3(Input.Pos.xy, 0)).rgb;
 	float k = hit.z ;
-	return float4( max(sampleColor * k, env), 0);
+	//return float4( max(sampleColor * k, env), 0);
+	return float4(sampleColor * k  , 0);
 }
 
 //float4 conetrace(PS_INPUT Input) :SV_TARGET

@@ -212,6 +212,13 @@ public:
 			PT_DIFFUSE,
 			PT_IBL,
 		};
+
+		enum Proxy
+		{
+			PP_NONE,
+			PP_BOX,
+			PP_DEPTH,
+		};
 	public:
 		virtual void visitRenderable(std::function<void(const Renderable&)>);
 		virtual std::pair<Vector3, Vector3> getWorldAABB()const ;
@@ -229,15 +236,15 @@ public:
 		bool intersect(const Vector3& p);
 		void setType(Type t) { mType = t; }
 		Type getType()const { return mType; }
-		void setUsingProxy(bool v) { mUsingProxy = v; }
-		bool isUsingProxy()const { return mUsingProxy; }
+		void setProxy(Proxy p) { mProxyType = p; }
+		Proxy getProxy()const { return mProxyType; }
 	private:
 		Box mBox = { {0,0,0}, {0,0,0} };
 		Box mInfluence = { {0,0,0}, {0,0,0} };
 		Vector3 mColor = { 1,1,1 };
 		Mesh::Ptr mDebugObject;
 		Type mType = PT_SPECULAR;
-		bool mUsingProxy = false;
+		Proxy mProxyType = PP_NONE;
 	};
 public:
 	Scene();

@@ -128,9 +128,9 @@ public:
 			auto index = D3D10CalcSubresource(0, face, desc.MipLevels);
 			HRESULT hr = context->Map(tex->getTexture(), index, D3D11_MAP_READ, 0, &subresource);
 
-			for (int y = 0; y < desc.Height; ++y)
+			for (UINT y = 0; y < desc.Height; ++y)
 			{
-				for (int x = 0; x < desc.Width; ++x)
+				for (UINT x = 0; x < desc.Width; ++x)
 				{
 					const Vector4* color = (const Vector4*)((const char*)subresource.pData + subresource.RowPitch * y) + x ;
 					Vector3 pos = convUVToPos(face, (float)x / (float)(desc.Width - 1), (float)y / (float)(desc.Height - 1));

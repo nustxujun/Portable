@@ -5,6 +5,7 @@
 #include "SkyBox.h"
 #include "MathUtilities.h"
 #include "SphericalHarmonics.h"
+#include "DepthLinearing.h"
 
 static auto constexpr MAX_NUM_PROBES = 10;
 
@@ -36,8 +37,12 @@ void EnvironmentMapping::init()
 		mPS[i][0] = renderer->createPixelShader("hlsl/environmentmapping.hlsl", "main", macros.data());
 		macros.insert(macros.end() - 1, { "CORRECTED", "1" });
 		mPS[i][1] = renderer->createPixelShader("hlsl/environmentmapping.hlsl", "main", macros.data());
+		((macros.end() - 2))->Name = "DEPTH_CORRECTED";
+		mPS[i][2] = renderer->createPixelShader("hlsl/environmentmapping.hlsl", "main", macros.data());
 	}
 
+	mLinear = getRenderer()->createSampler("linear_clamp", D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
+	mPoint = getRenderer()->createSampler("point_clamp", D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
 
 
 
@@ -106,6 +111,9 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 	mCubePipeline->addShaderResource("depth", depth);
 	mCubePipeline->addDepthStencil("depth", depth);
 	mCubePipeline->addTexture2D("depth", depth);
+	auto depthlinear = renderer->createRenderTarget(w, h, DXGI_FORMAT_R32_FLOAT);
+	mCubePipeline->addShaderResource("depthlinear", depthlinear);
+	mCubePipeline->addRenderTarget("depthlinear", depthlinear);
 	auto material = renderer->createRenderTarget(w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	mCubePipeline->addShaderResource("material", material);
 	mCubePipeline->addRenderTarget("material", material);
@@ -141,7 +149,13 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 		renderer->clearDepth(depth, 1.0f);
 	});
 
-	mCubePipeline->pushStage<GBuffer>();
+	mCubePipeline->pushStage<GBuffer>([](Scene::Entity::Ptr e)->bool
+	{
+		return e->isStatic();
+	});
+
+	mCubePipeline->pushStage<DepthLinearing>();
+
 	mCubePipeline->pushStage<PBR>();
 	if (!cubemap.empty())
 	{
@@ -171,7 +185,7 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 	cubedesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
 	mCube = renderer->createTexture(cubedesc);
 
-	mUpdate = [this,cam, renderer,frame](bool force) {
+	mUpdate = [this,cam, renderer,frame, depthlinear](bool force) {
 		auto scene = getScene();
 		auto campos = scene->createOrGetCamera("main")->getNode()->getRealPosition();
 		auto probes = scene->getProbes();
@@ -185,8 +199,14 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 		{
 			mIrradiance.clear();
 			mPrefiltered.clear();
+			mCoefficients.clear();
 			for (auto& p : probes)
 			{
+				auto desc = depthlinear->getDesc();
+				desc.ArraySize = 6;
+				desc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+				mDepthCorrected.push_back(renderer->createTemporaryRT(desc));
+
 				auto pos = p.second->getNode()->getRealPosition();
 
 
@@ -205,12 +225,17 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 					Quaternion rot = Quaternion::CreateFromRotationMatrix(d);
 					cam->getNode()->setOrientation(rot);
 					mCubePipeline->render();
-					renderer->getContext()->CopySubresourceRegion(mCube->getTexture(), index++, 0, 0, 0, frame->getTexture(), 0, 0);
+					renderer->getContext()->CopySubresourceRegion(mCube->getTexture(), index, 0, 0, 0, frame->getTexture(), 0, 0);
+					renderer->getContext()->CopySubresourceRegion(mDepthCorrected[nums]->get()->getTexture(), index, 0, 0, 0, depthlinear->getTexture(), 0, 0);
+					index++;
+
 				}
 				if (p.second->getType() == Scene::Probe::PT_IBL)
 				{
 					mIrradiance.push_back(mIrradianceProcessor->process(mCube));
 					mPrefiltered.push_back(mPrefilteredProcessor->process(mCube));
+					//D3DX11SaveTextureToFile(getRenderer()->getContext(), mCube->getTexture(), D3DX11_IFF_DDS, L"test.dds");
+
 				}
 				else if (p.second->getType() == Scene::Probe::PT_DIFFUSE)
 				{
@@ -218,7 +243,7 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 					mPrefiltered.push_back({});
 
 
-					auto constexpr degree = 3;
+					auto constexpr degree = 1;
 					auto constexpr num_coefs = (degree + 1) * (degree + 1);
 					std::vector<Vector3> coefs(num_coefs);
 
@@ -231,7 +256,6 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 					//{
 					//	coefs[i] = { r[i], g[i],b[i] };
 					//}
-					//D3DX11SaveTextureToFile(getRenderer()->getContext(), mCube->getTexture(), D3DX11_IFF_DDS, L"test.dds");
 					coefs = SphericalHarmonics::convert<degree>(mCube, getRenderer());
 
 					if (mCoefficients.size() <= nums)
@@ -263,10 +287,27 @@ void EnvironmentMapping::render(Renderer::Texture2D::Ptr rt)
 
 
 	auto cam = getCamera();
+	auto vp = cam->getViewport();
+	auto view = cam->getViewMatrix();
+	auto proj = cam->getProjectionMatrix();
+	
 	Constants constants;
-	constants.invertViewProj = (cam->getViewMatrix() * cam->getProjectionMatrix()).Invert().Transpose();
+	constants.proj = proj.Transpose();
+	constants.view = view.Transpose();
+	constants.invertView = view.Invert().Transpose();
+	constants.invertProj = proj.Invert().Transpose();
+	constants.invertViewProj = (view * proj).Invert().Transpose();
+
 	constants.campos = cam->getNode()->getRealPosition();
+	constants.nearZ = cam->getNear();
+
+	constants.raylength = 1000;
+	
 	constants.intensity = { 1,1,1 };
+	constants.stepstride = 4;
+	constants.screenSize = { vp.Width, vp.Height };
+
+
 	int selected = 0;
 	auto quad = getQuad();
 	if (has("ssr"))
@@ -315,9 +356,9 @@ void EnvironmentMapping::render(Renderer::Texture2D::Ptr rt)
 
 	//quad->setDefaultBlend(false);
 	quad->setBlendColorAdd();
-	quad->setDefaultSampler();
-	quad->setViewport(cam->getViewport());
-	quad->setPixelShader( mPS[probe->getType()][probe->isUsingProxy()]);
+	quad->setSamplers({ mLinear, mPoint });
+	quad->setViewport(vp);
+	quad->setPixelShader( mPS[probe->getType()][probe->getProxy()]);
 	quad->setConstant(mConstants);
 
 
@@ -328,7 +369,7 @@ void EnvironmentMapping::render(Renderer::Texture2D::Ptr rt)
 		getShaderResource("normal"),
 		getShaderResource("material"),
 		getShaderResource("depth"),
-		//mLUT,
+		mDepthCorrected[selected]->get(),
 	};
 
 	if (probe->getType() == Scene::Probe::PT_IBL)

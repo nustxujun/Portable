@@ -6,21 +6,17 @@
 class GBuffer:public Pipeline::Stage
 {
 public:
-	GBuffer(
-		Renderer::Ptr r, 
-		Scene::Ptr s, 
-		Quad::Ptr q,
-		Setting::Ptr set,
-		Pipeline* p);
+	using Pipeline::Stage::Stage;
 	~GBuffer();
 
 
 	void render(Renderer::Texture2D::Ptr rt)  override final;
+	void init(std::function<bool(Scene::Entity::Ptr)> cond = {});
 private:
 
 	Renderer::Effect::Ptr getEffect(Material::Ptr mat);
 private:
-
+	std::function<bool(Scene::Entity::Ptr)> mRenderCond;
 	Renderer::RenderTarget::Ptr mAlbedo;
 	Renderer::RenderTarget::Ptr mNormal;
 	Renderer::DepthStencil::Ptr mDepth;
