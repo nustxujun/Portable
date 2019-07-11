@@ -1,8 +1,5 @@
 #include "pbr.hlsl"
 
-#if DEPTH_CORRECTED
-#include "raymarch.hlsl"
-#endif
 
 Texture2D albedoTex: register(t0);
 Texture2D normalTex: register(t1);
@@ -27,9 +24,6 @@ TextureCube envTex: register(t5);
 cbuffer ConstantBuffer: register(b0)
 {
 	matrix proj;
-	matrix view;
-	matrix invertView;
-	matrix invertProj;
 	matrix invertViewProj;
 
 	float3 campos;
@@ -86,6 +80,91 @@ float3 intersectBox(float3 pos, float3 reflectionVector, float3 cubemin, float3 
 }
 
 
+float2 toScreen(float4 pos)
+{
+	return float2((pos.x *0.5 + 0.5) * screenSize.x, (0.5 - pos.y * 0.5) * screenSize.y);
+}
+
+struct RayParams
+{
+	float3 origin;
+	float3 dir;
+	float jitter;
+};
+
+static const float MAX_STEPS = 1024;
+
+bool raymarch(RayParams params,  out float3 hitpoint)
+{
+	float3 origin = params.origin;
+	float3 dir = params.dir;
+	float jitter = params.jitter;
+
+	float raylen = (origin.z + dir.z * raylength) < nearZ ? ((nearZ - origin.z) / dir.z) : raylength;
+	float3 endpoint = dir * raylen + origin;
+	float4 H0 = mul(float4(origin, 1), proj);
+	float4 H1 = mul(float4(endpoint, 1), proj);
+
+	float k0 = 1 / H0.w;
+	float k1 = 1 / H1.w;
+
+	float2 P0 = toScreen(H0 * k0);
+	float2 P1 = toScreen(H1 * k1);
+	float3 Q0 = origin * k0;
+	float3 Q1 = endpoint * k1;
+
+
+	P1 = dot(P1 - P0, P1 - P0) < 0.0001 ? P0 + 0.01 : P1;
+
+
+	float2 delta = P1 - P0;
+	float2 stepdir = normalize(delta);
+	float steplen = min(abs(1 / stepdir.x), abs(1 / stepdir.y));
+	delta /= steplen;
+	float maxsteps = max(abs(delta.x), abs(delta.y));
+	float invsteps = 1 / maxsteps * (1 + jitter);
+	float2 dP = (P1 - P0)  * invsteps;
+	float3 dQ = (Q1 - Q0) * invsteps;
+	float dk = (k1 - k0) * invsteps;
+	float numsteps = 0;
+	maxsteps = min(maxsteps, MAX_STEPS);
+	hitpoint = 0;
+	float stride = stepstride;
+	float2 invsize = 1.0f / screenSize;
+	float maxlen = 3.402823466e+38F;
+	while (numsteps < maxsteps)
+	{
+		float curstep = numsteps + stride;
+		hitpoint = (Q0 + dQ * curstep) / (k0 + dk * curstep);
+
+
+		float3 samplevec = normalize(hitpoint - probepos);
+		float distance = envdepthTex.SampleLevel(pointClamp, samplevec, 0).r;
+		float3 samplepos = samplevec * distance;
+		float curlen = length(samplepos - hitpoint);
+
+		if (maxlen > curlen)
+		{
+			if (stride <= 1)
+			{
+				numsteps += 1;
+				return true;
+			}
+			else
+				stride = max(1, stride / 2);
+		}
+		else
+		{
+			numsteps = curstep;
+			stride = stride * 2;
+		}
+	}
+
+	return false;
+}
+
+
+
 float4 main(PS_INPUT Input) : SV_TARGET
 {
 	float2 uv = Input.Tex;
@@ -120,33 +199,15 @@ float4 main(PS_INPUT Input) : SV_TARGET
 	coord = normalize(corrected - probepos); 
 #elif DEPTH_CORRECTED
 
-	float3 ray_origin_vs = mul(worldpos, view).xyz;
-	float3 ray_dir_vs = R;
-
-
 	RayParams rp;
-	rp.proj = proj;
-	rp.invertProj = invertProj;
-	rp.origin = ray_origin_vs;
-	rp.dir = ray_dir_vs;
+	rp.origin = worldpos;
+	rp.dir = R;
 	rp.jitter = 0;
-	rp.MAX_STEPS = 1000;
-	rp.depthTex = envdepthTex;
-	rp.thickness = 1;
-	rp.samp = pointClamp;
-	rp.raylength = raylength;
-	rp.nearZ = nearZ;
-	rp.screenSize = screenSize;
-	rp.stepstride = 4;
 
-	float3 hituv = 0;
-	float numsteps = 0;
-	float3 hitpoint = 0;
-	if (!raymarch(rp, hituv, numsteps, hitpoint))
+	if (!raymarch(rp,  coord))
 		return 0;
 
-	hitpoint = mul(float4(hitpoint, 1), invertView);
-	coord = normalize(hitpoint - campos);
+	coord = normalize(coord - probepos);
 #endif
 
 

@@ -7,8 +7,6 @@
 class ImageProcessing
 {
 public:
-
-
 	enum ResultType
 	{
 		RT_TEMP,
@@ -37,6 +35,46 @@ protected:
 protected:
 	Renderer::Ptr mRenderer;
 	Quad mQuad;
+};
+
+class CustomProcessing : public ImageProcessing
+{
+public:
+	using ImageProcessing::ImageProcessing;
+
+	template<class ... Args>
+	void init(const std::string& ps,  Args& ... args)
+	{
+		size_t size = sizeof...(args);
+
+		mConstants = mRenderer->createConstantBuffer(size);
+		mConstants->map();
+		mConstants->write(args ...);
+		mConstants->unmap();
+		
+		mPS = mRenderer->createPixelShader(ps);
+	}
+
+	Renderer::TemporaryRT::Ptr process(Renderer::Texture2D::Ptr ptr, float scaling = 1.0f)
+	{
+		auto desc = ptr->getDesc();
+		desc.Width *= scaling;
+		desc.Height *= scaling;
+		auto rt = createOrGet(desc);
+		mQuad.setViewport({ 0.0f, 0.0f, (float)desc.Width, (float)desc.Height, 0.0f, 0.1f });
+		mQuad.setDefaultBlend(false);
+		mQuad.setDefaultSampler();
+
+		mQuad.setTextures({ ptr });
+		mQuad.setRenderTarget(rt->get());
+		mQuad.setPixelShader(mPS);
+		mQuad.draw();
+
+		ptr->swap(rt->get());
+	}
+private:
+	Renderer::Buffer::Ptr mConstants;
+	Renderer::PixelShader::Weak mPS;
 };
 
 

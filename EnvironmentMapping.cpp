@@ -5,7 +5,6 @@
 #include "SkyBox.h"
 #include "MathUtilities.h"
 #include "SphericalHarmonics.h"
-#include "DepthLinearing.h"
 
 static auto constexpr MAX_NUM_PROBES = 10;
 
@@ -51,6 +50,33 @@ void EnvironmentMapping::init()
 	mConstants = renderer->createConstantBuffer(sizeof(Constants));
 
 	//mProbeInfos = renderer->createRWBuffer(sizeof(Vector3) * 6 * MAX_NUM_PROBES, sizeof(Vector3), DXGI_FORMAT_R32G32B32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+	mCalDistanceConst = renderer->createConstantBuffer(sizeof(Matrix));
+	mCalDistance = renderer->createPixelShader("hlsl/distance.hlsl");
+}
+
+Renderer::TemporaryRT::Ptr EnvironmentMapping::calDistance(Renderer::Texture2D::Ptr rt, const Matrix& inverViewProj)
+{
+	mCalDistanceConst->map();
+	mCalDistanceConst->write(inverViewProj);
+	mCalDistanceConst->unmap();
+
+	auto quad = getQuad();
+	auto desc = rt->getDesc();
+	desc.Format = DXGI_FORMAT_R32_FLOAT;
+	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+	auto tmp = getRenderer()->createTemporaryRT(desc);
+
+	quad->setViewport({ 0.0f, 0.0f, (float)desc.Width, (float)desc.Height, 0.0f, 0.1f });
+	quad->setDefaultBlend(false);
+	quad->setDefaultSampler();
+
+	quad->setTextures({ rt });
+	quad->setRenderTarget(tmp->get());
+	quad->setPixelShader(mCalDistance);
+	quad->setConstant(mCalDistanceConst);
+	quad->draw();
+
+	return tmp;
 }
 
 void EnvironmentMapping::init(const std::string& cubemap )
@@ -111,9 +137,6 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 	mCubePipeline->addShaderResource("depth", depth);
 	mCubePipeline->addDepthStencil("depth", depth);
 	mCubePipeline->addTexture2D("depth", depth);
-	auto depthlinear = renderer->createRenderTarget(w, h, DXGI_FORMAT_R32_FLOAT);
-	mCubePipeline->addShaderResource("depthlinear", depthlinear);
-	mCubePipeline->addRenderTarget("depthlinear", depthlinear);
 	auto material = renderer->createRenderTarget(w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	mCubePipeline->addShaderResource("material", material);
 	mCubePipeline->addRenderTarget("material", material);
@@ -154,8 +177,6 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 		return e->isStatic();
 	});
 
-	mCubePipeline->pushStage<DepthLinearing>();
-
 	mCubePipeline->pushStage<PBR>();
 	if (!cubemap.empty())
 	{
@@ -185,7 +206,7 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 	cubedesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
 	mCube = renderer->createTexture(cubedesc);
 
-	mUpdate = [this,cam, renderer,frame, depthlinear](bool force) {
+	mUpdate = [this,cam, renderer,frame,depth](bool force) {
 		auto scene = getScene();
 		auto campos = scene->createOrGetCamera("main")->getNode()->getRealPosition();
 		auto probes = scene->getProbes();
@@ -202,11 +223,6 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 			mCoefficients.clear();
 			for (auto& p : probes)
 			{
-				auto desc = depthlinear->getDesc();
-				desc.ArraySize = 6;
-				desc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
-				mDepthCorrected.push_back(renderer->createTemporaryRT(desc));
-
 				auto pos = p.second->getNode()->getRealPosition();
 
 
@@ -222,11 +238,24 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 				int index = 0;
 				for (auto& d : viewMats)
 				{
+					auto desc = depth->getDesc();
+					desc.ArraySize = 6;
+					desc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+					desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+					desc.Format = DXGI_FORMAT_R32_FLOAT;
+					mDepthCorrected.push_back(renderer->createTemporaryRT(desc));
+
+
 					Quaternion rot = Quaternion::CreateFromRotationMatrix(d);
 					cam->getNode()->setOrientation(rot);
 					mCubePipeline->render();
 					renderer->getContext()->CopySubresourceRegion(mCube->getTexture(), index, 0, 0, 0, frame->getTexture(), 0, 0);
-					renderer->getContext()->CopySubresourceRegion(mDepthCorrected[nums]->get()->getTexture(), index, 0, 0, 0, depthlinear->getTexture(), 0, 0);
+
+					auto view = cam->getViewMatrix();
+					auto proj = cam->getProjectionMatrix();
+					auto dist = calDistance(depth, (view * proj).Invert().Transpose());
+
+					renderer->getContext()->CopySubresourceRegion(mDepthCorrected[nums]->get()->getTexture(), index, 0, 0, 0, dist->get()->getTexture(), 0, 0);
 					index++;
 
 				}
@@ -293,9 +322,6 @@ void EnvironmentMapping::render(Renderer::Texture2D::Ptr rt)
 	
 	Constants constants;
 	constants.proj = proj.Transpose();
-	constants.view = view.Transpose();
-	constants.invertView = view.Invert().Transpose();
-	constants.invertProj = proj.Invert().Transpose();
 	constants.invertViewProj = (view * proj).Invert().Transpose();
 
 	constants.campos = cam->getNode()->getRealPosition();

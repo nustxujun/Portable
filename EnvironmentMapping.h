@@ -9,9 +9,6 @@ class EnvironmentMapping : public Pipeline::Stage
 		struct Constants
 	{
 		Matrix proj;
-		Matrix view;
-		Matrix invertView;
-		Matrix invertProj;
 		Matrix invertViewProj;
 		
 		Vector3 campos;
@@ -45,6 +42,7 @@ public:
 	void render(Renderer::Texture2D::Ptr rt)  override final;
 private:
 	void init();
+	Renderer::TemporaryRT::Ptr calDistance(Renderer::Texture2D::Ptr rt, const Matrix& inverViewProj);
 private:
 	Type mType = T_ONCE;
 	Renderer::Texture2D::Ptr mCube;
@@ -66,4 +64,7 @@ private:
 
 	Renderer::Sampler::Ptr mLinear;
 	Renderer::Sampler::Ptr mPoint;
+
+	Renderer::PixelShader::Weak mCalDistance;
+	Renderer::Buffer::Ptr mCalDistanceConst;
 };
