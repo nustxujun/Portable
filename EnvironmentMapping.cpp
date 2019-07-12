@@ -86,9 +86,9 @@ void EnvironmentMapping::init(const std::string& cubemap )
 
 	mIrradianceProcessor = ImageProcessing::create<IrradianceCubemap>(getRenderer(), false);
 	mPrefilteredProcessor = ImageProcessing::create<PrefilterCubemap>(getRenderer(), false);
-	mCube = getRenderer()->createTexture(cubemap, 1);
-	mIrradiance.push_back( mIrradianceProcessor->process(mCube));
-	mPrefiltered.push_back( mPrefilteredProcessor->process(mCube));
+	mCube.push_back(getRenderer()->createTexture(cubemap, 1));
+	mIrradiance.push_back( mIrradianceProcessor->process(mCube[0]));
+	mPrefiltered.push_back( mPrefilteredProcessor->process(mCube[0]));
 
 	//auto aabb = getScene()->getRoot()->getWorldAABB();
 	//Vector3 raw[6] = { (aabb.first + aabb.second)* 0.5f, aabb.first , aabb.second,  aabb.first, aabb.second , {1,1,1} };
@@ -192,21 +192,9 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 	auto frame = renderer->createRenderTarget(cubesize, cubesize, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	mCubePipeline->setFrameBuffer(frame);
 
-	D3D11_TEXTURE2D_DESC cubedesc;
-	cubedesc.Width = cubesize;
-	cubedesc.Height = cubesize;
-	cubedesc.MipLevels = 1;
-	cubedesc.ArraySize = 6;
-	cubedesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-	cubedesc.SampleDesc.Count = 1;
-	cubedesc.SampleDesc.Quality = 0;
-	cubedesc.Usage = D3D11_USAGE_DEFAULT;
-	cubedesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	cubedesc.CPUAccessFlags = 0;
-	cubedesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
-	mCube = renderer->createTexture(cubedesc);
 
-	mUpdate = [this,cam, renderer,frame,depth](bool force) {
+
+	mUpdate = [this,cam, renderer,frame,depth, cubesize](bool force) {
 		auto scene = getScene();
 		auto campos = scene->createOrGetCamera("main")->getNode()->getRealPosition();
 		auto probes = scene->getProbes();
@@ -223,6 +211,29 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 			mCoefficients.clear();
 			for (auto& p : probes)
 			{
+				{
+					D3D11_TEXTURE2D_DESC cubedesc;
+					cubedesc.Width = cubesize;
+					cubedesc.Height = cubesize;
+					cubedesc.MipLevels = 1;
+					cubedesc.ArraySize = 6;
+					cubedesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+					cubedesc.SampleDesc.Count = 1;
+					cubedesc.SampleDesc.Quality = 0;
+					cubedesc.Usage = D3D11_USAGE_DEFAULT;
+					cubedesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+					cubedesc.CPUAccessFlags = 0;
+					cubedesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+					mCube.push_back( renderer->createTexture(cubedesc));
+				}
+				{
+					auto desc = depth->getDesc();
+					desc.ArraySize = 6;
+					desc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+					desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+					desc.Format = DXGI_FORMAT_R32_FLOAT;
+					mDepthCorrected.push_back(renderer->createTemporaryRT(desc));
+				}
 				auto pos = p.second->getNode()->getRealPosition();
 
 
@@ -238,22 +249,18 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 				int index = 0;
 				for (auto& d : viewMats)
 				{
-					auto desc = depth->getDesc();
-					desc.ArraySize = 6;
-					desc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
-					desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-					desc.Format = DXGI_FORMAT_R32_FLOAT;
-					mDepthCorrected.push_back(renderer->createTemporaryRT(desc));
+
 
 
 					Quaternion rot = Quaternion::CreateFromRotationMatrix(d);
 					cam->getNode()->setOrientation(rot);
 					mCubePipeline->render();
-					renderer->getContext()->CopySubresourceRegion(mCube->getTexture(), index, 0, 0, 0, frame->getTexture(), 0, 0);
+					renderer->getContext()->CopySubresourceRegion(mCube[nums]->getTexture(), index, 0, 0, 0, frame->getTexture(), 0, 0);
 
-					auto view = cam->getViewMatrix();
 					auto proj = cam->getProjectionMatrix();
-					auto dist = calDistance(depth, (view * proj).Invert().Transpose());
+
+					auto dist = calDistance(depth,  proj.Invert().Transpose());
+					//D3DX11SaveTextureToFile(getRenderer()->getContext(), dist->get()->getTexture(), D3DX11_IFF_DDS, L"test.dds");
 
 					renderer->getContext()->CopySubresourceRegion(mDepthCorrected[nums]->get()->getTexture(), index, 0, 0, 0, dist->get()->getTexture(), 0, 0);
 					index++;
@@ -261,9 +268,8 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 				}
 				if (p.second->getType() == Scene::Probe::PT_IBL)
 				{
-					mIrradiance.push_back(mIrradianceProcessor->process(mCube));
-					mPrefiltered.push_back(mPrefilteredProcessor->process(mCube));
-					//D3DX11SaveTextureToFile(getRenderer()->getContext(), mCube->getTexture(), D3DX11_IFF_DDS, L"test.dds");
+					mIrradiance.push_back(mIrradianceProcessor->process(mCube[nums]));
+					mPrefiltered.push_back(mPrefilteredProcessor->process(mCube[nums]));
 
 				}
 				else if (p.second->getType() == Scene::Probe::PT_DIFFUSE)
@@ -272,7 +278,7 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 					mPrefiltered.push_back({});
 
 
-					auto constexpr degree = 1;
+					auto constexpr degree = 2;
 					auto constexpr num_coefs = (degree + 1) * (degree + 1);
 					std::vector<Vector3> coefs(num_coefs);
 
@@ -285,7 +291,7 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 					//{
 					//	coefs[i] = { r[i], g[i],b[i] };
 					//}
-					coefs = SphericalHarmonics::convert<degree>(mCube, getRenderer());
+					coefs = SphericalHarmonics::precompute<degree>(mCube[nums], getRenderer());
 
 					if (mCoefficients.size() <= nums)
 					{
@@ -327,10 +333,10 @@ void EnvironmentMapping::render(Renderer::Texture2D::Ptr rt)
 	constants.campos = cam->getNode()->getRealPosition();
 	constants.nearZ = cam->getNear();
 
-	constants.raylength = 1000;
+	constants.maxsteps = 100000;
 	
 	constants.intensity = { 1,1,1 };
-	constants.stepstride = 4;
+	constants.stepsize = 1;
 	constants.screenSize = { vp.Width, vp.Height };
 
 
@@ -409,7 +415,7 @@ void EnvironmentMapping::render(Renderer::Texture2D::Ptr rt)
 		srvs.push_back(mCoefficients[selected]);
 	}
 	else
-		srvs.push_back(mCube);
+		srvs.push_back(mCube[selected]);
 
 	quad->setTextures(srvs);
 	quad->draw();

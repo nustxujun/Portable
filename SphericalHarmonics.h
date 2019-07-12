@@ -48,6 +48,7 @@ public:
 		basis[6] = 1.f / 4.f * sqrt(5.f / PI) * (-x * x - y * y + 2 * z*z);
 		basis[7] = 1.f / 2.f * sqrt(15.f / PI) * z * x;
 		basis[8] = 1.f / 4.f * sqrt(15.f / PI) * (x*x - y * y);
+		return basis;
 	}
 
 	template<>
@@ -60,7 +61,7 @@ public:
 		float y2 = y * y;
 		float z2 = z * z;
 
-		auto basis = getBasis<1>(vec);
+		auto basis = getBasis<2>(vec);
 		basis.resize(16);
 		basis[9] = 1.f / 4.f*sqrt(35.f / (2.f*PI))*(3 * x2 - y2)*y;
 		basis[10] = 1.f / 2.f*sqrt(105.f / PI)*x*y*z;
@@ -84,7 +85,7 @@ public:
 	}
 
 	template<size_t D>
-	static std::vector<Vector3> convert(Renderer::Texture2D::Ptr cube, Renderer::Ptr renderer)
+	static std::vector<Vector3> precompute(Renderer::Texture2D::Ptr cube, Renderer::Ptr renderer)
 	{
 		auto constexpr NUM_COEFS = (D + 1) * (D + 1);
 		std::vector<Vector3> coefs(NUM_COEFS);
@@ -149,6 +150,8 @@ public:
 		}
 		return coefs;
 	}
+
+
 };
 
 const float SphericalHarmonics::PI = 3.14159265358f;

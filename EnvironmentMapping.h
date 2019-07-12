@@ -15,10 +15,10 @@ class EnvironmentMapping : public Pipeline::Stage
 		float nearZ;
 
 		Vector3 probepos;
-		float raylength;
+		float maxsteps;
 
 		Vector3 intensity;
-		float stepstride;
+		float stepsize;
 
 		Vector3A boxmin;
 		Vector3A boxmax;
@@ -45,7 +45,7 @@ private:
 	Renderer::TemporaryRT::Ptr calDistance(Renderer::Texture2D::Ptr rt, const Matrix& inverViewProj);
 private:
 	Type mType = T_ONCE;
-	Renderer::Texture2D::Ptr mCube;
+	std::vector<Renderer::Texture2D::Ptr> mCube;
 	std::vector<Renderer::TemporaryRT::Ptr> mIrradiance;
 	std::vector<Renderer::TemporaryRT::Ptr> mPrefiltered;
 	std::vector<Renderer::Buffer::Ptr> mCoefficients;

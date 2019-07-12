@@ -30,10 +30,10 @@ cbuffer ConstantBuffer: register(b0)
 	float nearZ;
 	
 	float3 probepos;
-	float raylength;
+	float maxsteps;
 	
 	float3 intensity;
-	float stepstride;
+	float stepsize;
 	
 	float3 boxmin;
 	float3 boxmax;
@@ -92,63 +92,45 @@ struct RayParams
 	float jitter;
 };
 
-static const float MAX_STEPS = 1024;
+static const float MAX_STEPS = 10000;
 
 bool raymarch(RayParams params,  out float3 hitpoint)
 {
-	float3 origin = params.origin;
+	float raylen = maxsteps * stepsize;
+
+	float steplen = stepsize;
+
 	float3 dir = params.dir;
+	float3 origin = params.origin;
 	float jitter = params.jitter;
 
-	float raylen = (origin.z + dir.z * raylength) < nearZ ? ((nearZ - origin.z) / dir.z) : raylength;
 	float3 endpoint = dir * raylen + origin;
-	float4 H0 = mul(float4(origin, 1), proj);
-	float4 H1 = mul(float4(endpoint, 1), proj);
-
-	float k0 = 1 / H0.w;
-	float k1 = 1 / H1.w;
-
-	float2 P0 = toScreen(H0 * k0);
-	float2 P1 = toScreen(H1 * k1);
-	float3 Q0 = origin * k0;
-	float3 Q1 = endpoint * k1;
 
 
-	P1 = dot(P1 - P0, P1 - P0) < 0.0001 ? P0 + 0.01 : P1;
-
-
-	float2 delta = P1 - P0;
-	float2 stepdir = normalize(delta);
-	float steplen = min(abs(1 / stepdir.x), abs(1 / stepdir.y));
-	delta /= steplen;
-	float maxsteps = max(abs(delta.x), abs(delta.y));
-	float invsteps = 1 / maxsteps * (1 + jitter);
-	float2 dP = (P1 - P0)  * invsteps;
-	float3 dQ = (Q1 - Q0) * invsteps;
-	float dk = (k1 - k0) * invsteps;
 	float numsteps = 0;
-	maxsteps = min(maxsteps, MAX_STEPS);
 	hitpoint = 0;
-	float stride = stepstride;
-	float2 invsize = 1.0f / screenSize;
-	float maxlen = 3.402823466e+38F;
+	float stride = 1;
+	float minE = -1000;
 	while (numsteps < maxsteps)
 	{
 		float curstep = numsteps + stride;
-		hitpoint = (Q0 + dQ * curstep) / (k0 + dk * curstep);
+		hitpoint = origin + dir * curstep * steplen;
 
 
 		float3 samplevec = normalize(hitpoint - probepos);
+		float hitdist = length(hitpoint - probepos);
 		float distance = envdepthTex.SampleLevel(pointClamp, samplevec, 0).r;
-		float3 samplepos = samplevec * distance;
-		float curlen = length(samplepos - hitpoint);
-
-		if (maxlen > curlen)
+		float e = distance - hitdist;
+		if ( e < 0)
 		{
 			if (stride <= 1)
 			{
 				numsteps += 1;
-				return true;
+				//if (e > minE)
+				//{
+					return true;
+				//}
+				//minE = e;
 			}
 			else
 				stride = max(1, stride / 2);
@@ -184,7 +166,7 @@ float4 main(PS_INPUT Input) : SV_TARGET
 	worldpos = mul(worldpos, invertViewProj);
 	worldpos /= worldpos.w;
 
-	//if (!testBox(worldpos.xyz, infmin, infmax))
+	//if (!testBox(worldpos.xyz, infmin, infmax)) 
 	//	return 0;
 
 	float3 V = normalize(campos - worldpos.xyz);
@@ -200,7 +182,7 @@ float4 main(PS_INPUT Input) : SV_TARGET
 #elif DEPTH_CORRECTED
 
 	RayParams rp;
-	rp.origin = worldpos;
+	rp.origin = worldpos + N * 0.1f;
 	rp.dir = R;
 	rp.jitter = 0;
 
@@ -219,7 +201,7 @@ float4 main(PS_INPUT Input) : SV_TARGET
 	result = calcolor * intensity /** float3((i % 2), 0, (1.0f - i % 2)) */; 
 #elif SH
 	float basis[NUM_COEFS];
-	HarmonicBasis(N, basis);
+	HarmonicBasis(N, basis); 
 	for (int i = 0; i < NUM_COEFS; ++i)
 	{
 		result += coefs[i] * basis[i];
