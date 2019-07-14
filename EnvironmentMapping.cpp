@@ -127,52 +127,15 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 	mCubePipeline->setCamera(cam);
 	auto w = cubesize;
 	auto h = cubesize;
-	auto albedo = renderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
-	mCubePipeline->addShaderResource("albedo", albedo);
-	mCubePipeline->addRenderTarget("albedo", albedo);
-	auto normal = renderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
-	mCubePipeline->addShaderResource("normal", normal);
-	mCubePipeline->addRenderTarget("normal", normal);
-	auto depth = renderer->createDepthStencil(w, h, DXGI_FORMAT_R24G8_TYPELESS, true);
-	mCubePipeline->addShaderResource("depth", depth);
-	mCubePipeline->addDepthStencil("depth", depth);
-	mCubePipeline->addTexture2D("depth", depth);
-	auto material = renderer->createRenderTarget(w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
-	mCubePipeline->addShaderResource("material", material);
-	mCubePipeline->addRenderTarget("material", material);
-
-	constexpr auto MAX_NUM_LIGHTS = 1024;
-	auto pointlights = renderer->createRWBuffer(sizeof(Vector4) * 2 * MAX_NUM_LIGHTS, sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-	mCubePipeline->addShaderResource("pointlights", pointlights);
-	mCubePipeline->addBuffer("pointlights", pointlights);
-
-	auto spotlights = renderer->createRWBuffer(sizeof(Vector4) * 3 * MAX_NUM_LIGHTS, sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-	mCubePipeline->addShaderResource("spotlights", spotlights);
-	mCubePipeline->addBuffer("spotlights", spotlights);
-
-	auto dirlights = renderer->createRWBuffer(sizeof(Vector4) * 2 * MAX_NUM_LIGHTS, sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-	mCubePipeline->addShaderResource("dirlights", dirlights);
-	mCubePipeline->addBuffer("dirlights", dirlights);
-
-	{
-		Vector4 lightinfo[2];
-		auto l = getScene()->createOrGetLight("main");
-		auto dir = l->getDirection();
-		lightinfo[0] = { dir.x, dir.y,dir.z , 0 };
-		auto color = l->getColor() * getValue<float>("dirradiance");
-		lightinfo[1] = { color.x, color.y, color.z , 0 };
-		dirlights.lock()->blit(lightinfo, sizeof(lightinfo));
-	}
 
 
 
-	mCubePipeline->pushStage("clear rt", [this, renderer,depth](Renderer::Texture2D::Ptr rt)
+	mCubePipeline->pushStage("clear rt", [this, renderer](Renderer::Texture2D::Ptr rt)
 	{
 		renderer->clearRenderTarget(rt, { 0,0,0,0 });
-		renderer->clearDepth(depth, 1.0f);
 	});
 
-	mCubePipeline->pushStage<GBuffer>([](Scene::Entity::Ptr e)->bool
+	mCubePipeline->pushStage<GBuffer>(true,[](Scene::Entity::Ptr e)->bool
 	{
 		return e->isStatic();
 	});
@@ -193,7 +156,7 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 	mCubePipeline->setFrameBuffer(frame);
 
 
-
+	auto depth = mCubePipeline->getTexture2D("depth");
 	mUpdate = [this,cam, renderer,frame,depth, cubesize](bool force) {
 		auto scene = getScene();
 		auto campos = scene->createOrGetCamera("main")->getNode()->getRealPosition();
@@ -274,30 +237,30 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 				}
 				else if (p.second->getType() == Scene::Probe::PT_DIFFUSE)
 				{
-					mIrradiance.push_back({});
-					mPrefiltered.push_back({});
+					//mIrradiance.push_back({});
+					//mPrefiltered.push_back({});
 
 
-					auto constexpr degree = 2;
-					auto constexpr num_coefs = (degree + 1) * (degree + 1);
-					std::vector<Vector3> coefs(num_coefs);
+					//auto constexpr degree = 1;
+					//auto constexpr num_coefs = (degree + 1) * (degree + 1);
+					//std::vector<Vector3> coefs(num_coefs);
 
-					//float r[num_coefs] = { 0 };
-					//float g[num_coefs] = { 0 };
-					//float b[num_coefs] = { 0 };
-					//D3DX11SHProjectCubeMap(getRenderer()->getContext(), degree + 1 , mCube->getTexture(), r, g, b);
+					////float r[num_coefs] = { 0 };
+					////float g[num_coefs] = { 0 };
+					////float b[num_coefs] = { 0 };
+					////D3DX11SHProjectCubeMap(getRenderer()->getContext(), degree + 1 , mCube->getTexture(), r, g, b);
 
-					//for (int i = 0; i < num_coefs; ++i)
+					////for (int i = 0; i < num_coefs; ++i)
+					////{
+					////	coefs[i] = { r[i], g[i],b[i] };
+					////}
+					//coefs = SphericalHarmonics::precompute<degree>(mCube[nums], getRenderer());
+
+					//if (mCoefficients.size() <= nums)
 					//{
-					//	coefs[i] = { r[i], g[i],b[i] };
+					//	mCoefficients.push_back(getRenderer()->createRWBuffer(sizeof(Vector3) * num_coefs, sizeof(Vector3), DXGI_FORMAT_R32G32B32_FLOAT,D3D11_BIND_SHADER_RESOURCE,D3D11_USAGE_DYNAMIC,D3D11_CPU_ACCESS_WRITE));
 					//}
-					coefs = SphericalHarmonics::precompute<degree>(mCube[nums], getRenderer());
-
-					if (mCoefficients.size() <= nums)
-					{
-						mCoefficients.push_back(getRenderer()->createRWBuffer(sizeof(Vector3) * num_coefs, sizeof(Vector3), DXGI_FORMAT_R32G32B32_FLOAT,D3D11_BIND_SHADER_RESOURCE,D3D11_USAGE_DYNAMIC,D3D11_CPU_ACCESS_WRITE));
-					}
-					mCoefficients[nums]->blit(coefs.data(), sizeof(Vector3) * num_coefs);
+					//mCoefficients[nums]->blit(coefs.data(), sizeof(Vector3) * num_coefs);
 				}
 				nums++;
 			}

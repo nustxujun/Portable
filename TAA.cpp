@@ -2,6 +2,7 @@
 
 void TAA::init()
 {
+	mName = "temporal AA";
 	mBlend = getRenderer()->createPixelShader("hlsl/taa.hlsl", "blendHistory");
 
 	auto cam = getCamera();

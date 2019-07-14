@@ -12,7 +12,7 @@ PBR::PBR(
 	mName = "pbr lighting";
 	this->set("roughness", { {"type","set"}, {"value",1},{"min","0.01"},{"max",1.0f},{"interval", "0.01"} });
 	this->set("metallic", { {"type","set"}, {"value",1},{"min","0"},{"max",1.0f},{"interval", "0.01"} });
-	this->set("ambient", { {"type","set"}, {"value",0.001},{"min","0"},{"max","1"},{"interval", "0.001"} });
+	this->set("ambient", { {"type","set"}, {"value",0.0},{"min","0"},{"max","1"},{"interval", "0.001"} });
 
 	const std::vector<const char*> definitions = { "POINT", "DIR", "SPOT", "TILED", "CLUSTERED" };
 	for (int i = 0; i < definitions.size(); ++i)
@@ -90,6 +90,8 @@ PBR::~PBR()
 
 void PBR::render(Renderer::Texture2D::Ptr rt) 
 {
+	updateLights();
+
 	if (has("tiled") || has("clustered"))
 		renderNormal(rt);
 	else
@@ -103,7 +105,110 @@ void PBR::init(const Vector3 & cluster, const std::vector<Renderer::Texture2D::P
 	mCluster = cluster; 
 	mShadowTextures = shadows; 
 
+	auto renderer = getRenderer();
+	constexpr auto MAX_NUM_LIGHTS = 1024;
+	auto pointlights = renderer->createRWBuffer(sizeof(Vector4) * 2 * MAX_NUM_LIGHTS, sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+	addShaderResource("pointlights", pointlights);
+	addBuffer("pointlights", pointlights);
+
+	auto spotlights = renderer->createRWBuffer(sizeof(Vector4) * 3 * MAX_NUM_LIGHTS, sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+	addShaderResource("spotlights", spotlights);
+	addBuffer("spotlights", spotlights);
+
+	auto dirlights = renderer->createRWBuffer(sizeof(Vector4) * 2 * MAX_NUM_LIGHTS, sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+	addShaderResource("dirlights", dirlights);
+	addBuffer("dirlights", dirlights);
+
 }
+
+void PBR::updateLights()
+{
+	auto scene = getScene();
+	std::vector<Scene::Light::Ptr> lights[3];
+	std::map<void*, int> shadowindices;
+	int index = 1;
+	scene->visitLights([&lights, &shadowindices, &index, this](Scene::Light::Ptr l) {
+		lights[l->getType()].push_back(l);
+		if (l->isCastingShadow() && index <= mShadowTextures.size())
+			shadowindices[&(*l)] = index++;
+	});
+
+	std::vector<Renderer::Buffer::Ptr> lightbuffers = 
+	{
+		getBuffer("pointlights"),
+		getBuffer("dirlights"),
+		getBuffer("spotlights"),
+	};
+
+	auto renderer = getRenderer();
+	auto context = renderer->getContext();
+
+	auto copy = [](char*& data, auto value)
+	{
+		memcpy(data, &value, sizeof(value));
+		data += sizeof(value);
+	};
+
+	float range = 1;
+	if (has("lightRange"))
+		range = getValue<float>("lightRange");
+	for (int type = 0; type < 3; ++type)
+	{
+		auto buffer = lightbuffers[type]->getBuffer();
+		D3D11_MAPPED_SUBRESOURCE subresource;
+		context->Map(buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
+		char* data = (char*)subresource.pData;
+
+		for (int i = 0; i < lights[type].size(); ++i)
+		{
+			auto light = lights[type][i];
+			auto shadowindex = shadowindices[&(*light)];
+			switch (type)
+			{
+			case Scene::Light::LT_POINT:
+				{
+					auto pos = light->getNode()->getRealPosition();
+					Vector4 vpos = { pos.x, pos.y, pos.z,range };
+					copy(data, vpos);
+					auto color = light->getColor();
+					if (has("pointradiance"))
+						color *= getValue<float>("pointradiance");
+					copy(data, Vector4(color.x, color.y, color.z, shadowindex));
+				}
+				break;
+			case Scene::Light::LT_DIR:
+				{
+					auto dir = light->getDirection();
+					copy(data, Vector4(dir.x, dir.y, dir.z, 0));
+
+					Vector3 color = light->getColor();
+					if (has("dirradiance"))
+						color *= getValue<float>("dirradiance");
+
+					copy(data, Vector4(color.x, color.y, color.z, shadowindex));
+				}
+				break;
+			case Scene::Light::LT_SPOT:
+				{
+					auto pos = light->getNode()->getRealPosition();
+					Vector4 vpos = { pos.x, pos.y, pos.z,range };
+					copy(data, vpos);
+
+					auto dir = light->getDirection();
+					copy(data, Vector4(dir.x, dir.y, dir.z, std::cos(light->getSpotAngle())));
+
+					auto color = light->getColor();
+					if (has("spotradiance"))
+						color *= getValue<float>("spotradiance");
+					copy(data, Vector4(color.x, color.y, color.z, shadowindex));
+				}
+				break;
+			}
+		}
+		context->Unmap(buffer, 0);
+	}
+}
+
 
 
 void PBR::renderNormal(Renderer::Texture2D::Ptr rt)

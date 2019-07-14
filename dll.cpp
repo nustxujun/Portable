@@ -10,6 +10,7 @@
 #include "MultipleLights.h"
 #include "PBRMaterial.h"
 #include "Reflections.h"
+#include "SHSample.h"
 
 using namespace nlohmann;
 
@@ -19,7 +20,7 @@ using namespace nlohmann;
 #define EXPORT
 #endif
 
-using FRAMEWORK = Reflections;
+using FRAMEWORK = SHSample;
 using Ptr = std::shared_ptr<FRAMEWORK>;
 Ptr framework;
 std::shared_ptr<std::thread> loop;
@@ -282,7 +283,7 @@ extern "C"
 	{
 		parentWnd = overlayhandle;
 #ifdef _WINDLL
-		::MessageBoxA(NULL, "start", NULL, NULL);
+		//::MessageBoxA(NULL, "start", NULL, NULL);
 		::SetCurrentDirectoryA("../");
 #endif
 

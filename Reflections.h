@@ -13,6 +13,7 @@
 #include "EnvironmentMapping.h"
 #include "AO.h"
 #include "MotionBlur.h"
+#include "IrradianceVolumes.h"
 
 #include <random>
 
@@ -30,82 +31,82 @@ public:
 		set("dirradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
 
 		auto root = mScene->getRoot();
-		//{
-		//	std::vector<std::string> textures = {
-		//			"media/rustediron/rustediron2_basecolor.png",
-		//			"media/rustediron/rustediron2_normal.png",
-		//			"media/rustediron/rustediron2_roughness.png",
-		//			"media/rustediron/rustediron2_metallic.png",
-		//	};
-		//	Parameters params;
-		//	params["geom"] = "plane";
-		//	params["size"] = "50";
-		//	auto model = mScene->createModel("plane", params, [this](const Parameters& p)
-		//	{
-		//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		//	});
-		//	model->setCastShadow(true);
-		//	model->attach(root);
-		//	Material::Ptr mat = Material::create();
-		//	mat->roughness = 1;
-		//	mat->metallic = 1;
-		//	mat->reflection = 1;
-		//	for (int i = 0; i < textures.size(); ++i)
-		//		if (!textures[i].empty())
-		//			mat->setTexture(i, mRenderer->createTexture(textures[i]));
-		//	model->setMaterial(mat);
-		//}
+		{
+			std::vector<std::string> textures = {
+					"media/rustediron/rustediron2_basecolor.png",
+					"media/rustediron/rustediron2_normal.png",
+					"media/rustediron/rustediron2_roughness.png",
+					"media/rustediron/rustediron2_metallic.png",
+			};
+			Parameters params;
+			params["geom"] = "plane";
+			params["size"] = "50";
+			auto model = mScene->createModel("plane", params, [this](const Parameters& p)
+			{
+				return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+			});
+			model->setCastShadow(true);
+			model->attach(root);
+			Material::Ptr mat = Material::create();
+			mat->roughness = 1;
+			mat->metallic = 1;
+			mat->reflection = 1;
+			for (int i = 0; i < textures.size(); ++i)
+				if (!textures[i].empty())
+					mat->setTexture(i, mRenderer->createTexture(textures[i]));
+			model->setMaterial(mat);
+		}
 
-		//{
-		//	Parameters params;
-		//	params["geom"] = "plane";
-		//	params["size"] = "50";
-		//	auto model = mScene->createModel("wall1", params, [this](const Parameters& p)
-		//	{
-		//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		//	});
-		//	model->getNode()->setPosition({ 0,25,24 });
-		//	model->getNode()->rotate( -3.1415926 * 0.5, 0, 0);
-		//	model->setCastShadow(true);
-		//	model->attach(root);
-		//	Material::Ptr mat = Material::create();
-		//	mat->roughness = 1;
-		//	mat->metallic = 0;
-		//	mat->reflection = 0;
-		//	mat->diffuse = { 0,1, 0};
-		//	model->setMaterial(mat);
+		{
+			Parameters params;
+			params["geom"] = "plane";
+			params["size"] = "50";
+			auto model = mScene->createModel("wall1", params, [this](const Parameters& p)
+			{
+				return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+			});
+			model->getNode()->setPosition({ 0,25,24 });
+			model->getNode()->rotate( -3.1415926 * 0.5, 0, 0);
+			model->setCastShadow(true);
+			model->attach(root);
+			Material::Ptr mat = Material::create();
+			mat->roughness = 1;
+			mat->metallic = 0;
+			mat->reflection = 0;
+			mat->diffuse = { 0,1, 0};
+			model->setMaterial(mat);
 
 
-		//	model = mScene->createModel("wall2", params, [this](const Parameters& p)
-		//	{
-		//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		//	});
-		//	model->getNode()->setPosition({ 0,25,-24 });
-		//	model->getNode()->rotate(3.1415926 * 0.5, 0, 0);
-		//	model->setCastShadow(true);
-		//	model->attach(root);
-		//	mat = Material::create();
-		//	mat->roughness = 1;
-		//	mat->metallic = 0;
-		//	mat->reflection = 0;
-		//	mat->diffuse = { 0,0, 1 };
-		//	model->setMaterial(mat);
+			//model = mScene->createModel("wall2", params, [this](const Parameters& p)
+			//{
+			//	return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+			//});
+			//model->getNode()->setPosition({ 0,25,-24 });
+			//model->getNode()->rotate(3.1415926 * 0.5, 0, 0);
+			//model->setCastShadow(true);
+			//model->attach(root);
+			//mat = Material::create();
+			//mat->roughness = 1;
+			//mat->metallic = 0;
+			//mat->reflection = 0;
+			//mat->diffuse = { 0,0, 1 };
+			//model->setMaterial(mat);
 
-		//	model = mScene->createModel("wall3", params, [this](const Parameters& p)
-		//	{
-		//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		//	});
-		//	model->getNode()->setPosition({ 24,25,0 });
-		//	model->getNode()->rotate(0, 0, 3.1415926 * 0.5);
-		//	model->setCastShadow(true);
-		//	model->attach(root);
-		//	mat = Material::create();
-		//	mat->roughness = 1;
-		//	mat->metallic = 0;
-		//	mat->reflection = 0;
-		//	mat->diffuse = { 1,0, 0 };
-		//	model->setMaterial(mat);
-		//}
+			model = mScene->createModel("wall3", params, [this](const Parameters& p)
+			{
+				return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+			});
+			model->getNode()->setPosition({ 24,25,0 });
+			model->getNode()->rotate(0, 0, 3.1415926 * 0.5);
+			model->setCastShadow(true);
+			model->attach(root);
+			mat = Material::create();
+			mat->roughness = 1;
+			mat->metallic = 0;
+			mat->reflection = 0;
+			mat->diffuse = { 1,0, 0 };
+			model->setMaterial(mat);
+		}
 
 		{
 			int spherecount = 10;
@@ -203,8 +204,8 @@ public:
 					probe->setDebugObject(sphere);
 					probe->getNode()->setPosition(aabb.first + Vector3(vec.x / numprobes * x, vec.y / numprobes * y, vec.z / numprobes * z));
 					probe->attach(root);
-					probe->setType(Scene::Probe::PT_DIFFUSE);
-					probe->setProxy(Scene::Probe::PP_NONE);
+					probe->setType(Scene::Probe::PT_IBL);
+					probe->setProxy(Scene::Probe::PP_DEPTH);
 					probe->setStatic(false);
 
 				}
@@ -238,32 +239,7 @@ public:
 		auto vp = cam->getViewport();
 		auto w = vp.Width;
 		auto h = vp.Height;
-		auto albedo = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
-		mPipeline->addShaderResource("albedo", albedo);
-		mPipeline->addRenderTarget("albedo", albedo);
-		auto normal = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
-		mPipeline->addShaderResource("normal", normal);
-		mPipeline->addRenderTarget("normal", normal);
-		auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R24G8_TYPELESS, true);
-		mPipeline->addShaderResource("depth", depth);
-		mPipeline->addDepthStencil("depth", depth);
-		mPipeline->addTexture2D("depth", depth);
-		auto material = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
-		mPipeline->addShaderResource("material", material);
-		mPipeline->addRenderTarget("material", material);
 
-		constexpr auto MAX_NUM_LIGHTS = 1024;
-		auto pointlights = mRenderer->createRWBuffer(sizeof(Vector4) * 2 * MAX_NUM_LIGHTS, sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-		mPipeline->addShaderResource("pointlights", pointlights);
-		mPipeline->addBuffer("pointlights", pointlights);
-
-		auto spotlights = mRenderer->createRWBuffer(sizeof(Vector4) * 3 * MAX_NUM_LIGHTS, sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-		mPipeline->addShaderResource("spotlights", spotlights);
-		mPipeline->addBuffer("spotlights", spotlights);
-
-		auto dirlights = mRenderer->createRWBuffer(sizeof(Vector4) * 2 * MAX_NUM_LIGHTS, sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-		mPipeline->addShaderResource("dirlights", dirlights);
-		mPipeline->addBuffer("dirlights", dirlights);
 
 		auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 		mPipeline->setFrameBuffer(frame);
@@ -275,25 +251,25 @@ public:
 			shadowmaps.push_back(mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32_FLOAT));
 
 		auto bb = mRenderer->getBackbuffer();
-		mPipeline->pushStage("clear rt", [bb, this, depth](Renderer::Texture2D::Ptr rt)
+		mPipeline->pushStage("clear rt", [bb, this](Renderer::Texture2D::Ptr rt)
 		{
 			mRenderer->clearRenderTarget(rt, { 0,0,0,0 });
-			mRenderer->clearDepth(depth, 1.0f);
 		});
 
 
 		auto aabb = mScene->getRoot()->getWorldAABB();
 
-		mPipeline->pushStage<GBuffer>();
+		mPipeline->pushStage<GBuffer>(true);
 		//mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
 		mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
 		mPipeline->pushStage<EnvironmentMapping>(EnvironmentMapping::T_ONCE, "media/Alexs_Apt_2k.hdr");
 
 		//mPipeline->pushStage<AO>();
 		//mPipeline->pushStage<SSR>();
-		mPipeline->pushStage<SkyBox>("media/Alexs_Apt_2k.hdr", false);
 		//mPipeline->pushStage<MotionBlur>(true);
-		////mPipeline->pushStage<HDR>();
+		//mPipeline->pushStage<IrradianceVolumes>(Vector3(1, 1, 1), "media/Alexs_Apt_2k.hdr");
+		mPipeline->pushStage<SkyBox>("media/Alexs_Apt_2k.hdr", false);
+		//mPipeline->pushStage<HDR>();
 		mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 		Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
 		mPipeline->pushStage("draw to backbuffer", [bb, quad](Renderer::Texture2D::Ptr rt)

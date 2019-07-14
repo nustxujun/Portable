@@ -40,7 +40,7 @@ public:
 public:
 	std::vector<Renderer::Texture2D::Ptr> textures;
 	bool beLighting = true;
-	float metallic = 1.0f;
+	float metallic = 0.0f;
 	float roughness = 1.0f;
 	float reflection = 1.0f;
 	DirectX::SimpleMath::Vector3 diffuse = { 1,1,1 };

@@ -198,7 +198,7 @@ float4 main(PS_INPUT Input) : SV_TARGET
 	float3 prefiltered = prefilteredTexture.SampleLevel(sampLinear, coord, roughness * (PREFILTERED_MIP_LEVEL - 1)).rgb;
 	float3 irradiance = irradianceTexture.SampleLevel(sampLinear, N, 0).rgb;
 	calcolor = indirectBRDF(irradiance, prefiltered, lut, roughness, metallic, F0_DEFAULT, albedo, N, V);
-	result = calcolor * intensity /** float3((i % 2), 0, (1.0f - i % 2)) */; 
+	result = calcolor * intensity /** float3((i % 2), 0, (1.0f - i % 2)) */;  
 #elif SH
 	float basis[NUM_COEFS];
 	HarmonicBasis(N, basis); 

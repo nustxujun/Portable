@@ -181,6 +181,8 @@
     <ClInclude Include="HDR.h" />
     <ClInclude Include="ImageProcessing.h" />
     <ClInclude Include="Input.h" />
+    <ClInclude Include="IrradianceCaching.h" />
+    <ClInclude Include="IrradianceVolumes.h" />
     <ClInclude Include="LightCulling.h" />
     <ClInclude Include="LightVolumeCulling.h" />
     <ClInclude Include="Material.h" />
@@ -205,6 +207,7 @@
     <ClInclude Include="Scene.h" />
     <ClInclude Include="Setting.h" />
     <ClInclude Include="ShadowMap.h" />
+    <ClInclude Include="SHSample.h" />
     <ClInclude Include="SkyBox.h" />
     <ClInclude Include="SphericalHarmonics.h" />
     <ClInclude Include="SSR.h" />
@@ -226,6 +229,7 @@
     <ClCompile Include="GPUComputer.cpp" />
     <ClCompile Include="HDR.cpp" />
     <ClCompile Include="ImageProcessing.cpp" />
+    <ClCompile Include="IrradianceVolumes.cpp" />
     <ClCompile Include="LightCulling.cpp" />
     <ClCompile Include="Framework.cpp" />
     <ClCompile Include="Input.cpp" />

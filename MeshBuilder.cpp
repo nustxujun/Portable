@@ -27,7 +27,7 @@ MeshBuilder::Data MeshBuilder::buildByAssimp(const std::string & filename)
 	Data ret;
 	ret.aabb = { FLT_MAX,FLT_MAX,FLT_MAX,FLT_MIN, FLT_MIN,FLT_MIN };
 	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(filename, aiProcess_Triangulate  | aiProcess_JoinIdenticalVertices | aiProcess_CalcTangentSpace | aiProcess_PreTransformVertices | aiProcess_ConvertToLeftHanded);
+	const aiScene* scene = importer.ReadFile(filename, aiProcess_Triangulate  | aiProcess_JoinIdenticalVertices | aiProcess_GenNormals |aiProcess_CalcTangentSpace | aiProcess_PreTransformVertices | aiProcess_ConvertToLeftHanded);
 	if (!scene)
 	{
 		::MessageBoxA(NULL, importer.GetErrorString(), NULL, NULL);
@@ -69,6 +69,9 @@ MeshBuilder::Data MeshBuilder::buildByAssimp(const std::string & filename)
 			mat.ambient = getTex(aiTextureType_AMBIENT);
 			mat.height = getTex(aiTextureType_HEIGHT);
 			mat.shininess = getTex(aiTextureType_SHININESS);
+			aiColor4D d;
+			aiGetMaterialColor(m, AI_MATKEY_COLOR_DIFFUSE, &d);
+			mat.diffuse = { d.r, d.g, d.b};
 
 			//if (m->GetTextureCount(aiTextureType_DIFFUSE) > 0)
 			//{

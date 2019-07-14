@@ -11,7 +11,7 @@ public:
 
 
 	void render(Renderer::Texture2D::Ptr rt)  override final;
-	void init(std::function<bool(Scene::Entity::Ptr)> cond = {});
+	void init(bool cleardepth, std::function<bool(Scene::Entity::Ptr)> cond = {});
 private:
 
 	Renderer::Effect::Ptr getEffect(Material::Ptr mat);
@@ -20,7 +20,7 @@ private:
 	Renderer::RenderTarget::Ptr mAlbedo;
 	Renderer::RenderTarget::Ptr mNormal;
 	Renderer::DepthStencil::Ptr mDepth;
-
+	bool mClearDepth;
 
 	std::unordered_map<size_t, Renderer::Effect::Ptr> mEffect;
 };

@@ -80,32 +80,8 @@ void Framework::initPipeline()
 	auto vp = cam->getViewport();
 	auto w = vp.Width;
 	auto h = vp.Height;
-	auto albedo = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
-	mPipeline->addShaderResource("albedo", albedo);
-	mPipeline->addRenderTarget("albedo", albedo);
-	auto normal = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
-	mPipeline->addShaderResource("normal", normal);
-	mPipeline->addRenderTarget("normal", normal);
-	auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R24G8_TYPELESS, true);
-	mPipeline->addShaderResource("depth", depth);
-	mPipeline->addDepthStencil("depth", depth);
-	mPipeline->addTexture2D("depth", depth);
-	auto material = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
-	mPipeline->addShaderResource("material", material);
-	mPipeline->addRenderTarget("material", material);
 
-	constexpr auto MAX_NUM_LIGHTS = 1024;
-	auto pointlights = mRenderer->createRWBuffer(sizeof(Vector4) * 2 * MAX_NUM_LIGHTS, sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-	mPipeline->addShaderResource("pointlights", pointlights);
-	mPipeline->addBuffer("pointlights", pointlights);
 
-	auto spotlights = mRenderer->createRWBuffer(sizeof(Vector4) * 3 * MAX_NUM_LIGHTS, sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-	mPipeline->addShaderResource("spotlights", spotlights);
-	mPipeline->addBuffer("spotlights", spotlights);
-
-	auto dirlights = mRenderer->createRWBuffer(sizeof(Vector4) * 2 * MAX_NUM_LIGHTS, sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-	mPipeline->addShaderResource("dirlights", dirlights);
-	mPipeline->addBuffer("dirlights", dirlights);
 
 	auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	mPipeline->setFrameBuffer(frame);
@@ -117,14 +93,13 @@ void Framework::initPipeline()
 		shadowmaps.push_back(mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32_FLOAT));
 
 	auto bb = mRenderer->getBackbuffer();
-	mPipeline->pushStage("clear rt", [bb, this,depth](Renderer::Texture2D::Ptr rt)
+	mPipeline->pushStage("clear rt", [bb, this](Renderer::Texture2D::Ptr rt)
 	{
 		mRenderer->clearRenderTarget(rt, { 0,0,0,0 });
-		mRenderer->clearDepth(depth, 1.0f);
 	});
 
 	//mPipeline->pushStage<PreZ>();
-	mPipeline->pushStage<GBuffer>();
+	mPipeline->pushStage<GBuffer>(true);
 	mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
 	mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
 	mPipeline->pushStage<EnvironmentMapping>(EnvironmentMapping::T_ONCE, std::string("media/Alexs_Apt_2k.hdr"));
@@ -135,7 +110,7 @@ void Framework::initPipeline()
 	//mPipeline->pushStage<MotionBlur>();
 	//mPipeline->pushStage<HDR>();
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
-	//mPipeline->pushStage<TAA>();
+	mPipeline->pushStage<TAA>();
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
 	mPipeline->pushStage("draw to backbuffer", [bb, quad](Renderer::Texture2D::Ptr rt)
 	{
@@ -147,7 +122,7 @@ void Framework::initPipeline()
 void Framework::initScene()
 {
 
-	int numdirs = 0;
+	int numdirs = 1;
 
 	set("time", { {"value", 3.14f}, {"min", "1.57"}, {"max", "4.71"}, {"interval", "0.001"}, {"type","set"} });
 	set("numdirs", { {"value", numdirs}, {"min", 0}, {"max", numdirs}, {"interval", 1}, {"type","set"} });
@@ -271,16 +246,9 @@ void Framework::framemove()
 	}
 
 
-	auto lightbuffer = mPipeline->getBuffer("dirlights");
-	Vector4 lightinfo[2];
 	auto l = mScene->createOrGetLight("main");
 	float rad = getValue<float>("time");
 	l->setDirection({ 0.1f, cos(rad), sin(rad) });
-	auto dir = l->getDirection();
-	lightinfo[0] = { dir.x, dir.y,dir.z , 0 };
-	auto color = l->getColor() * getValue<float>("dirradiance");
-	lightinfo[1] = { color.x, color.y, color.z , 1 };
-	lightbuffer.lock()->blit(lightinfo, sizeof(lightinfo));
 }
 
 

@@ -247,14 +247,7 @@ public:
 
 	virtual void framemove()
 	{
-		auto lightbuffer = mPipeline->getBuffer("dirlights");
-		Vector4 lightinfo[2];
-		auto l = mScene->createOrGetLight("main");
-		auto pos = l->getDirection();
-		lightinfo[0] = { pos.x, pos.y, pos.z, 0 };
-		auto color = l->getColor() * getValue<float>("dirradiance");
-		lightinfo[1] = { color.x, color.y, color.z , 0};
-		lightbuffer.lock()->blit(lightinfo,sizeof(lightinfo));
+
 	}
 
 	virtual void initPipeline()override
@@ -264,32 +257,6 @@ public:
 		auto vp = cam->getViewport();
 		auto w = vp.Width;
 		auto h = vp.Height;
-		auto albedo = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
-		mPipeline->addShaderResource("albedo", albedo);
-		mPipeline->addRenderTarget("albedo", albedo);
-		auto normal = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
-		mPipeline->addShaderResource("normal", normal);
-		mPipeline->addRenderTarget("normal", normal);
-		auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R24G8_TYPELESS, true);
-		mPipeline->addShaderResource("depth", depth);
-		mPipeline->addDepthStencil("depth", depth);
-		auto material = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
-		mPipeline->addShaderResource("material", material);
-		mPipeline->addRenderTarget("material", material);
-
-		constexpr auto MAX_NUM_LIGHTS = 1024;
-		auto pointlights = mRenderer->createRWBuffer(sizeof(Vector4) * 2 * MAX_NUM_LIGHTS, sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-		mPipeline->addShaderResource("pointlights", pointlights);
-		mPipeline->addBuffer("pointlights", pointlights);
-
-		auto spotlights = mRenderer->createRWBuffer(sizeof(Vector4) * 3 * MAX_NUM_LIGHTS, sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-		mPipeline->addShaderResource("spotlights", spotlights);
-		mPipeline->addBuffer("spotlights", spotlights);
-
-		auto dirlights = mRenderer->createRWBuffer(sizeof(Vector4) * 2 * MAX_NUM_LIGHTS, sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-		mPipeline->addShaderResource("dirlights", dirlights);
-		mPipeline->addBuffer("dirlights", dirlights);
-
 
 		auto frame = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R32G32B32A32_FLOAT);
 		mPipeline->setFrameBuffer(frame);
@@ -297,13 +264,12 @@ public:
 		std::string hdrenvfile = "media/Ditch-River_Env.hdr";
 
 		auto bb = mRenderer->getBackbuffer();
-		mPipeline->pushStage("clear rt", [bb, this, depth](Renderer::Texture2D::Ptr rt)
+		mPipeline->pushStage("clear rt", [bb, this](Renderer::Texture2D::Ptr rt)
 		{
 			mRenderer->clearRenderTarget(rt, { 0,0,0,0 });
-			mRenderer->clearDepth(depth, 1.0f);
 		});
 
-		mPipeline->pushStage<GBuffer>();
+		mPipeline->pushStage<GBuffer>(true);
 		mPipeline->pushStage<PBR>();
 		//mPipeline->pushStage<AO>(3.0f);
 		//mPipeline->pushStage<SSR>();

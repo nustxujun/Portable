@@ -42,6 +42,7 @@ public:
 private:
 	void renderLightVolumes(Renderer::Texture2D::Ptr rt);
 	void renderNormal(Renderer::Texture2D::Ptr rt);
+	void updateLights();
 private:
 	Renderer::ShaderResource::Ptr mAlbedo;
 	Renderer::ShaderResource::Ptr mNormal;

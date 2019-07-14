@@ -25,32 +25,6 @@ void MultipleLights::initPipeline()
 	auto vp = cam->getViewport();
 	auto w = vp.Width;
 	auto h = vp.Height;
-	auto albedo = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
-	mPipeline->addShaderResource("albedo", albedo);
-	mPipeline->addRenderTarget("albedo", albedo);
-	auto normal = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
-	mPipeline->addShaderResource("normal", normal);
-	mPipeline->addRenderTarget("normal", normal);
-	auto depth = mRenderer->createDepthStencil(w, h, DXGI_FORMAT_R24G8_TYPELESS, true);
-	mPipeline->addShaderResource("depth", depth);
-	mPipeline->addDepthStencil("depth", depth);
-	auto material = mRenderer->createRenderTarget(w, h, DXGI_FORMAT_R16G16B16A16_FLOAT);
-	mPipeline->addShaderResource("material", material);
-	mPipeline->addRenderTarget("material", material);
-
-	constexpr auto MAX_NUM_LIGHTS = 1024;
-	auto pointlights = mRenderer->createRWBuffer(sizeof(Vector4) * 2 * MAX_NUM_LIGHTS, sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-	mPipeline->addShaderResource("pointlights", pointlights);
-	mPipeline->addBuffer("pointlights", pointlights);
-
-	auto spotlights = mRenderer->createRWBuffer(sizeof(Vector4) * 3 * MAX_NUM_LIGHTS, sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-	mPipeline->addShaderResource("spotlights", spotlights);
-	mPipeline->addBuffer("spotlights", spotlights);
-
-	auto dirlights = mRenderer->createRWBuffer(sizeof(Vector4) * 2 * MAX_NUM_LIGHTS, sizeof(Vector4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-	mPipeline->addShaderResource("dirlights", dirlights);
-	mPipeline->addBuffer("dirlights", dirlights);
-
 
 
 	initDRPipeline();
@@ -269,80 +243,10 @@ void MultipleLights::initScene()
 			lightCastingShadow[light] = numCastingShadow++;
 	});
 
-	auto updateLights = [this, lightCastingShadow](auto lights, const std::string& buffername) {
-		auto cam = mScene->createOrGetCamera("main");
-		D3D11_MAP map = D3D11_MAP_WRITE_DISCARD;
-		D3D11_MAPPED_SUBRESOURCE subresource;
-		auto context = mRenderer->getContext();
-		auto buffer = mPipeline->getBuffer(buffername).lock();
-		context->Map(*buffer, 0, map, 0, &subresource);
-		char* data = (char*)subresource.pData;
-		float range = 1000.0f;
-		if (has("lightRange"))
-			range = getValue<float>("lightRange");
-		
-		auto endi = lightCastingShadow.end();
-		for (auto& l : *lights)
-		{
-			auto light = l.light;
-			auto iter = lightCastingShadow.find(light);
-			float shadowindex = 0.0f;
-			if (iter != endi)
-				shadowindex = (float)iter->second;
 
-			if (light->getType() == Scene::Light::LT_POINT)
-			{
-				Vector3 pos = light->getNode()->getRealPosition();
-				Vector4 vpos = { pos.x, pos.y, pos.z, 1 };
-				vpos.w = range;
-				memcpy(data, &vpos, sizeof(vpos));
-				data += sizeof(vpos);
-				Vector3 color = light->getColor();
-				color *= getValue<float>("pointradiance");
-				memcpy(data, &Vector4(color.x, color.y, color.z, shadowindex), sizeof(Vector4));
-				data += sizeof(Vector4);
-			}
-			else if (light->getType() == Scene::Light::LT_SPOT)
-			{
-				Vector3 pos = light->getNode()->getRealPosition();
-				Vector4 vpos = { pos.x, pos.y, pos.z, 1 };
-				vpos.w = range;
-				memcpy(data, &vpos, sizeof(vpos));
-				data += sizeof(vpos);
-
-				Vector3 dir = light->getDirection();
-				Vector4 vdir = { dir.x, dir.y,dir.z,0 };
-				vdir.w = std::cos(light->getSpotAngle());
-				memcpy(data, &vdir, sizeof(vdir));
-				data += sizeof(vdir);
-
-				Vector3 color = light->getColor();
-				color *= getValue<float>("spotradiance");
-				memcpy(data, &Vector4(color.x, color.y, color.z, shadowindex), sizeof(Vector4));
-				data += sizeof(Vector4);
-			}
-			else if (light->getType() == Scene::Light::LT_DIR)
-			{
-				Vector3 dir = light->getDirection();
-				Vector4 vdir = { dir.x, dir.y,dir.z,0 };
-				memcpy(data, &vdir, sizeof(vdir));
-				data += sizeof(vdir);
-
-				Vector3 color = light->getColor();
-				color *= getValue<float>("dirradiance");
-				memcpy(data, &Vector4(color.x, color.y, color.z, shadowindex), sizeof(Vector4));
-				data += sizeof(Vector4);
-			}
-		}
-
-		context->Unmap(*buffer, 0);
-	};
 	
 	set("time", { {"value", 3.14f}, {"min", "1.57"}, {"max", "4.71"}, {"interval", "0.001"}, {"type","set"} });
 	mUpdater = [=]() {
-		updateLights(pointlights, "pointlights");
-		updateLights(spotlights, "spotlights");
-		updateLights(dirlights, "dirlights");
 
 		//for(auto&i: *pointlights)
 		//{ 
@@ -400,10 +304,9 @@ void MultipleLights::initDRPipeline()
 	mPipeline->pushStage("clear rt",[bb,this, depth](Renderer::Texture2D::Ptr rt)
 	{
 		mRenderer->clearRenderTarget(rt, { 0,0,0,0 });
-		mRenderer->clearDepth(depth, 1.0f);
 	});
 
-	mPipeline->pushStage<GBuffer>();
+	mPipeline->pushStage<GBuffer>(true);
 	mPipeline->pushStage<PBR>();
 	mPipeline->pushStage<HDR>();
 	mPipeline->pushStage<SkyBox>("media/Ditch-River_2k.hdr", false);
@@ -477,10 +380,9 @@ void MultipleLights::initTBDRPipeline()
 	mPipeline->pushStage("clear rt",[bb,this, depth](Renderer::Texture2D::Ptr rt)
 	{
 		mRenderer->clearDepth(depth, 1.0f);
-		mRenderer->clearRenderTarget(rt, { 0,0,0,0 });
 	});
 
-	mPipeline->pushStage<GBuffer>();
+	mPipeline->pushStage<GBuffer>(true);
 	mPipeline->pushStage<DepthBounding>(bw, bh);
 	mPipeline->pushStage<LightCulling>(bw, bh);
 
@@ -575,10 +477,9 @@ void MultipleLights::initCDRPipeline()
 	mPipeline->pushStage("clear rt", [bb,this, depth](Renderer::Texture2D::Ptr rt)
 	{
 		mRenderer->clearRenderTarget(rt, { 0,0,0,0 });
-		mRenderer->clearDepth(depth, 1.0f);
 	});
 
-	mPipeline->pushStage<GBuffer>();
+	mPipeline->pushStage<GBuffer>(true);
 
 	mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
 

@@ -171,6 +171,15 @@
     <ClInclude Include="SphericalHarmonics.h">
       <Filter>Engine</Filter>
     </ClInclude>
+    <ClInclude Include="IrradianceVolumes.h">
+      <Filter>Pipeline\Stage</Filter>
+    </ClInclude>
+    <ClInclude Include="IrradianceCaching.h">
+      <Filter>Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="SHSample.h">
+      <Filter>Framework</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -276,6 +285,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="MotionVector.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="IrradianceVolumes.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

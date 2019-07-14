@@ -18,8 +18,9 @@ float HarmonicBasis0() {
 }
 
 
-
-#define DEGREE 2
+#ifndef DEGREE
+#define DEGREE 1
+#endif
 #define NUM_COEFS (DEGREE + 1) * (DEGREE + 1)
 
 #define PI 3.14159265358f
