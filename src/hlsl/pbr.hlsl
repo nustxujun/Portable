@@ -1,5 +1,5 @@
 
-static const float PI = 3.14159265359f;
+static const float PI = 3.14159265358f;
 static const float3 F0_DEFAULT = 0.04f;
 static const float MIN_ROUGHNESS = 0.0001f;
 

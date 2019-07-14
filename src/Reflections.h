@@ -71,7 +71,7 @@ public:
 			model->attach(root);
 			Material::Ptr mat = Material::create();
 			mat->roughness = 1;
-			mat->metallic = 0;
+			mat->metallic = 1;
 			mat->reflection = 0;
 			mat->diffuse = { 0,1, 0};
 			model->setMaterial(mat);
@@ -115,6 +115,7 @@ public:
 			params["radius"] = "1";
 			Material::Ptr mat = Material::create();
 			mat->reflection = 1;
+			mat->metallic = 1;
 			std::vector<std::string> textures = {
 			"media/streaked/streaked-metal1-albedo.png",
 			"",
@@ -193,6 +194,7 @@ public:
 		params["radius"] = "1";
 		auto sphere = Mesh::Ptr(new GeometryMesh(params, mRenderer));
 		sphere->getMesh(0).material->roughness = 0;
+		sphere->getMesh(0).material->metallic = 1;
 
 		for (int x = 1; x < numprobes; ++x)
 		{

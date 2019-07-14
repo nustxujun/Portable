@@ -26,8 +26,7 @@ void EnvironmentMapping::init()
 		switch (i)
 		{
 		case 0: break;
-		case 1: macros.push_back({ "SH", "1" }); break;
-		case 2: macros.push_back({ "IBL", "1" }); break;
+		case 1: macros.push_back({ "IBL", "1" }); break;
 		default:
 			break;
 		}
@@ -49,7 +48,6 @@ void EnvironmentMapping::init()
 
 	mConstants = renderer->createConstantBuffer(sizeof(Constants));
 
-	//mProbeInfos = renderer->createRWBuffer(sizeof(Vector3) * 6 * MAX_NUM_PROBES, sizeof(Vector3), DXGI_FORMAT_R32G32B32_FLOAT, D3D11_BIND_SHADER_RESOURCE, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 	mCalDistanceConst = renderer->createConstantBuffer(sizeof(Matrix));
 	mCalDistance = renderer->createPixelShader("hlsl/distance.hlsl");
 }
@@ -146,9 +144,29 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 		//mCubePipeline->pushStage<EnvironmentMapping>(cubemap);
 		mCubePipeline->pushStage<SkyBox>(cubemap, false);
 	}
-	mCubePipeline->setValue("ambient", 1.0f);
+	//mCubePipeline->setValue("ambient", 1.0f);
 	//mCubePipeline->setValue("numdirs", 1.0f);
 	//mCubePipeline->setValue("dirradiance", 1.0f);
+
+	mCubePipeline->setValue("dirradiance", 1);
+	mCubePipeline->setValue("pointradiance", 1);
+	mCubePipeline->setValue("lightRange", vec.Length());
+
+
+	int numdirs = 0;
+	int numpoints = 0;
+
+	getScene()->visitLights([&numdirs, &numpoints](Scene::Light::Ptr l)
+	{
+		switch (l->getType())
+		{
+		case Scene::Light::LT_DIR: numdirs++; break;
+		case Scene::Light::LT_POINT: numpoints++; break;
+		}
+	});
+
+	mCubePipeline->setValue("numdirs", numdirs);
+	mCubePipeline->setValue("numpoints", numpoints);
 
 
 
@@ -167,26 +185,27 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 		float mindist = FLT_MAX;
 		std::vector<float> dists;
 		int nums = 0;
+
+		int miplevels = 10;
 		if (force || mType == T_EVERYFRAME)
 		{
 			mIrradiance.clear();
 			mPrefiltered.clear();
-			mCoefficients.clear();
 			for (auto& p : probes)
 			{
 				{
 					D3D11_TEXTURE2D_DESC cubedesc;
 					cubedesc.Width = cubesize;
 					cubedesc.Height = cubesize;
-					cubedesc.MipLevels = 1;
-					cubedesc.ArraySize = 6;
+					cubedesc.MipLevels = miplevels;
+					cubedesc.ArraySize = 6 ;
 					cubedesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 					cubedesc.SampleDesc.Count = 1;
 					cubedesc.SampleDesc.Quality = 0;
 					cubedesc.Usage = D3D11_USAGE_DEFAULT;
 					cubedesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 					cubedesc.CPUAccessFlags = 0;
-					cubedesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+					cubedesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE | D3D11_RESOURCE_MISC_GENERATE_MIPS;
 					mCube.push_back( renderer->createTexture(cubedesc));
 				}
 				{
@@ -218,13 +237,17 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 					Quaternion rot = Quaternion::CreateFromRotationMatrix(d);
 					cam->getNode()->setOrientation(rot);
 					mCubePipeline->render();
-					renderer->getContext()->CopySubresourceRegion(mCube[nums]->getTexture(), index, 0, 0, 0, frame->getTexture(), 0, 0);
+
+					auto cubeindex = D3D10CalcSubresource(0, index, miplevels);
+
+					renderer->getContext()->CopySubresourceRegion(mCube[nums]->getTexture(), cubeindex, 0, 0, 0, frame->getTexture(), 0, 0);
 
 					auto proj = cam->getProjectionMatrix();
 
 					auto dist = calDistance(depth,  proj.Invert().Transpose());
-					//D3DX11SaveTextureToFile(getRenderer()->getContext(), dist->get()->getTexture(), D3DX11_IFF_DDS, L"test.dds");
+					//D3DX11SaveTextureToFile(getRenderer()->getContext(), mCube[nums]->getTexture(), D3DX11_IFF_DDS, L"test.dds");
 
+					
 					renderer->getContext()->CopySubresourceRegion(mDepthCorrected[nums]->get()->getTexture(), index, 0, 0, 0, dist->get()->getTexture(), 0, 0);
 					index++;
 
@@ -235,33 +258,11 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 					mPrefiltered.push_back(mPrefilteredProcessor->process(mCube[nums]));
 
 				}
-				else if (p.second->getType() == Scene::Probe::PT_DIFFUSE)
+				else
 				{
-					//mIrradiance.push_back({});
-					//mPrefiltered.push_back({});
-
-
-					//auto constexpr degree = 1;
-					//auto constexpr num_coefs = (degree + 1) * (degree + 1);
-					//std::vector<Vector3> coefs(num_coefs);
-
-					////float r[num_coefs] = { 0 };
-					////float g[num_coefs] = { 0 };
-					////float b[num_coefs] = { 0 };
-					////D3DX11SHProjectCubeMap(getRenderer()->getContext(), degree + 1 , mCube->getTexture(), r, g, b);
-
-					////for (int i = 0; i < num_coefs; ++i)
-					////{
-					////	coefs[i] = { r[i], g[i],b[i] };
-					////}
-					//coefs = SphericalHarmonics::precompute<degree>(mCube[nums], getRenderer());
-
-					//if (mCoefficients.size() <= nums)
-					//{
-					//	mCoefficients.push_back(getRenderer()->createRWBuffer(sizeof(Vector3) * num_coefs, sizeof(Vector3), DXGI_FORMAT_R32G32B32_FLOAT,D3D11_BIND_SHADER_RESOURCE,D3D11_USAGE_DYNAMIC,D3D11_CPU_ACCESS_WRITE));
-					//}
-					//mCoefficients[nums]->blit(coefs.data(), sizeof(Vector3) * num_coefs);
+					renderer->getContext()->GenerateMips(mCube[nums]->Renderer::ShaderResource::getView());
 				}
+
 				nums++;
 			}
 		}
@@ -365,17 +366,13 @@ void EnvironmentMapping::render(Renderer::Texture2D::Ptr rt)
 		getShaderResource("material"),
 		getShaderResource("depth"),
 		mDepthCorrected[selected]->get(),
+		mLUT
 	};
 
 	if (probe->getType() == Scene::Probe::PT_IBL)
 	{
-		srvs.push_back(mLUT);
 		srvs.push_back(mIrradiance[selected]->get());
 		srvs.push_back(mPrefiltered[selected]->get());
-	}
-	else if (probe->getType() == Scene::Probe::PT_DIFFUSE)
-	{
-		srvs.push_back(mCoefficients[selected]);
 	}
 	else
 		srvs.push_back(mCube[selected]);

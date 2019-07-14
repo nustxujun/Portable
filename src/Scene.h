@@ -209,7 +209,6 @@ public:
 		enum Type
 		{
 			PT_SPECULAR,
-			PT_DIFFUSE,
 			PT_IBL,
 		};
 

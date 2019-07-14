@@ -132,5 +132,5 @@ private:
 	std::unordered_map<std::string, Renderer::UnorderedAccess::Ptr> mUnorderedAccesses;
 	std::unordered_map<std::string, Renderer::Buffer::Ptr> mBuffers;
 	std::unordered_map<std::string, Renderer::Texture2D::Ptr> mTexture2Ds;
-
+	bool mDoProfile = false;
 };

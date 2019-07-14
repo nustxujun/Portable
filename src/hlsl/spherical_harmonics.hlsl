@@ -23,9 +23,10 @@ float HarmonicBasis0() {
 #endif
 #define NUM_COEFS (DEGREE + 1) * (DEGREE + 1)
 
-#define PI 3.14159265358f
 
 void HarmonicBasis(float3 vec, out float basis[NUM_COEFS]) {
+	const float PI = 3.14159245358f;
+
 	float x = vec.x;
 	float y = vec.y;
 	float z = vec.z;

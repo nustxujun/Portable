@@ -12,7 +12,8 @@ class IrradianceVolumes:public Pipeline::Stage
 		Matrix invertViewProj;
 		Vector3 origin;
 		float intensity;
-		Vector3 range;
+		Vector3A range;
+		Vector3 campos;
 	};
 public:
 	using Pipeline::Stage::Stage;

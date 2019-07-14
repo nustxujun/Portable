@@ -143,6 +143,10 @@ Renderer::TemporaryRT::Ptr CubeMapProcessing::process(Renderer::Texture2D::Ptr t
 		desc.MipLevels = 1;
 		desc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
 	}
+	else
+	{
+		desc.MipLevels = 1;
+	}
 	desc.Width = 32;
 	desc.Height = 32;
 	desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
@@ -233,6 +237,7 @@ Renderer::TemporaryRT::Ptr PrefilterCubemap::process(Renderer::Texture2D::Ptr te
 		desc.ArraySize = 6;
 		desc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
 	}
+
 	desc.Width = 512;
 	desc.Height = 512;
 	desc.MipLevels = 5;

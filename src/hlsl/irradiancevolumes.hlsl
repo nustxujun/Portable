@@ -1,4 +1,5 @@
 #include "spherical_harmonics.hlsl"
+#include "pbr.hlsl"
 
 Texture2D albedoTex:register(t0);
 Texture2D depthTex:register(t1);
@@ -12,7 +13,7 @@ cbuffer Constants:register(b0)
 	float3 origin;
 	float intensity;
 	float3 range;
-
+	float3 campos;
 }
 
 SamplerState sampLinear:register(s0);
@@ -90,7 +91,15 @@ float4 main(PS_INPUT Input) : SV_TARGET
 	}
 
 	float metallic = material.g;
-	color = saturate(color) * (1 - metallic);
+	float roughness = material.r;
 
-	return float4(color * albedo * intensity, 1);
+	float3 V = normalize(campos - worldpos.xyz);
+	float3 f0 = lerp(F0_DEFAULT, albedo, metallic);
+	float3 kS = FresnelSchlickRoughness(V, N, f0, roughness);
+	float3 kD = 1.0f - kS;
+	kD *= (1.0f - metallic);
+
+	color = saturate(color) * kD * albedo * intensity;
+
+	return float4(color, 1);
 }

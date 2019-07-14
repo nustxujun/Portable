@@ -48,7 +48,6 @@ private:
 	std::vector<Renderer::Texture2D::Ptr> mCube;
 	std::vector<Renderer::TemporaryRT::Ptr> mIrradiance;
 	std::vector<Renderer::TemporaryRT::Ptr> mPrefiltered;
-	std::vector<Renderer::Buffer::Ptr> mCoefficients;
 	std::vector<Renderer::TemporaryRT::Ptr> mDepthCorrected;
 	Renderer::Texture2D::Ptr mLUT;
 	IrradianceCubemap::Ptr mIrradianceProcessor;

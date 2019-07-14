@@ -14,7 +14,7 @@ const size_t IrradianceVolumes::NUM_COEFS = (IrradianceVolumes::SH_DEGREE + 1) *
 const size_t IrradianceVolumes::COEFS_ARRAY_SIZE = ALIGN(NUM_COEFS * 3, 4)  / 4;
 const size_t IrradianceVolumes::RESOLUTION = 32;
 
-#define SHOW_DEBUG_OBJECT 1
+#define SHOW_DEBUG_OBJECT 0
 
 void IrradianceVolumes::init(const Vector3 & size, const std::string& sky)
 {
@@ -102,9 +102,10 @@ void IrradianceVolumes::initBakedPipeline(const std::string& sky)
 	mBakedPipeline->pushStage<PBR>(Vector3(), shadowmaps);
 	mBakedPipeline->pushStage<SkyBox>(sky, false);
 
-	mBakedPipeline->setValue("ambient", 1.0f);
-	mBakedPipeline->setValue("dirradiance", 10);
-	mBakedPipeline->setValue("pointradiance", 10);
+	//mBakedPipeline->setValue("ambient", 1.0f);
+	mBakedPipeline->setValue("dirradiance", 1);
+	mBakedPipeline->setValue("pointradiance", 1);
+	mBakedPipeline->setValue("lightRange", vec.Length());
 
 	int numdirs = 0;
 	int numpoints = 0;
@@ -118,8 +119,8 @@ void IrradianceVolumes::initBakedPipeline(const std::string& sky)
 		}
 	});
 
-	//mBakedPipeline->setValue("numdirs", numdirs);
-	//mBakedPipeline->setValue("numpoints", numpoints);
+	mBakedPipeline->setValue("numdirs", numdirs);
+	mBakedPipeline->setValue("numpoints", numpoints);
 
 
 
@@ -203,7 +204,7 @@ void IrradianceVolumes::calCoefs(size_t cubesize, Renderer::Texture2D::Ptr frame
 					});
 					model->getNode()->setPosition(aabb.first  + len * Vector3(x, y, z) + half);
 					model->attach(scene->getRoot());
-					model->setStatic(true);
+					model->setStatic(false);
 #endif
 
 					mBakedPipeline->render();
@@ -340,6 +341,7 @@ void IrradianceVolumes::render(Renderer::Texture2D::Ptr rt)
 	c.invertViewProj = (cam->getViewMatrix() * cam->getProjectionMatrix()).Invert().Transpose();
 	c.range = vec - len ;
 	c.origin = aabb.first + half;
+	c.campos = cam->getNode()->getRealPosition();
 	mConstants->blit(c);
 	quad->setConstant(mConstants);
 	quad->draw();

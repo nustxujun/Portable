@@ -18,6 +18,7 @@
 #include "TAA.h"
 #include "MotionVector.h"
 
+
 #include <random>
 
 class SHSample :public Framework
@@ -34,7 +35,7 @@ public:
 		//set("dirradiance", { {"type","set"}, {"value",100},{"min","0.1"},{"max",100},{"interval", "0.1"} });
 		set("lightRange", { {"value", 100}, {"min", 1}, {"max", 1000}, {"interval", 1}, {"type","set"} });
 		set("numpoints", { {"value", 1}, {"min", 0}, {"max", 1}, {"interval", 1}, {"type","set"} });
-		set("pointradiance", { {"type","set"}, {"value",100},{"min","0.1"},{"max",100},{"interval", "0.1"} });
+		set("pointradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
 
 		auto root = mScene->getRoot();
 		//{
@@ -128,6 +129,7 @@ public:
 			"media/streaked/streaked-metal1-ao.png",
 			};
 			mat->metallic = 0;
+			mat->roughness = 1;
 			//for (int i = 0; i < textures.size(); ++i)
 			//	if (!textures[i].empty())
 			//		mat->setTexture(i, mRenderer->createTexture(textures[i]));
@@ -182,19 +184,19 @@ public:
 		light->setType(Scene::Light::LT_POINT);
 		light->getNode()->setPosition(0, 1.75, 0);
 
-		int numprobes = 1;
-		auto half = vec * 0.5f;
-		auto dx = vec.x / numprobes;
-		auto pos = (aabb.first + aabb.second) * 0.5f;
-		std::uniform_real_distribution<float> rand(0.0f, 1.0f);
-		std::default_random_engine gen;
-
 		Parameters params;
 		params["geom"] = "sphere";
-		params["radius"] = "1";
+		params["radius"] = "0.1";
 		auto sphere = Mesh::Ptr(new GeometryMesh(params, mRenderer));
 		sphere->getMesh(0).material->roughness = 0;
+		sphere->getMesh(0).material->metallic = 1;
 
+		auto probe = mScene->createProbe("probe");
+		probe->getNode()->setPosition((aabb.first + aabb.second)*0.5f);
+		probe->setDebugObject(sphere);
+		probe->setProxy(Scene::Probe::PP_DEPTH);
+		probe->setType(Scene::Probe::PT_IBL);
+		probe->attach(root);
 
 	}
 
@@ -234,9 +236,10 @@ public:
 		//mPipeline->pushStage<AO>();
 		//mPipeline->pushStage<SSR>();
 		//mPipeline->pushStage<MotionBlur>(true);
-		mPipeline->pushStage<IrradianceVolumes>(Vector3(5, 5, 5), "media/black.png");
+		//mPipeline->pushStage<IrradianceVolumes>(Vector3(5, 5, 5), "media/black.png");
+		mPipeline->pushStage<EnvironmentMapping>(EnvironmentMapping::T_ONCE, "media/black.png");
 		mPipeline->pushStage<SkyBox>("media/black.png", false);
-		mPipeline->pushStage<TAA>();
+		//mPipeline->pushStage<TAA>();
 		mPipeline->pushStage<HDR>();
 		mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 		Quad::Ptr quad = std::make_shared<Quad>(mRenderer);

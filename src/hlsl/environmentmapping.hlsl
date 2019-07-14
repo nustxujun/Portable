@@ -6,18 +6,17 @@ Texture2D normalTex: register(t1);
 Texture2D materialTex:register(t2);
 Texture2D depthTex:register(t3);
 TextureCube envdepthTex:register(t4);
+Texture2D lutTexture: register(t5);
 
 
 #if IBL
 #define PREFILTERED_MIP_LEVEL 5
-Texture2D lutTexture: register(t5);
+
 TextureCube irradianceTexture: register(t6);
 TextureCube prefilteredTexture: register(t7);
-#elif SH
-#include "spherical_harmonics.hlsl"
-Buffer<float3> coefs: register(t5);
 #else
-TextureCube envTex: register(t5);
+#define PREFILTERED_MIP_LEVEL 10
+TextureCube envTex: register(t6);
 #endif
 
 
@@ -192,24 +191,19 @@ float4 main(PS_INPUT Input) : SV_TARGET
 	coord = normalize(coord - probepos);
 #endif
 
+	float3 lut = LUT(N, V, roughness, lutTexture, sampLinear);
 
 #if IBL
-	float3 lut = LUT(N, V, roughness, lutTexture, sampLinear);
 	float3 prefiltered = prefilteredTexture.SampleLevel(sampLinear, coord, roughness * (PREFILTERED_MIP_LEVEL - 1)).rgb;
 	float3 irradiance = irradianceTexture.SampleLevel(sampLinear, N, 0).rgb;
 	calcolor = indirectBRDF(irradiance, prefiltered, lut, roughness, metallic, F0_DEFAULT, albedo, N, V);
 	result = calcolor * intensity /** float3((i % 2), 0, (1.0f - i % 2)) */;  
-#elif SH
-	float basis[NUM_COEFS];
-	HarmonicBasis(N, basis); 
-	for (int i = 0; i < NUM_COEFS; ++i)
-	{
-		result += coefs[i] * basis[i];
-	}
-	result *= albedo * intensity; 
 #else
-	calcolor = envTex.SampleLevel(sampLinear, coord, 0).rgb;
-	result = calcolor * intensity * (1 - roughness) * metallic  ;
+	float3 f0 = lerp(F0_DEFAULT, albedo, metallic);
+	float3 kS = FresnelSchlickRoughness(V, N, f0, roughness);
+	float3 specular = envTex.SampleLevel(sampLinear, coord, roughness * (PREFILTERED_MIP_LEVEL - 1)).rgb ;
+	calcolor = specular * (kS * lut.x + lut.y);
+	result = calcolor * intensity ;
 #endif
 
 

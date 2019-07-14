@@ -2,6 +2,7 @@
 
 void MotionVector::init()
 {
+	mName = "motion vector";
 	mEffect = getRenderer()->createEffect("hlsl/motionvector.fx");
 	auto cam = getCamera();
 	auto vp = cam->getViewport();
