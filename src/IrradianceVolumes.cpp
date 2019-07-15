@@ -9,7 +9,7 @@
 #include <thread>
 #include <iostream>
 
-const size_t IrradianceVolumes::SH_DEGREE = 2;
+const size_t IrradianceVolumes::SH_DEGREE = 1;
 const size_t IrradianceVolumes::NUM_COEFS = (IrradianceVolumes::SH_DEGREE + 1) * (IrradianceVolumes::SH_DEGREE + 1);
 const size_t IrradianceVolumes::COEFS_ARRAY_SIZE = ALIGN(NUM_COEFS * 3, 4)  / 4;
 const size_t IrradianceVolumes::RESOLUTION = 32;
@@ -98,7 +98,7 @@ void IrradianceVolumes::initBakedPipeline(const std::string& sky)
 	{
 		return e->isStatic();
 	});
-	//mBakedPipeline->pushStage<ShadowMap>(1024, 1, shadowmaps);
+	mBakedPipeline->pushStage<ShadowMap>(cubesize, 1, shadowmaps);
 	mBakedPipeline->pushStage<PBR>(Vector3(), shadowmaps);
 	mBakedPipeline->pushStage<SkyBox>(sky, false);
 
@@ -128,7 +128,11 @@ void IrradianceVolumes::initBakedPipeline(const std::string& sky)
 	mBakedPipeline->setFrameBuffer(frame);
 
 	std::cout << "computing sphecial harmonics coefficients ..." << std::endl;
-	calCoefs(cubesize, frame);
+
+	mCal = [cubesize, frame,this]() {
+		calCoefs(cubesize, frame);
+	};
+	mCal();
 }
 
 void IrradianceVolumes::calCoefs(size_t cubesize, Renderer::Texture2D::Ptr frame)
@@ -176,7 +180,7 @@ void IrradianceVolumes::calCoefs(size_t cubesize, Renderer::Texture2D::Ptr frame
 #if SHOW_DEBUG_OBJECT
 	Parameters params;
 	params["geom"] = "sphere";
-	params["radius"] = Common::format(vec.Length() * 0.01f);
+	params["radius"] = Common::format(vec.Length() * 0.01f * std::pow(1 / mSize.Length(), 0.5f));
 	auto sphere = Mesh::Ptr(new GeometryMesh(params, renderer));
 	sphere->getMesh(0).material->roughness = 1;
 	sphere->getMesh(0).material->metallic = 0;
@@ -299,6 +303,7 @@ void IrradianceVolumes::readTextureCube(Renderer::Texture2D::Ptr cube, std::arra
 
 void IrradianceVolumes::render(Renderer::Texture2D::Ptr rt)
 {
+	//mCal();
 	auto quad = getQuad();
 	auto renderer = getRenderer();
 

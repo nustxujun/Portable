@@ -32,4 +32,5 @@ private:
 	std::function<void(void)> mCalSH;
 	Renderer::PixelShader::Weak mPS;
 	Renderer::Buffer::Ptr mConstants;
+	std::function<void(void)> mCal;
 };
