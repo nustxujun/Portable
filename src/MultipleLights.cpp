@@ -27,9 +27,9 @@ void MultipleLights::initPipeline()
 	auto h = vp.Height;
 
 
-	initDRPipeline();
+	//initDRPipeline();
 	//initTBDRPipeline();
-	//initCDRPipeline();
+	initCDRPipeline();
 }
 
 void MultipleLights::initScene()
@@ -121,11 +121,11 @@ void MultipleLights::initScene()
 		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
 		auto m = model->getMesh()->getMesh(0).material;
 
-		for (int i = 0; i < model->getMesh()->getNumMesh(); ++i)
-		{
-			auto m = model->getMesh()->getMesh(i).material;
-			m->setTexture(0, {});
-		}
+		//for (int i = 0; i < model->getMesh()->getNumMesh(); ++i)
+		//{
+		//	auto m = model->getMesh()->getMesh(i).material;
+		//	m->setTexture(0, {});
+		//}
 
 	}
 
@@ -300,8 +300,7 @@ void MultipleLights::initDRPipeline()
 
 	mPipeline->setFrameBuffer(frame);
 	auto bb = mRenderer->getBackbuffer();
-	auto depth = mPipeline->getDepthStencil("depth");
-	mPipeline->pushStage("clear rt",[bb,this, depth](Renderer::Texture2D::Ptr rt)
+	mPipeline->pushStage("clear rt",[bb,this](Renderer::Texture2D::Ptr rt)
 	{
 		mRenderer->clearRenderTarget(rt, { 0,0,0,0 });
 	});
@@ -375,11 +374,9 @@ void MultipleLights::initTBDRPipeline()
 
 	mPipeline->setFrameBuffer(frame);
 	auto bb = mRenderer->getBackbuffer();
-	auto depth = mPipeline->getDepthStencil("depth");
 
-	mPipeline->pushStage("clear rt",[bb,this, depth](Renderer::Texture2D::Ptr rt)
+	mPipeline->pushStage("clear rt",[bb,this](Renderer::Texture2D::Ptr rt)
 	{
-		mRenderer->clearDepth(depth, 1.0f);
 	});
 
 	mPipeline->pushStage<GBuffer>(true);
@@ -472,9 +469,8 @@ void MultipleLights::initCDRPipeline()
 
 	mPipeline->setFrameBuffer(frame);
 	auto bb = mRenderer->getBackbuffer();
-	auto depth = mPipeline->getDepthStencil("depth");
 
-	mPipeline->pushStage("clear rt", [bb,this, depth](Renderer::Texture2D::Ptr rt)
+	mPipeline->pushStage("clear rt", [bb,this](Renderer::Texture2D::Ptr rt)
 	{
 		mRenderer->clearRenderTarget(rt, { 0,0,0,0 });
 	});
