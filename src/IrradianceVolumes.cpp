@@ -9,10 +9,10 @@
 #include <thread>
 #include <iostream>
 
-const size_t IrradianceVolumes::SH_DEGREE = 1;
+const size_t IrradianceVolumes::SH_DEGREE = 2;
 const size_t IrradianceVolumes::NUM_COEFS = (IrradianceVolumes::SH_DEGREE + 1) * (IrradianceVolumes::SH_DEGREE + 1);
 const size_t IrradianceVolumes::COEFS_ARRAY_SIZE = ALIGN(NUM_COEFS * 3, 4)  / 4;
-const size_t IrradianceVolumes::RESOLUTION = 32;
+const size_t IrradianceVolumes::RESOLUTION = 128;
 
 #define SHOW_DEBUG_OBJECT 0
 
@@ -186,7 +186,7 @@ void IrradianceVolumes::calCoefs(size_t cubesize, Renderer::Texture2D::Ptr frame
 	sphere->getMesh(0).material->metallic = 0;
 #endif
 
-	std::vector<std::thread> threads;
+	std::list<std::thread> threads;
 
 	for (float x = 0; x < mSize.x; ++x)
 	{
@@ -220,6 +220,13 @@ void IrradianceVolumes::calCoefs(size_t cubesize, Renderer::Texture2D::Ptr frame
 				using TEXCUBE = std::array<std::vector<Vector4>, 6>;
 				std::shared_ptr<TEXCUBE> content =  decltype(content)(new TEXCUBE());
 				readTextureCube(cube->get(), *content);
+				
+				auto maxthreads = std::thread::hardware_concurrency() - 1; 
+				if (threads.size() > maxthreads)
+				{
+					threads.begin()->join();
+					threads.pop_front();
+				}
 				threads.emplace_back([=,&coefs]()
 				{
 					std::vector<Vector3> ret = SphericalHarmonics::precompute< SH_DEGREE>(*content, cubesize);

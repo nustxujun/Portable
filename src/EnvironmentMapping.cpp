@@ -133,9 +133,12 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 		renderer->clearRenderTarget(rt, { 0,0,0,0 });
 	});
 
-	mCubePipeline->pushStage<GBuffer>(true,[](Scene::Entity::Ptr e)->bool
+	mCubePipeline->pushStage<GBuffer>(true,[this](Scene::Entity::Ptr e)->bool
 	{
-		return e->isStatic();
+		if (mType == T_ONCE)
+			return e->isStatic();
+		else
+			return true;
 	});
 
 	mCubePipeline->pushStage<PBR>();

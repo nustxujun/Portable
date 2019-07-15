@@ -195,7 +195,7 @@ public:
 		probe->getNode()->setPosition((aabb.first + aabb.second)*0.5f);
 		probe->setDebugObject(sphere);
 		probe->setProxy(Scene::Probe::PP_DEPTH);
-		probe->setType(Scene::Probe::PT_IBL);
+		probe->setType(Scene::Probe::PT_SPECULAR);
 		probe->attach(root);
 
 	}
@@ -236,8 +236,8 @@ public:
 		//mPipeline->pushStage<AO>();
 		//mPipeline->pushStage<SSR>();
 		//mPipeline->pushStage<MotionBlur>(true);
-		//mPipeline->pushStage<IrradianceVolumes>(Vector3(5, 5, 5), "media/black.png");
-		mPipeline->pushStage<EnvironmentMapping>(EnvironmentMapping::T_ONCE, "media/black.png");
+		//mPipeline->pushStage<IrradianceVolumes>(Vector3(10, 10, 10), "media/black.png");
+		//mPipeline->pushStage<EnvironmentMapping>(EnvironmentMapping::T_EVERYFRAME, "media/black.png");
 		mPipeline->pushStage<SkyBox>("media/black.png", false);
 		//mPipeline->pushStage<TAA>();
 		mPipeline->pushStage<HDR>();
