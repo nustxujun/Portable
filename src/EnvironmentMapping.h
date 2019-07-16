@@ -45,7 +45,7 @@ private:
 	Renderer::TemporaryRT::Ptr calDistance(Renderer::Texture2D::Ptr rt, const Matrix& inverViewProj);
 private:
 	Type mType = T_ONCE;
-	std::vector<Renderer::Texture2D::Ptr> mCube;
+	std::vector<Renderer::TemporaryRT::Ptr> mCube;
 	std::vector<Renderer::TemporaryRT::Ptr> mIrradiance;
 	std::vector<Renderer::TemporaryRT::Ptr> mPrefiltered;
 	std::vector<Renderer::TemporaryRT::Ptr> mDepthCorrected;

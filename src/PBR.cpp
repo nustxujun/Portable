@@ -119,6 +119,42 @@ void PBR::init(const Vector3 & cluster, const std::vector<Renderer::Texture2D::P
 	addShaderResource("dirlights", dirlights);
 	addBuffer("dirlights", dirlights);
 
+
+
+
+	D3D11_DEPTH_STENCIL_DESC dsdesc =
+	{
+		TRUE,
+		D3D11_DEPTH_WRITE_MASK_ZERO,
+		D3D11_COMPARISON_LESS,
+		TRUE,
+		D3D11_DEFAULT_STENCIL_READ_MASK,
+		D3D11_DEFAULT_STENCIL_WRITE_MASK,
+		{
+			D3D11_STENCIL_OP_KEEP,
+			D3D11_STENCIL_OP_INCR,
+			D3D11_STENCIL_OP_KEEP,
+			D3D11_COMPARISON_ALWAYS,
+		},
+		{
+			D3D11_STENCIL_OP_KEEP,
+			D3D11_STENCIL_OP_DECR,
+			D3D11_STENCIL_OP_KEEP,
+			D3D11_COMPARISON_ALWAYS
+		}
+	};
+
+	renderer->createDepthStencilState("depth_write_less_stencil_front_incr_back_decr",dsdesc);
+
+	dsdesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	dsdesc.FrontFace.StencilFunc = D3D11_COMPARISON_NOT_EQUAL;
+	dsdesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	dsdesc.BackFace.StencilFunc = D3D11_COMPARISON_NOT_EQUAL;
+	dsdesc.DepthEnable = false;
+	dsdesc.StencilEnable = true;
+
+	renderer->createDepthStencilState("stencil_front_not_equal_back_not_equal",dsdesc);
+
 }
 
 void PBR::updateLights()
@@ -278,20 +314,7 @@ void PBR::renderNormal(Renderer::Texture2D::Ptr rt)
 	quad->setSamplers({ mLinear, mPoint });
 	quad->setConstant(mConstants);
 
-	D3D11_BLEND_DESC blend = { 0 };
-
-	blend.RenderTarget[0] = {
-		TRUE,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_OP_ADD,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_OP_ADD,
-		D3D11_COLOR_WRITE_ENABLE_ALL
-	};
-
-	quad->setBlend(blend);
+	quad->setBlendColorAdd();
 
 	quad->draw();
 }
@@ -339,19 +362,8 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 	renderer->setTextures(srvs);
 
 
-	D3D11_BLEND_DESC blend = { 0 };
-	blend.RenderTarget[0] = {
-		TRUE,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_OP_ADD,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_OP_ADD,
-		D3D11_COLOR_WRITE_ENABLE_ALL
-	};
-	renderer->setBlendState(blend);
 
+	renderer->setBlendState("color_add");
 
 
 	auto cam = getCamera();
@@ -416,42 +428,14 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 		rasterDesc.SlopeScaledDepthBias = 0.0f;
 		renderer->setRasterizer(rasterDesc);
 
-		D3D11_DEPTH_STENCIL_DESC dsdesc =
-		{
-			TRUE,
-			D3D11_DEPTH_WRITE_MASK_ZERO,
-			D3D11_COMPARISON_LESS,
-			TRUE,
-			D3D11_DEFAULT_STENCIL_READ_MASK,
-			D3D11_DEFAULT_STENCIL_WRITE_MASK,
-			{
-				D3D11_STENCIL_OP_KEEP,
-				D3D11_STENCIL_OP_INCR,
-				D3D11_STENCIL_OP_KEEP,
-				D3D11_COMPARISON_ALWAYS,
-			},
-			{
-				D3D11_STENCIL_OP_KEEP,
-				D3D11_STENCIL_OP_DECR,
-				D3D11_STENCIL_OP_KEEP,
-				D3D11_COMPARISON_ALWAYS
-			}
-		};
-
 		// 1. draw front face and back face in depth and stencil
 		renderer->clearStencil(mDepth,1);
-		renderer->setDepthStencilState(dsdesc, 1);
+		renderer->setDepthStencilState("depth_write_less_stencil_front_incr_back_decr", 1);
 		renderer->setPixelShader({});
 		renderer->setRenderTargets({}, mDepth);
 		context->DrawIndexedInstanced(rend.numIndices, pointcount, 0, 0, 0);
 		// 2  render back face and test stencil(only draw pixel in the range of light volume)
-		dsdesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-		dsdesc.FrontFace.StencilFunc = D3D11_COMPARISON_NOT_EQUAL;
-		dsdesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-		dsdesc.BackFace.StencilFunc = D3D11_COMPARISON_NOT_EQUAL;
-		dsdesc.DepthEnable = false;
-		dsdesc.StencilEnable = true;
-		renderer->setDepthStencilState(dsdesc, 1);
+		renderer->setDepthStencilState("stencil_front_not_equal_back_not_equal", 1);
 		
 		//rasterDesc.FillMode = D3D11_FILL_WIREFRAME;
 		rasterDesc.CullMode = D3D11_CULL_FRONT;
@@ -472,20 +456,8 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 		quad->setDefaultViewport();
 		quad->setSamplers({ mLinear, mPoint });
 		quad->setConstant(mConstants); 
-		D3D11_BLEND_DESC blend = { 0 };
 
-		blend.RenderTarget[0] = {
-			TRUE,
-			D3D11_BLEND_ONE,
-			D3D11_BLEND_ONE,
-			D3D11_BLEND_OP_ADD,
-			D3D11_BLEND_ONE,
-			D3D11_BLEND_ONE,
-			D3D11_BLEND_OP_ADD,
-			D3D11_COLOR_WRITE_ENABLE_ALL
-		};
-
-		quad->setBlend(blend);
+		quad->setBlendColorAdd();
 		quad->draw();
 	}
 	renderer->removeShaderResourceViews();

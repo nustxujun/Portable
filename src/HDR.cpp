@@ -178,18 +178,7 @@ void HDR::renderBloom(Renderer::Texture2D::Ptr rt)
 	quad->setDefaultPixelShader();
 	
 
-	D3D11_BLEND_DESC desc = { 0 };
-	desc.RenderTarget[0] = {
-		TRUE,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_OP_ADD,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_OP_ADD,
-		D3D11_COLOR_WRITE_ENABLE_ALL
-	};
-	quad->setBlend(desc);
+	quad->setBlendColorAdd();
 	quad->setRenderTarget(rt);
 	quad->setTextures({ mBloomRT->get() });
 	quad->draw();

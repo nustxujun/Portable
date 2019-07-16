@@ -29,29 +29,8 @@ void MotionVector::render(Renderer::Texture2D::Ptr rt)
 	renderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	renderer->setDefaultBlendState();
 	renderer->clearStencil(depth, 0);
-	D3D11_DEPTH_STENCIL_DESC dsdesc =
-	{
-		TRUE,
-		D3D11_DEPTH_WRITE_MASK_ALL,
-		D3D11_COMPARISON_LESS_EQUAL,
-		FALSE,
-		D3D11_DEFAULT_STENCIL_READ_MASK,
-		D3D11_DEFAULT_STENCIL_WRITE_MASK,
-		{
-			D3D11_STENCIL_OP_KEEP,
-			D3D11_STENCIL_OP_KEEP,
-			D3D11_STENCIL_OP_INCR,
-			D3D11_COMPARISON_ALWAYS,
-		},
-		{
-			D3D11_STENCIL_OP_KEEP,
-			D3D11_STENCIL_OP_KEEP,
-			D3D11_STENCIL_OP_INCR,
-			D3D11_COMPARISON_ALWAYS
-		}
-	};
 
-	renderer->setDepthStencilState(dsdesc);
+	renderer->setDepthStencilState("depth_write_less_equal");
 	//renderer->setSampler(mPoint);
 
 	renderer->setDefaultRasterizer();

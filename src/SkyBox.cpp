@@ -57,12 +57,8 @@ void SkyBox::render(Renderer::Texture2D::Ptr rt)
 	auto renderer = getRenderer();
 
 	renderer->setRenderTargets({ rt }, getDepthStencil("depth"));
-	D3D11_DEPTH_STENCIL_DESC desc = {0};
-	desc.DepthEnable = true;
-	desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-	desc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
 	
-	renderer->setDepthStencilState(desc);
+	renderer->setDepthStencilState("depth_write_less_equal");
 	D3D11_RASTERIZER_DESC rasterDesc;
 	rasterDesc.AntialiasedLineEnable = false;
 	rasterDesc.CullMode = D3D11_CULL_FRONT;

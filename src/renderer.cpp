@@ -126,9 +126,30 @@ void Renderer::init(HWND win, int width, int height)
 	mTextures.emplace_back(shared);
 	mBackbuffer = shared;
 
-
-
 	mDefaultDepthStencil = createDepthStencil(width, height, DXGI_FORMAT_D24_UNORM_S8_UINT);
+
+	D3D11_DEPTH_STENCIL_DESC dsdesc =
+	{
+		TRUE,
+		D3D11_DEPTH_WRITE_MASK_ALL,
+		D3D11_COMPARISON_LESS_EQUAL,
+		FALSE,
+		D3D11_DEFAULT_STENCIL_READ_MASK,
+		D3D11_DEFAULT_STENCIL_WRITE_MASK,
+		{
+			D3D11_STENCIL_OP_KEEP,
+			D3D11_STENCIL_OP_KEEP,
+			D3D11_STENCIL_OP_KEEP,
+			D3D11_COMPARISON_ALWAYS,
+		},
+		{
+			D3D11_STENCIL_OP_KEEP,
+			D3D11_STENCIL_OP_KEEP,
+			D3D11_STENCIL_OP_KEEP,
+			D3D11_COMPARISON_ALWAYS
+		}
+	};
+	createDepthStencilState("depth_write_less_equal", dsdesc);
 
 
 	D3D11_QUERY_DESC d;
@@ -466,34 +487,48 @@ void Renderer::setViewport(const D3D11_VIEWPORT & vp)
 	mContext->RSSetViewports(1, &vp);
 }
 
-void Renderer::setDepthStencilState(const D3D11_DEPTH_STENCIL_DESC & desc, UINT stencil )
+
+void Renderer::setDepthStencilState(const std::string & name, UINT stencil)
 {
-	size_t hash = Common::hash(desc);
-	auto ret = mDepthStencilStates.find(hash);
+	auto ret = mDepthStencilStates.find(name);
 	if (ret == mDepthStencilStates.end())
-	{
-		ID3D11DepthStencilState* state;
-		checkResult(mDevice->CreateDepthStencilState(&desc, &state));
-		auto newstate = mDepthStencilStates.emplace(hash, new DepthStencilState(state));
-		ret = newstate.first;
-	}
+		return error(Common::format("cannot find depthstencilstate ", name));
 
 	mContext->OMSetDepthStencilState(*ret->second, stencil);
 }
 
-void Renderer::setBlendState(const D3D11_BLEND_DESC& desc, const std::array<float, 4>& factor , size_t mask )
+void Renderer::setDepthStencilState(DepthStencilState::Weak dss, UINT stencil)
 {
-	size_t hash = Common::hash(desc);
-	auto ret = mBlendStates.find(hash);
+	mContext->OMSetDepthStencilState(*dss.lock(), stencil);
+}
+
+//void Renderer::setBlendState(const D3D11_BLEND_DESC& desc, const std::array<float, 4>& factor , size_t mask )
+//{
+//	std::string name((char*)&desc, sizeof(desc));
+//	auto ret = mBlendStates.find(name);
+//	if (ret == mBlendStates.end())
+//	{
+//		ID3D11BlendState* state;
+//		checkResult(mDevice->CreateBlendState(&desc, &state));
+//		auto newstate = mBlendStates.emplace(name, new BlendState(state));
+//		ret = newstate.first;
+//	}
+//
+//	mContext->OMSetBlendState(*ret->second, factor.data(), mask);
+//}
+
+void Renderer::setBlendState(const std::string& name, const std::array<float, 4>& factor , size_t mask )
+{
+	auto ret = mBlendStates.find(name);
 	if (ret == mBlendStates.end())
-	{
-		ID3D11BlendState* state;
-		checkResult(mDevice->CreateBlendState(&desc, &state));
-		auto newstate = mBlendStates.emplace(hash, new BlendState(state));
-		ret = newstate.first;
-	}
+		return error(Common::format("cannot find blend state:", name ));
 
 	mContext->OMSetBlendState(*ret->second, factor.data(), mask);
+}
+
+void Renderer::setBlendState(BlendState::Weak blend, const std::array<float, 4>& factor, size_t mask)
+{
+	mContext->OMSetBlendState(*blend.lock(), factor.data(), mask);
 }
 
 void Renderer::setDefaultBlendState()
@@ -568,6 +603,19 @@ void Renderer::uninit()
 		MessageBox(NULL, TEXT("some objects were not released."), NULL, NULL);
 	}
 
+}
+
+Renderer::BlendState::Weak Renderer::createBlendState(const std::string & name, const D3D11_BLEND_DESC & desc)
+{
+	auto ret = mBlendStates.find(name);
+	if (ret != mBlendStates.end())
+		return ret->second;
+
+	ID3D11BlendState* state;
+	checkResult(mDevice->CreateBlendState(&desc, &state));
+	auto newstate = mBlendStates.emplace(name, new BlendState(state));
+	ret = newstate.first;
+	return ret->second;
 }
 
 Renderer::Sampler::Ptr Renderer::createSampler(const std::string& name, D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV, D3D11_TEXTURE_ADDRESS_MODE addrW, D3D11_COMPARISON_FUNC cmpfunc, float minlod, float maxlod)
@@ -745,7 +793,22 @@ Renderer::Texture2D::Ptr Renderer::createRenderTarget(int width, int height, DXG
 
 Renderer::TemporaryRT::Ptr Renderer::createTemporaryRT(const D3D11_TEXTURE2D_DESC & desc)
 {
-	auto hash = Common::hash(desc);
+	std::string format = Common::format(
+		desc.Width,
+		desc.Height,
+		desc.MipLevels,
+		desc.ArraySize,
+		desc.Format,
+		desc.SampleDesc.Count,
+		desc.SampleDesc.Quality,
+		desc.Usage,
+		desc.BindFlags,
+		desc.CPUAccessFlags,
+		desc.MiscFlags
+	);
+
+
+	auto hash = Common::hash(format);
 	auto ret = mTemporaryRTs.find(hash);
 	if (ret != mTemporaryRTs.end())
 	{
@@ -1006,6 +1069,18 @@ Renderer::Texture2D::Ptr Renderer::createDepthStencil(int width, int height, DXG
 
 	
 	return createTexture(descDepth);
+}
+
+Renderer::DepthStencilState::Weak Renderer::createDepthStencilState(const std::string & name, const D3D11_DEPTH_STENCIL_DESC & desc)
+{
+	auto ret = mDepthStencilStates.find(name);
+	if (ret != mDepthStencilStates.end())
+		return ret->second;
+	ID3D11DepthStencilState* state;
+	checkResult(mDevice->CreateDepthStencilState(&desc, &state));
+	auto newstate = mDepthStencilStates.emplace(name, new DepthStencilState(state));
+
+	return newstate.first->second;
 }
 
 Renderer::Profile::Ptr Renderer::createProfile()

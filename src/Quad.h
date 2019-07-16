@@ -28,7 +28,7 @@ public:
 	void setConstant(Renderer::Buffer::Ptr c) { mConstants.clear(); mConstants.push_back(c); }
 	void setConstants(const std::vector<Renderer::Buffer::Ptr>& c) { mConstants = c; }
 
-	void setBlend(const D3D11_BLEND_DESC&desc, const std::array<float, 4>& factor = { 1,1,1,1 }, size_t mask = 0xffffffff);
+	//void setBlend(const D3D11_BLEND_DESC&desc, const std::array<float, 4>& factor = { 1,1,1,1 }, size_t mask = 0xffffffff);
 	void setDefaultPixelShader()  { setPixelShader(mDrawTexturePS); }
 	void setDefaultSampler() { setSamplers({ mDefaultSampler }); }
 	void setViewport(const D3D11_VIEWPORT& vp) { mViewport = vp; }
@@ -61,12 +61,17 @@ private:
 	Renderer::Sampler::Ptr mDefaultSampler;
 	struct BlendState
 	{
-		D3D11_BLEND_DESC desc;
+		Renderer::BlendState::Weak blend;
 		std::array<float, 4> factor;
 		size_t mask;
 	};
 
 	BlendState mBlendState;
 	D3D11_VIEWPORT mViewport;
+
+	Renderer::BlendState::Weak mBlendAdd;
+	Renderer::BlendState::Weak mBlendMul;
+	Renderer::BlendState::Weak mBlendCover;
+	Renderer::BlendState::Weak mBlendAlpha;
 
 };

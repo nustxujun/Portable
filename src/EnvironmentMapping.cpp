@@ -84,9 +84,17 @@ void EnvironmentMapping::init(const std::string& cubemap )
 
 	mIrradianceProcessor = ImageProcessing::create<IrradianceCubemap>(getRenderer(), false);
 	mPrefilteredProcessor = ImageProcessing::create<PrefilterCubemap>(getRenderer(), false);
-	mCube.push_back(getRenderer()->createTexture(cubemap, 1));
-	mIrradiance.push_back( mIrradianceProcessor->process(mCube[0]));
-	mPrefiltered.push_back( mPrefilteredProcessor->process(mCube[0]));
+
+
+	auto tex = getRenderer()->createTexture(cubemap, 1);
+
+	mCube.push_back(getRenderer()->createTemporaryRT(tex->getDesc()));
+	getRenderer()->getContext()->CopyResource(mCube[0]->get()->getTexture(), tex->getTexture());
+	getRenderer()->destroyTexture(tex);
+
+
+	mIrradiance.push_back( mIrradianceProcessor->process(mCube[0]->get()));
+	mPrefiltered.push_back( mPrefilteredProcessor->process(mCube[0]->get()));
 
 	//auto aabb = getScene()->getRoot()->getWorldAABB();
 	//Vector3 raw[6] = { (aabb.first + aabb.second)* 0.5f, aabb.first , aabb.second,  aabb.first, aabb.second , {1,1,1} };
@@ -194,6 +202,8 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 		{
 			mIrradiance.clear();
 			mPrefiltered.clear();
+			mDepthCorrected.clear();
+			mCube.clear();
 			for (auto& p : probes)
 			{
 				{
@@ -209,7 +219,7 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 					cubedesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 					cubedesc.CPUAccessFlags = 0;
 					cubedesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE | D3D11_RESOURCE_MISC_GENERATE_MIPS;
-					mCube.push_back( renderer->createTexture(cubedesc));
+					mCube.push_back( renderer->createTemporaryRT(cubedesc));
 				}
 				{
 					auto desc = depth->getDesc();
@@ -243,7 +253,7 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 
 					auto cubeindex = D3D10CalcSubresource(0, index, miplevels);
 
-					renderer->getContext()->CopySubresourceRegion(mCube[nums]->getTexture(), cubeindex, 0, 0, 0, frame->getTexture(), 0, 0);
+					renderer->getContext()->CopySubresourceRegion(mCube[nums]->get()->getTexture(), cubeindex, 0, 0, 0, frame->getTexture(), 0, 0);
 
 					auto proj = cam->getProjectionMatrix();
 
@@ -257,13 +267,13 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 				}
 				if (p.second->getType() == Scene::Probe::PT_IBL)
 				{
-					mIrradiance.push_back(mIrradianceProcessor->process(mCube[nums]));
-					mPrefiltered.push_back(mPrefilteredProcessor->process(mCube[nums]));
+					mIrradiance.push_back(mIrradianceProcessor->process(mCube[nums]->get()));
+					mPrefiltered.push_back(mPrefilteredProcessor->process(mCube[nums]->get()));
 
 				}
 				else
 				{
-					renderer->getContext()->GenerateMips(mCube[nums]->Renderer::ShaderResource::getView());
+					renderer->getContext()->GenerateMips(mCube[nums]->get()->Renderer::ShaderResource::getView());
 				}
 
 				nums++;
@@ -378,7 +388,7 @@ void EnvironmentMapping::render(Renderer::Texture2D::Ptr rt)
 		srvs.push_back(mPrefiltered[selected]->get());
 	}
 	else
-		srvs.push_back(mCube[selected]);
+		srvs.push_back(mCube[selected]->get());
 
 	quad->setTextures(srvs);
 	quad->draw();

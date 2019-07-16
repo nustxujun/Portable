@@ -52,6 +52,48 @@ Quad::Quad(Renderer::Ptr r):mRenderer(r)
 
 	mDefaultSampler = r->createSampler("linear_clamp", D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
 
+	D3D11_BLEND_DESC desc = { 0 };
+	desc.RenderTarget[0] = {
+		FALSE,
+		D3D11_BLEND_SRC_ALPHA,
+		D3D11_BLEND_INV_SRC_ALPHA,
+		D3D11_BLEND_OP_ADD,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_OP_ADD,
+		D3D11_COLOR_WRITE_ENABLE_ALL
+	};
+	mBlendCover = mRenderer->createBlendState("color_cover", desc);
+
+	desc.RenderTarget[0].BlendEnable = TRUE;
+	mBlendAlpha = mRenderer->createBlendState("color_alpha", desc);
+	
+	desc.RenderTarget[0] = {
+		TRUE,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_OP_ADD,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_OP_ADD,
+		D3D11_COLOR_WRITE_ENABLE_ALL
+	};
+	mBlendAdd = mRenderer->createBlendState("color_add", desc);
+
+	desc.RenderTarget[0] = {
+		TRUE,
+		D3D11_BLEND_DEST_COLOR,
+		D3D11_BLEND_ZERO,
+		D3D11_BLEND_OP_ADD,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_OP_ADD,
+		D3D11_COLOR_WRITE_ENABLE_ALL
+	};
+	mBlendMul = mRenderer->createBlendState("color_mul", desc);
+	
+
+
 }
 
 Quad::~Quad()
@@ -65,7 +107,7 @@ void Quad::draw(const std::array<float, 4>& color)
 
 	mRenderer->setViewport(mViewport);
 
-	mRenderer->setBlendState(mBlendState.desc, mBlendState.factor, mBlendState.mask);
+	mRenderer->setBlendState(mBlendState.blend, mBlendState.factor, mBlendState.mask);
 	mRenderer->setDefaultDepthStencilState();
 	mRenderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	mRenderer->setIndexBuffer(mIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
@@ -104,48 +146,28 @@ void Quad::drawTexture(Renderer::ShaderResource::Ptr texture, bool blend)
 
 
 
-void Quad::setBlend(const D3D11_BLEND_DESC & desc, const std::array<float, 4>& factor, size_t mask)
-{
-	mBlendState = { desc,factor, mask };
-}
+//void Quad::setBlend(const D3D11_BLEND_DESC & desc, const std::array<float, 4>& factor, size_t mask)
+//{
+//	std::string name((const char*)&desc, sizeof(desc));
+//	auto blend = mRenderer->createBlendState(name, desc);
+//	mBlendState = { blend,factor, mask };
+//}
 
 void Quad::setDefaultBlend(bool blend)
 {
-	D3D11_BLEND_DESC desc = { 0 };
-
-	desc.RenderTarget[0] = {
-		blend,
-		D3D11_BLEND_SRC_ALPHA,
-		D3D11_BLEND_INV_SRC_ALPHA,
-		D3D11_BLEND_OP_ADD,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_OP_ADD,
-		D3D11_COLOR_WRITE_ENABLE_ALL
-	};
 	mBlendState = {
-		desc,
+		blend? mBlendAlpha: mBlendCover,
 		{1,1,1,1},
 		0xffffffff,
 	};
+
 }
 
 void Quad::setBlendColorMul()
 {
-	D3D11_BLEND_DESC desc = { 0 };
 
-	desc.RenderTarget[0] = {
-		TRUE,
-		D3D11_BLEND_DEST_COLOR,
-		D3D11_BLEND_ZERO,
-		D3D11_BLEND_OP_ADD,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_OP_ADD,
-		D3D11_COLOR_WRITE_ENABLE_ALL
-	};
 	mBlendState = {
-		desc,
+		mBlendMul,
 		{1,1,1,1},
 		0xffffffff,
 	};
@@ -153,20 +175,8 @@ void Quad::setBlendColorMul()
 
 void Quad::setBlendColorAdd()
 {
-	D3D11_BLEND_DESC desc = { 0 };
-
-	desc.RenderTarget[0] = {
-		TRUE,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_OP_ADD,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_OP_ADD,
-		D3D11_COLOR_WRITE_ENABLE_ALL
-	};
 	mBlendState = {
-		desc,
+		mBlendAdd,
 		{1,1,1,1},
 		0xffffffff,
 	};

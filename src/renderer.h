@@ -550,15 +550,20 @@ public:
 	void setVertexBuffer(Buffer::Ptr b, UINT stride, UINT offset);
 	void setVertexBuffers(const std::vector<Buffer::Ptr>& b, const UINT* stride, const UINT* offset);
 	void setViewport(const D3D11_VIEWPORT& vp);
-	void setDepthStencilState(const D3D11_DEPTH_STENCIL_DESC& desc, UINT stencil = 0);
-	void setBlendState(const D3D11_BLEND_DESC& desc, const std::array<float, 4>& factor = { 1,1,1,1 }, size_t mask = 0xffffffff);
+	void setDepthStencilState(const std::string& name, UINT stencil = 0);
+	void setDepthStencilState(DepthStencilState::Weak dss, UINT stencil = 0);
+
+	//void setBlendState(const D3D11_BLEND_DESC& desc, const std::array<float, 4>& factor = { 1,1,1,1 }, size_t mask = 0xffffffff);
+	void setBlendState(const std::string& name, const std::array<float, 4>& factor = { 1,1,1,1 }, size_t mask = 0xffffffff);
+	void setBlendState(BlendState::Weak blend, const std::array<float, 4>& factor = { 1,1,1,1 }, size_t mask = 0xffffffff);
+
 	void setDefaultBlendState();
 	void setDefaultDepthStencilState();
 	void setVertexShader(VertexShader::Weak shader);
 	void setPixelShader(PixelShader::Weak shader);
 	void setComputeShder(ComputeShader::Weak shader);
 
-
+	BlendState::Weak createBlendState(const std::string& name, const D3D11_BLEND_DESC& desc);
 	Sampler::Ptr createSampler(const std::string& name, D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV,
 		D3D11_TEXTURE_ADDRESS_MODE addrW = D3D11_TEXTURE_ADDRESS_WRAP, D3D11_COMPARISON_FUNC cmpfunc = D3D11_COMPARISON_NEVER, float minlod = 0, float maxlod = D3D11_FLOAT32_MAX);
 	Texture2D::Ptr createTexture(const std::string& filename, UINT miplevels = 0);
@@ -590,6 +595,7 @@ public:
 	Font::Ptr createOrGetFont(const std::wstring& font);
 	Rasterizer::Ptr createOrGetRasterizer(  const D3D11_RASTERIZER_DESC& desc);
 	Texture2D::Ptr createDepthStencil(int width, int height, DXGI_FORMAT format, bool access = false);
+	DepthStencilState::Weak createDepthStencilState(const std::string& name, const D3D11_DEPTH_STENCIL_DESC& desc);
 
 	Profile::Ptr createProfile();
 
@@ -636,8 +642,8 @@ private:
 	std::unordered_map<std::wstring, std::shared_ptr<Font>> mFonts;
 	std::unordered_map<size_t, std::shared_ptr<Rasterizer>> mRasterizers;
 
-	std::unordered_map<size_t, DepthStencilState::Shared> mDepthStencilStates;
-	std::unordered_map<size_t, BlendState::Shared> mBlendStates;
+	std::unordered_map<std::string, DepthStencilState::Shared> mDepthStencilStates;
+	std::unordered_map<std::string, BlendState::Shared> mBlendStates;
 };
 
 

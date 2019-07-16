@@ -236,8 +236,8 @@ public:
 		//mPipeline->pushStage<AO>();
 		//mPipeline->pushStage<SSR>();
 		//mPipeline->pushStage<MotionBlur>(true);
-		//mPipeline->pushStage<IrradianceVolumes>(Vector3(10, 10, 10), "media/black.png");
-		//mPipeline->pushStage<EnvironmentMapping>(EnvironmentMapping::T_EVERYFRAME, "media/black.png");
+		mPipeline->pushStage<IrradianceVolumes>(Vector3(10, 10, 10), "media/black.png");
+		mPipeline->pushStage<EnvironmentMapping>(EnvironmentMapping::T_EVERYFRAME, "media/black.png");
 		mPipeline->pushStage<SkyBox>("media/black.png", false);
 		//mPipeline->pushStage<TAA>();
 		mPipeline->pushStage<HDR>();

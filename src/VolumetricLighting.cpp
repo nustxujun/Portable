@@ -61,20 +61,7 @@ void VolumetricLighting::renderBlur(Renderer::Texture2D::Ptr rt)
 	mQuad.setRenderTarget(mBlur);
 	mQuad.draw();
 
-	D3D11_BLEND_DESC desc = { 0 };
-
-	desc.RenderTarget[0] = {
-		TRUE,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_OP_ADD,
-		D3D11_BLEND_ONE,
-		D3D11_BLEND_ZERO,
-		D3D11_BLEND_OP_ADD,
-		D3D11_COLOR_WRITE_ENABLE_ALL
-	};
-
-	mQuad.setBlend(desc);
+	mQuad.setBlendColorAdd();
 
 	mQuad.setPixelShader(mPS);
 	mQuad.setTextures({ mBlur });
