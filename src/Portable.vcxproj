@@ -221,6 +221,8 @@
     <ClInclude Include="targetver.h" />
     <ClInclude Include="tiny_obj_loader.h" />
     <ClInclude Include="VolumetricLighting.h" />
+    <ClInclude Include="VoxelConeTracing.h" />
+    <ClInclude Include="Voxelize.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AO.cpp" />
@@ -264,6 +266,7 @@
     <ClCompile Include="TAA.cpp" />
     <ClCompile Include="tiny_obj_loader.cc" />
     <ClCompile Include="VolumetricLighting.cpp" />
+    <ClCompile Include="Voxelize.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="deferredRendering.rc" />

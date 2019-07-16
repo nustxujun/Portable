@@ -180,6 +180,12 @@
     <ClInclude Include="SHSample.h">
       <Filter>Framework</Filter>
     </ClInclude>
+    <ClInclude Include="Voxelize.h">
+      <Filter>Pipeline\Stage</Filter>
+    </ClInclude>
+    <ClInclude Include="VoxelConeTracing.h">
+      <Filter>Framework</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -281,14 +287,17 @@
     <ClCompile Include="PreZ.cpp">
       <Filter>Pipeline\Stage</Filter>
     </ClCompile>
-    <ClCompile Include="TAA.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="MotionVector.cpp">
-      <Filter>源文件</Filter>
+      <Filter>Pipeline\Stage</Filter>
     </ClCompile>
     <ClCompile Include="IrradianceVolumes.cpp">
-      <Filter>源文件</Filter>
+      <Filter>Pipeline\Stage</Filter>
+    </ClCompile>
+    <ClCompile Include="TAA.cpp">
+      <Filter>Pipeline\Stage</Filter>
+    </ClCompile>
+    <ClCompile Include="Voxelize.cpp">
+      <Filter>Pipeline\Stage</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -328,8 +337,14 @@
     <None Include="hlsl\skybox.fx">
       <Filter>shader</Filter>
     </None>
-    <None Include="hlsl\tiledlightculling.hlsl" />
-    <None Include="hlsl\ssr.hlsl" />
-    <None Include="hlsl\simple_vs.hlsl" />
+    <None Include="hlsl\simple_vs.hlsl">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="hlsl\ssr.hlsl">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="hlsl\tiledlightculling.hlsl">
+      <Filter>shader</Filter>
+    </None>
   </ItemGroup>
 </Project>

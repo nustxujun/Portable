@@ -11,7 +11,7 @@
 #include "PBRMaterial.h"
 #include "Reflections.h"
 #include "SHSample.h"
-
+#include "VoxelConeTracing.h"
 using namespace nlohmann;
 
 #ifdef _WINDLL
@@ -20,7 +20,7 @@ using namespace nlohmann;
 #define EXPORT
 #endif
 
-using FRAMEWORK = SHSample;
+using FRAMEWORK = VoxelConeTracing;
 using Ptr = std::shared_ptr<FRAMEWORK>;
 Ptr framework;
 std::shared_ptr<std::thread> loop;

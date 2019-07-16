@@ -20,12 +20,30 @@ cbuffer ParallaxConstants:register(b1)
 	uint minsamplecount;
 	uint maxsamplecount;
 };
+
+# if VOXELIZE
+cbuffer VoxelizeConstants:register(b3)
+{
+	float width;
+	float height;
+	float depth;
+	int viewport;
+};
+#endif
+
 Texture2D diffuseTex: register(t0);
 Texture2D normalTex:register(t1);
 Texture2D roughTex:register(t2);
 Texture2D metalTex:register(t3);
 Texture2D aoTex:register(t4);
 Texture2D heightTex:register(t5);
+
+#if VOXELIZE
+RWTexture3D<float4> albedoRT:register(u0);
+RWTexture3D<float4> normalRT:register(u1);
+RWTexture3D<float4> materialRT:register(u2);
+#endif
+
 
 SamplerState sampLinear
 {
@@ -153,19 +171,29 @@ float2 ParallaxMapping(float2 coord, float3 V, int sampleCount)
 }
 #endif
 
-
-GBufferPixelShaderOutput ps(GBufferVertexShaderOutput input) : SV_TARGET
+#if (VOXELIZE)
+void
+#else
+GBufferPixelShaderOutput
+#endif
+ps(GBufferVertexShaderOutput input) 
+#if !(VOXELIZE)
+	: SV_TARGET
+#endif
 {
 	GBufferPixelShaderOutput output;
 #if UV
 	float2 coord = input.TexCoord;
 #endif
+
+	// height map
 #if HEIGHT_MAP
 	float3 V = normalize(input.CamInTangent - input.PosInTangent);
 	uint sampleCount = lerp(minsamplecount, maxsamplecount, dot(input.Normal, normalize(campos - input.WorldPosition)));
 	coord = ParallaxMapping(coord, V, sampleCount) ;
 #endif
 
+	// albedo
 #if ALBEDO
 	output.Color = diffuseTex.Sample(sampLinear, coord);
 #if !(SRGB)
@@ -177,10 +205,12 @@ GBufferPixelShaderOutput ps(GBufferVertexShaderOutput input) : SV_TARGET
 #endif
 	output.Color.rgb *= diffuse;
 
+	// ao map
 #if AO_MAP
 	output.Color.rgb *= aoTex.Sample(sampLinear, coord).rgb;
 #endif
 
+	// normal map
 #if NORMAL_MAP 
 	float3x3 TBN = float3x3(input.Tangent, input.Bitangent, input.Normal);
 	float3 normal = normalize(normalTex.Sample(sampLinear, coord).rgb * 2.0f - 1.0f);
@@ -188,7 +218,8 @@ GBufferPixelShaderOutput ps(GBufferVertexShaderOutput input) : SV_TARGET
 #else
 	output.Normal.xyz = input.Normal;
 #endif
-
+	output.Normal.w = 0;
+	// pbr parameters
 #if PBR_MAP
 	float r = roughTex.Sample(sampLinear, coord).r;
 	float m = metalTex.Sample(sampLinear, coord).r;
@@ -196,7 +227,35 @@ GBufferPixelShaderOutput ps(GBufferVertexShaderOutput input) : SV_TARGET
 #else
 	output.Material = float4(roughness, metallic, reflection, 0);
 #endif
+
+	// output as voxels
+#if VOXELIZE
+	int3 pos = 0;
+	if (viewport == 0)
+	{
+		pos.x = input.Position.z * width;
+		pos.y = height - input.Position.y;
+		pos.z = input.Position.x;
+	}
+	else if (viewport == 1)
+	{
+		pos.x = input.Position.x;
+		pos.y = input.Position.z * height;
+		pos.z = depth - input.Position.y;
+	}
+	else
+	{
+		pos.x = input.Position.x;
+		pos.y = height - input.Position.y;
+		pos.z = input.Position.z * depth;
+	}
+
+	albedoRT[pos] = output.Color;
+	normalRT[pos] = output.Normal;
+	materialRT[pos] = output.Material;
+#else
 	return output;
+#endif
 }
 
 

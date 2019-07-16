@@ -74,9 +74,13 @@ void Renderer::init(HWND win, int width, int height)
 	mHeight = height;
 	D3D_FEATURE_LEVEL featureLevels[] =
 	{
+#ifdef USING_D3D11_3
+		D3D_FEATURE_LEVEL_12_0,
+#else
 		D3D_FEATURE_LEVEL_11_0,
-		D3D_FEATURE_LEVEL_10_1,
-		D3D_FEATURE_LEVEL_10_0,
+#endif
+		//D3D_FEATURE_LEVEL_10_1,
+		//D3D_FEATURE_LEVEL_10_0,
 	};
 
 	DXGI_SWAP_CHAIN_DESC sd = 
@@ -1026,7 +1030,19 @@ Renderer::Font::Ptr Renderer::createOrGetFont(const std::wstring & font)
 
 Renderer::Rasterizer::Ptr Renderer::createOrGetRasterizer(const D3D11_RASTERIZER_DESC& desc)
 {
-	auto key = Common::hash(desc);
+	std::string params = Common::format(
+		desc.FillMode,
+		desc.CullMode,
+		desc.FrontCounterClockwise,
+		desc.DepthBias,
+		desc.DepthBiasClamp,
+		desc.SlopeScaledDepthBias,
+		desc.DepthClipEnable,
+		desc.ScissorEnable,
+		desc.MultisampleEnable,
+		desc.AntialiasedLineEnable
+	);
+	auto key = Common::hash(params);
 
 	auto ret = mRasterizers.find(key);
 	if (ret != mRasterizers.end())

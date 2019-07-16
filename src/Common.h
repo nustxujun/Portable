@@ -16,6 +16,12 @@
 #include <D3D11.h>
 #include <D3DX11.h>
 
+#define USING_D3D11_3
+#ifdef USING_D3D11_3
+#include <d3d11_3.h>
+#endif
+
+
 #define ALIGN16 __declspec(align(16))
 #define ALIGN(x,y) (((x + y - 1) & ~(y - 1)) )
 

@@ -17,11 +17,12 @@
 #include "IrradianceVolumes.h"
 #include "TAA.h"
 #include "MotionVector.h"
+#include "Voxelize.h"
 
 
 #include <random>
 
-class SHSample :public Framework
+class VoxelConeTracing :public Framework
 {
 public:
 	using Framework::Framework;
@@ -146,7 +147,7 @@ public:
 			model->setCastShadow(true);
 			model->attach(root);
 			model->setStatic(false);
-			
+
 		}
 
 		{
@@ -171,7 +172,7 @@ public:
 		DirectX::XMFLOAT3 eye(aabb.second);
 		DirectX::XMFLOAT3 at(aabb.first);
 		//cam->lookat({ -20,10,0 }, { 0,0,0 });
-		cam->lookat(aabb.first , aabb.second);
+		cam->lookat(aabb.first, aabb.second);
 		//cam->getNode()->setPosition((aabb.first + aabb.second) * 0.5);
 		//cam->setDirection({ 0, -1, 0 });
 		cam->setViewport(0, 0, mRenderer->getWidth(), mRenderer->getHeight());
@@ -226,21 +227,10 @@ public:
 		});
 
 
-		auto aabb = mScene->getRoot()->getWorldAABB();
+		mPipeline->pushStage<Voxelize>(1);
+		//mPipeline->pushStage<SkyBox>("media/black.png", false);
 
-		mPipeline->pushStage<GBuffer>(true);
-		mPipeline->pushStage<MotionVector>();
-		mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
-		mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
 
-		//mPipeline->pushStage<AO>();
-		//mPipeline->pushStage<SSR>();
-		//mPipeline->pushStage<MotionBlur>(true);
-		mPipeline->pushStage<IrradianceVolumes>(Vector3(10, 10, 10), "media/black.png");
-		mPipeline->pushStage<EnvironmentMapping>(EnvironmentMapping::T_EVERYFRAME, "media/black.png");
-		mPipeline->pushStage<SkyBox>("media/black.png", false);
-		//mPipeline->pushStage<TAA>();
-		//mPipeline->pushStage<HDR>();
 		mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 		Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
 		mPipeline->pushStage("draw to backbuffer", [bb, quad](Renderer::Texture2D::Ptr rt)
@@ -260,7 +250,7 @@ public:
 			float time = GetTickCount() * 0.001;
 			float sin = std::sin(time) * 0.5;
 			float cos = std::cos(time) * 0.5;
-			model->getNode()->setPosition(cos , cos + 1, sin );
+			model->getNode()->setPosition(cos, cos + 1, sin);
 		}
 	}
 
