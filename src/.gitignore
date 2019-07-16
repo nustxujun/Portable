@@ -63,7 +63,6 @@ StyleCopReport.xml
 *_i.h
 *.ilk
 *.meta
-*.obj
 *.iobj
 *.pch
 *.pdb
@@ -346,8 +345,6 @@ ASALocalRun/
 /San_Miguel
 /sponza
 /powerplant
-/media/cup
-/media/sponza
 /asio
 /controlPanel/test.dll
 /controlPanel/dll/MyDLL.dll
@@ -357,13 +354,9 @@ ASALocalRun/
 /controlPanel/Portable.dll
 /controlPanel/assimp-vc140-mtd.dll
 /controlPanel/assimp-vc140-mt.dll
-/media/skybox/6.png
-/media/skybox/5.png
-/media/skybox/4.png
-/media/skybox/3.png
-/media/skybox/2.png
-/media/skybox/1.png
+
 /Cerberus
 /Helmet
 /cache
-/media/sponza_pbr
+
+/media/sponza
