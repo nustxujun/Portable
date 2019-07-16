@@ -120,7 +120,7 @@ public:
 			int spherecount = 1;
 			Parameters params;
 			params["geom"] = "sphere";
-			params["radius"] = "0.1";
+			params["radius"] = "1";
 			Material::Ptr mat = Material::create();
 			std::vector<std::string> textures = {
 			"media/streaked/streaked-metal1-albedo.png",
@@ -143,27 +143,27 @@ public:
 			});
 
 
-			model->getNode()->setPosition({ 0 , 0.1, 0 });
+			model->getNode()->setPosition({ 0 , 0, 0 });
 			model->setCastShadow(true);
 			model->attach(root);
 			model->setStatic(false);
 
 		}
 
-		{
-			Parameters params;
-			//params["file"] = "media/model.obj";
-			params["file"] = "media/CornellBox/CornellBox-Empty-RG.obj";
-			auto model = mScene->createModel("test", params, [this](const Parameters& p) {
-				return Mesh::Ptr(new Mesh(p, mRenderer));
-			});
+		//{
+		//	Parameters params;
+		//	//params["file"] = "media/model.obj";
+		//	params["file"] = "media/CornellBox/CornellBox-Empty-RG.obj";
+		//	auto model = mScene->createModel("test", params, [this](const Parameters& p) {
+		//		return Mesh::Ptr(new Mesh(p, mRenderer));
+		//	});
 
-			model->setCastShadow(true);
-			model->attach(mScene->getRoot());
-			model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-			Matrix mat = Matrix::CreateFromYawPitchRoll(0, -3.14 / 2, 0);
-			//model->getNode()->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
-		}
+		//	model->setCastShadow(true);
+		//	model->attach(mScene->getRoot());
+		//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+		//	Matrix mat = Matrix::CreateFromYawPitchRoll(0, -3.14 / 2, 0);
+		//	//model->getNode()->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
+		//}
 		auto aabb = root->getWorldAABB();
 
 		Vector3 vec = aabb.second - aabb.first;
@@ -226,8 +226,12 @@ public:
 			mRenderer->clearRenderTarget(rt, { 0,0,0,0 });
 		});
 
+		//mPipeline->pushStage<GBuffer>(true);
+		//mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
 
-		mPipeline->pushStage<Voxelize>(1);
+		mPipeline->pushStage<Voxelize>(64);
+
+
 		//mPipeline->pushStage<SkyBox>("media/black.png", false);
 
 
@@ -244,14 +248,14 @@ public:
 
 	void framemove()
 	{
-		auto model = mScene->getModel("sphere");
-		if (model)
-		{
-			float time = GetTickCount() * 0.001;
-			float sin = std::sin(time) * 0.5;
-			float cos = std::cos(time) * 0.5;
-			model->getNode()->setPosition(cos, cos + 1, sin);
-		}
+		//auto model = mScene->getModel("sphere");
+		//if (model)
+		//{
+		//	float time = GetTickCount() * 0.001;
+		//	float sin = std::sin(time) * 0.5;
+		//	float cos = std::cos(time) * 0.5;
+		//	model->getNode()->setPosition(cos, cos + 1, sin);
+		//}
 	}
 
 };

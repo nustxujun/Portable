@@ -16,7 +16,6 @@
 #include <D3D11.h>
 #include <D3DX11.h>
 
-#define USING_D3D11_3
 #ifdef USING_D3D11_3
 #include <d3d11_3.h>
 #endif

@@ -39,9 +39,9 @@ Texture2D aoTex:register(t4);
 Texture2D heightTex:register(t5);
 
 #if VOXELIZE
-RWTexture3D<float4> albedoRT:register(u0);
-RWTexture3D<float4> normalRT:register(u1);
-RWTexture3D<float4> materialRT:register(u2);
+RWTexture3D<float4> albedoRT:register(u3);
+RWTexture3D<float4> normalRT:register(u4);
+RWTexture3D<float4> materialRT:register(u5);
 #endif
 
 
@@ -85,9 +85,9 @@ struct GBufferVertexShaderOutput
 
 struct GBufferPixelShaderOutput
 {
-	float4 Color : COLOR0;
-	float4 Normal : COLOR1;
-	float4 Material: COLOR2;
+	float4 Color : SV_TARGET0;
+	float4 Normal : SV_TARGET1;
+	float4 Material: SV_TARGET2;
 };
 
 GBufferVertexShaderOutput vs(GBufferVertexShaderInput input)
@@ -171,15 +171,8 @@ float2 ParallaxMapping(float2 coord, float3 V, int sampleCount)
 }
 #endif
 
-#if (VOXELIZE)
-void
-#else
-GBufferPixelShaderOutput
-#endif
-ps(GBufferVertexShaderOutput input) 
-#if !(VOXELIZE)
-	: SV_TARGET
-#endif
+
+GBufferPixelShaderOutput ps(GBufferVertexShaderOutput input) 
 {
 	GBufferPixelShaderOutput output;
 #if UV
@@ -253,9 +246,8 @@ ps(GBufferVertexShaderOutput input)
 	albedoRT[pos] = output.Color;
 	normalRT[pos] = output.Normal;
 	materialRT[pos] = output.Material;
-#else
-	return output;
 #endif
+	return output;
 }
 
 

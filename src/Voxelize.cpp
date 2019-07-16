@@ -16,21 +16,22 @@ void Voxelize::init(int size)
 	texdesc.Height = mSize;
 	texdesc.Depth = mSize;
 	texdesc.MipLevels = 1;
-	texdesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+	texdesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 	texdesc.Usage = D3D11_USAGE_DEFAULT;
 	texdesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
 	texdesc.CPUAccessFlags = 0;
 	texdesc.MiscFlags = 0;
-	auto tex = renderer->createTexture3D(texdesc);
-	addUnorderedAccess("voxelalbedo", tex);
+	auto albedo = renderer->createTexture3D(texdesc);
+	addUnorderedAccess("voxelalbedo", albedo);
+	mAlbedo = albedo;
 
 	texdesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
-	tex = renderer->createTexture3D(texdesc);
-	addUnorderedAccess("voxelnormal", tex);
+	auto normal = renderer->createTexture3D(texdesc);
+	addUnorderedAccess("voxelnormal", normal);
 
 	texdesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
-	tex = renderer->createTexture3D(texdesc);
-	addUnorderedAccess("voxelmaterial", tex);
+	auto material = renderer->createTexture3D(texdesc);
+	addUnorderedAccess("voxelmaterial", material);
 
 
 	D3D11_RASTERIZER_DESC rasterDesc;
@@ -45,15 +46,40 @@ void Voxelize::init(int size)
 	rasterDesc.ScissorEnable = false;
 	rasterDesc.SlopeScaledDepthBias = 0.0f;
 	mRasterizer = renderer->createOrGetRasterizer(rasterDesc);
+
+	//voxelize();
+
+
 }
 
 void Voxelize::render(Renderer::Texture2D::Ptr rt)
+{
+	voxelize(rt);
+}
+
+Renderer::Effect::Ptr Voxelize::getEffect(Material::Ptr mat)
+{
+	auto ret = mEffect.find(mat->getShaderID());
+	if (ret != mEffect.end())
+		return ret->second;
+
+	auto macros = mat->generateShaderID();
+	//macros.insert(macros.begin(), { "VOXELIZE", "1" });
+	auto effect = getRenderer()->createEffect("hlsl/gbuffer.fx", macros.data());
+
+	mEffect[mat->getShaderID()] = effect;
+	return effect;
+}
+
+void Voxelize::voxelize(Renderer::Texture2D::Ptr rt)
 {
 	auto scene = getScene();
 	auto renderer = getRenderer();
 	auto context = renderer->getContext();
 
 	renderer->setRasterizer(mRasterizer);
+	renderer->setDefaultBlendState();
+	renderer->setDefaultDepthStencilState();
 
 	std::vector<ID3D11UnorderedAccessView*> uavs = {
 		getUnorderedAccess("voxelalbedo")->getView(),
@@ -61,13 +87,14 @@ void Voxelize::render(Renderer::Texture2D::Ptr rt)
 		getUnorderedAccess("voxelmaterial")->getView(),
 	};
 
-	context->OMSetRenderTargetsAndUnorderedAccessViews(0, 0, 0, 0, 3, uavs.data(), 0);
+	ID3D11RenderTargetView* rtv = rt->Renderer::RenderTarget::getView();
+	context->OMSetRenderTargetsAndUnorderedAccessViews(1, &rtv, 0, 3, 3, uavs.data(), 0);
 	renderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	std::vector<Matrix> views = {
-		Matrix::CreateLookAt(Vector3::Zero, Vector3::UnitX, Vector3::UnitY),
-		Matrix::CreateLookAt(Vector3::Zero, Vector3::UnitY, Vector3::UnitZ),
-		Matrix::CreateLookAt(Vector3::Zero, Vector3::UnitZ, Vector3::UnitY),
+		DirectX::XMMatrixLookAtLH(Vector3::Zero, Vector3::UnitX, Vector3::UnitY),
+		DirectX::XMMatrixLookAtLH(Vector3::Zero, Vector3::UnitY, Vector3::UnitZ),
+		DirectX::XMMatrixLookAtLH(Vector3::Zero, Vector3::UnitZ, Vector3::UnitY),
 	};
 
 	auto aabb = scene->getRoot()->getWorldAABB();
@@ -76,18 +103,18 @@ void Voxelize::render(Renderer::Texture2D::Ptr rt)
 	renderer->setViewport({ (float)mSize, (float)mSize, 0,1.0f,0,0, });
 	auto center = (aabb.first + aabb.second) * 0.5f;
 	float half = length * 0.5f;
-	Matrix proj = DirectX::XMMatrixOrthographicOffCenterLH(-half + center.x, half + center.x, -half + center.y, half + center.y, -half + center.z, half + center.z);
-
+	Matrix proj = DirectX::XMMatrixOrthographicOffCenterLH(-half , half + center.x, -half + center.y, half + center.y, -half + center.z, half + center.z);
+	auto cam = getCamera();
 	int vp = 0;
-	for (auto view: views)
+	for (auto view : views)
 	{
-		getScene()->visitRenderables([this, proj,view, vec, vp](const Renderable& r)
+		getScene()->visitRenderables([this, proj, view, vec, vp,cam](const Renderable& r)
 		{
 			auto effect = getEffect(r.material);
 			auto e = effect.lock();
 			e->getVariable("World")->AsMatrix()->SetMatrix((const float*)&r.tranformation);
-			e->getVariable("View")->AsMatrix()->SetMatrix((const float*)&view);
-			e->getVariable("Projection")->AsMatrix()->SetMatrix((const float*)&proj);
+			e->getVariable("View")->AsMatrix()->SetMatrix((const float*)&cam->getViewMatrix());
+			e->getVariable("Projection")->AsMatrix()->SetMatrix((const float*)&cam->getProjectionMatrix());
 			e->getVariable("roughness")->AsScalar()->SetFloat(r.material->roughness * getValue<float>("roughness"));
 			e->getVariable("metallic")->AsScalar()->SetFloat(r.material->metallic * getValue<float>("metallic"));
 			e->getVariable("reflection")->AsScalar()->SetFloat(r.material->reflection);
@@ -119,18 +146,41 @@ void Voxelize::render(Renderer::Texture2D::Ptr rt)
 		vp++;
 	}
 
-}
 
-Renderer::Effect::Ptr Voxelize::getEffect(Material::Ptr mat)
-{
-	auto ret = mEffect.find(mat->getShaderID());
-	if (ret != mEffect.end())
-		return ret->second;
+	{
+		D3D11_TEXTURE3D_DESC texdesc;
+		texdesc.Width = mSize;
+		texdesc.Height = mSize;
+		texdesc.Depth = mSize;
+		texdesc.MipLevels = 1;
+		texdesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+		texdesc.Usage = D3D11_USAGE_STAGING;
+		texdesc.BindFlags = 0;
+		texdesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+		texdesc.MiscFlags = 0;
 
-	auto macros = mat->generateShaderID();
-	macros.insert(macros.begin(), { "VOXELIZE", "1" });
-	auto effect = getRenderer()->createEffect("hlsl/gbuffer.fx", macros.data());
+		auto copy = renderer->createTexture3D(texdesc);
+		auto context = renderer->getContext();
+		context->CopyResource(copy->getTexture(), mAlbedo->getTexture());
 
-	mEffect[mat->getShaderID()] = effect;
-	return effect;
+		std::vector<Vector4> raw(mSize * mSize * mSize);
+		Vector4* data = raw.data();
+		D3D11_MAPPED_SUBRESOURCE sr;
+		context->Map(copy->getTexture(), 0, D3D11_MAP_READ, 0, &sr);
+		const char* head = (const char*)sr.pData;
+		for (int z = 0; z < mSize; ++z)
+		{
+			for (int y = 0; y < mSize; ++y)
+			{
+				memcpy(data, head + sr.RowPitch * y + sr.DepthPitch * z, sizeof(Vector4) * mSize);
+				data += mSize;
+			}
+		}
+
+
+
+
+		context->Unmap(copy->getTexture(), 0);
+		renderer->destroyTexture(copy);
+	}
 }
