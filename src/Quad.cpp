@@ -123,7 +123,8 @@ void Quad::draw(const std::array<float, 4>& color)
 	mRenderer->setLayout(mLayout.lock()->bind(mVS));
 	mRenderer->setTextures(mSRVs);
 	mRenderer->setSamplers(mSamplers);
-	mRenderer->setPSConstantBuffers(mConstants);
+	if (!mConstants.empty())
+		mRenderer->setPSConstantBuffers(mConstants);
 	mRenderer->setDefaultRasterizer();
 
 	auto context = mRenderer->getContext();

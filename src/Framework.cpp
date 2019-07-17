@@ -254,13 +254,15 @@ void Framework::framemove()
 
 void Framework::initInput()
 {
-	auto aabb = mScene->getRoot()->getWorldAABB();
-	Vector3 vec = aabb.second - aabb.first;
+
 
 	auto cam = mScene->createOrGetCamera("main");
-	float com_step = std::max(std::max(vec.x, vec.y), vec.z) * 0.001f;
 
 	mInput->listen([=](const Input::Mouse& m, const Input::Keyboard& k) {
+		auto aabb = mScene->getRoot()->getWorldAABB();
+		Vector3 vec = aabb.second - aabb.first;
+		float com_step = std::max(std::max(vec.x, vec.y), vec.z) * 0.001f;
+
 		static auto lasttime = GetTickCount();
 		auto dtime = GetTickCount() - lasttime;
 		lasttime = GetTickCount();

@@ -63,10 +63,17 @@ void GBuffer::render(Renderer::Texture2D::Ptr rt)
 		e->getVariable("minsamplecount")->AsScalar()->SetInt(getValue<int>("minSampleCount"));
 		e->getVariable("maxsamplecount")->AsScalar()->SetInt(getValue<int>("maxSampleCount"));
 
+		auto& texs = r.material->textures;
+		std::vector<ID3D11ShaderResourceView*> srvs;
+		for (auto&i : texs)
+			srvs.push_back(i->Renderer::ShaderResource::getView());
+		if (!texs.empty())
+			e->getVariable("diffuseTex")->AsShaderResource()->SetResourceArray(srvs.data(), 0, srvs.size());
+
 		getRenderer()->setIndexBuffer(r.indices, DXGI_FORMAT_R32_UINT, 0);
 		getRenderer()->setVertexBuffer(r.vertices, r.layout.lock()->getSize(), 0);
 	
-		e->render(getRenderer(), [ this, &r,e](ID3DX11EffectPass* pass)
+		e->render(getRenderer(), [ this, &r](ID3DX11EffectPass* pass)
 		{
 			getRenderer()->setTextures(r.material->textures);
 			getRenderer()->setLayout(r.layout.lock()->bind(pass));

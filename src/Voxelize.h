@@ -9,11 +9,12 @@ public:
 	void render(Renderer::Texture2D::Ptr rt)  override final;
 private:
 	Renderer::Effect::Ptr getEffect(Material::Ptr mat);
-	void voxelize(Renderer::Texture2D::Ptr rt);
+	void voxelize();
 private:
 	std::unordered_map<size_t, Renderer::Effect::Ptr> mEffect;
 	Renderer::Rasterizer::Ptr mRasterizer;
 	int mSize;
 	Renderer::Texture3D::Ptr mAlbedo;
+
 };
 

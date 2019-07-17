@@ -121,6 +121,7 @@ public:
 			Parameters params;
 			params["geom"] = "sphere";
 			params["radius"] = "1";
+			params["size"] = "1";
 			Material::Ptr mat = Material::create();
 			std::vector<std::string> textures = {
 			"media/streaked/streaked-metal1-albedo.png",
@@ -143,7 +144,7 @@ public:
 			});
 
 
-			model->getNode()->setPosition({ 0 , 0, 0 });
+			model->getNode()->setPosition({0 , 0, 0 });
 			model->setCastShadow(true);
 			model->attach(root);
 			model->setStatic(false);
@@ -194,7 +195,7 @@ public:
 
 		auto probe = mScene->createProbe("probe");
 		probe->getNode()->setPosition((aabb.first + aabb.second)*0.5f);
-		probe->setDebugObject(sphere);
+		//probe->setDebugObject(sphere);
 		probe->setProxy(Scene::Probe::PP_DEPTH);
 		probe->setType(Scene::Probe::PT_SPECULAR);
 		probe->attach(root);
@@ -226,13 +227,13 @@ public:
 			mRenderer->clearRenderTarget(rt, { 0,0,0,0 });
 		});
 
-		//mPipeline->pushStage<GBuffer>(true);
-		//mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
-
-		mPipeline->pushStage<Voxelize>(64);
 
 
-		//mPipeline->pushStage<SkyBox>("media/black.png", false);
+		mPipeline->pushStage<Voxelize>(32);
+		mPipeline->pushStage<GBuffer>(true);
+		mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
+
+		mPipeline->pushStage<SkyBox>("media/white.png", false);
 
 
 		mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
@@ -248,6 +249,11 @@ public:
 
 	void framemove()
 	{
+
+		auto cam = mScene->createOrGetCamera("main");
+		auto aabb = mScene->getRoot()->getWorldAABB();
+		auto len = (aabb.second - aabb.first).Length();
+		cam->setNearFar(len * 0.01f, len * 2);
 		//auto model = mScene->getModel("sphere");
 		//if (model)
 		//{

@@ -277,6 +277,8 @@ void Renderer::setTextures(const std::vector<ShaderResource::Ptr>& srvs)
 
 void Renderer::removeShaderResourceViews()
 {
+	if (mSRVState == 0)
+		return;
 	std::vector<ID3D11ShaderResourceView*> nil(mSRVState);
 	mContext->PSSetShaderResources(0, nil.size(), nil.data());
 	mSRVState = 0;

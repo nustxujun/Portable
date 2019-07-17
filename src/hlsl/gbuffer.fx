@@ -171,8 +171,12 @@ float2 ParallaxMapping(float2 coord, float3 V, int sampleCount)
 }
 #endif
 
-
-GBufferPixelShaderOutput ps(GBufferVertexShaderOutput input) 
+#if VOXELIZE
+void 
+#else
+GBufferPixelShaderOutput 
+#endif
+ps(GBufferVertexShaderOutput input) 
 {
 	GBufferPixelShaderOutput output;
 #if UV
@@ -226,28 +230,30 @@ GBufferPixelShaderOutput ps(GBufferVertexShaderOutput input)
 	int3 pos = 0;
 	if (viewport == 0)
 	{
-		pos.x = input.Position.z * width;
-		pos.y = height - input.Position.y;
-		pos.z = input.Position.x;
+		pos.x = input.Position.z * width ;
+		pos.y = height - input.Position.y ;
+		pos.z = input.Position.x ;
 	}
 	else if (viewport == 1)
 	{
-		pos.x = input.Position.x;
-		pos.y = input.Position.z * height;
-		pos.z = depth - input.Position.y;
+		pos.x = input.Position.x ;
+		pos.y = input.Position.z * height ;
+		pos.z = depth - input.Position.y ;
 	}
 	else
 	{
-		pos.x = input.Position.x;
-		pos.y = height - input.Position.y;
-		pos.z = input.Position.z * depth;
+		pos.x = input.Position.x ;
+		pos.y = height - input.Position.y ;
+		pos.z = input.Position.z * depth ;
 	}
 
 	albedoRT[pos] = output.Color;
 	normalRT[pos] = output.Normal;
 	materialRT[pos] = output.Material;
-#endif
+#else
 	return output;
+#endif
+
 }
 
 
