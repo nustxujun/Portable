@@ -186,6 +186,9 @@
     <ClInclude Include="VoxelConeTracing.h">
       <Filter>Framework</Filter>
     </ClInclude>
+    <ClInclude Include="VoxelMesh.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -298,6 +301,9 @@
     </ClCompile>
     <ClCompile Include="Voxelize.cpp">
       <Filter>Pipeline\Stage</Filter>
+    </ClCompile>
+    <ClCompile Include="VoxelMesh.cpp">
+      <Filter>Engine</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

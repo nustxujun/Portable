@@ -61,6 +61,7 @@ Mesh::Mesh(const Parameters& params, Renderer::Ptr r)
 			case MeshBuilder::TEXCOORD0: d = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offset, D3D11_INPUT_PER_VERTEX_DATA, 0 }; break;
 			case MeshBuilder::TANGENT: d = { "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offset, D3D11_INPUT_PER_VERTEX_DATA, 0 }; break;
 			case MeshBuilder::BITANGENT: d = { "TANGENT", 1, DXGI_FORMAT_R32G32B32_FLOAT, 0, offset, D3D11_INPUT_PER_VERTEX_DATA, 0 }; break;
+			case MeshBuilder::DIFFUSE: d = { "COLOR", 0 ,DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offset, D3D11_INPUT_PER_VERTEX_DATA, 0 }; break;
 			default:
 				abort();
 				break;

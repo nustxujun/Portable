@@ -45,7 +45,7 @@ public:
 	};
 protected:
 	Mesh(std::pair<Meshs, AABB >&&);
-
+	Mesh() {};
 public:
 	Mesh(const Parameters& params, Renderer::Ptr r);
 
@@ -56,7 +56,7 @@ public:
 	const AABB & getAABB() const{ return mAABB; }
 
 	void setMaterial(Material::Ptr m);
-private:
+protected:
 	AABB mAABB;
 	Meshs mMeshs;
 };

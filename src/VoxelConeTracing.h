@@ -229,8 +229,12 @@ public:
 
 
 
-		mPipeline->pushStage<Voxelize>(32);
-		mPipeline->pushStage<GBuffer>(true);
+		mPipeline->pushStage<Voxelize>(8);
+		mPipeline->pushStage<GBuffer>(true, [](Scene::Entity::Ptr e)
+		{
+			//return e->getMask() == 1;
+			return true;
+		});
 		mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
 
 		mPipeline->pushStage<SkyBox>("media/white.png", false);

@@ -223,6 +223,7 @@
     <ClInclude Include="VolumetricLighting.h" />
     <ClInclude Include="VoxelConeTracing.h" />
     <ClInclude Include="Voxelize.h" />
+    <ClInclude Include="VoxelMesh.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AO.cpp" />
@@ -267,6 +268,7 @@
     <ClCompile Include="tiny_obj_loader.cc" />
     <ClCompile Include="VolumetricLighting.cpp" />
     <ClCompile Include="Voxelize.cpp" />
+    <ClCompile Include="VoxelMesh.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="deferredRendering.rc" />

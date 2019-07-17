@@ -90,10 +90,14 @@ public:
 
 		bool isStatic()const { return mStatic; }
 		void setStatic(bool v) { mStatic = v; }
+		void setMask(UINT v) { mMask = v; }
+		UINT getMask()const { return mMask; }
+
 	private:
 		Node::Ptr mNode;
 		bool mCastShadow = true;
 		bool mStatic = true;
+		UINT mMask = 0;
 	};
 
 	class Model : public Entity

@@ -12,6 +12,7 @@ public:
 		TEXCOORD0,
 		TANGENT,
 		BITANGENT,
+		DIFFUSE,
 	};
 
 	struct Data

@@ -1,6 +1,6 @@
 #include "Voxelize.h"
 
-#include "GeometryMesh.h"
+#include "VoxelMesh.h"
 
 void Voxelize::init(int size)
 {
@@ -64,8 +64,8 @@ void Voxelize::init(int size)
 		auto context = renderer->getContext();
 		context->CopyResource(copy->getTexture(), mAlbedo->getTexture());
 
-		std::vector<Vector4> raw(mSize * mSize * mSize);
-		Vector4* data = raw.data();
+		std::unique_ptr<std::vector<Vector4>> raw( new std::vector<Vector4>(mSize * mSize * mSize));
+		Vector4* data = raw->data();
 		D3D11_MAPPED_SUBRESOURCE sr;
 		HRESULT hr = context->Map(copy->getTexture(), 0, D3D11_MAP_READ, 0, &sr);
 		const char* head = (const char*)sr.pData;
@@ -82,32 +82,17 @@ void Voxelize::init(int size)
 		renderer->destroyTexture(copy);
 
 		Parameters params;
-		params["geom"] = "cube";
-		params["size"] = "1";
 		auto scene = getScene();
-		auto box = Mesh::Ptr(new GeometryMesh(params, renderer));
-		auto root = scene->getRoot();
+		auto vm = new VoxelMesh(params, renderer);
+		vm->load(mSize, std::move(raw), {}, {});
 
-		for (int z = 0; z < mSize; z++)
+		auto model = scene->createModel("voxels", params, [vm](const Parameters& p)
 		{
-			for (int y = 0; y < mSize; ++y)
-			{
-				for (int x = 0; x < mSize; ++x)
-				{
-					int index = x + y * mSize + z * mSize * mSize;
-					auto color = raw[index];
-					if (color.x == 0 && color.y == 0 && color.z == 0)
-						continue;
-					auto model = scene->createModel(Common::format("voxel", x,y,z), params, [box](const Parameters& p)
-					{
-						return box;
-					});
+			return Mesh::Ptr(vm);
+		});
 
-					model->getNode()->setPosition({ (float)x,(float)y,(float)z });
-					model->attach(root);
-				}
-			}
-		}
+		model->attach(scene->getRoot());
+		model->setMask(1);
 	}
 }
 
