@@ -10,7 +10,7 @@ public:
 
 	VoxelMesh(const Parameters& params, Renderer::Ptr r);
 
-	void load(size_t size, Buffer color, Buffer normal, Buffer material);
+	void load(size_t size,float scale, Buffer color, Buffer normal, Buffer material);
 private:
 	Renderer::Ptr mRenderer;
 };

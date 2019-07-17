@@ -5,7 +5,7 @@ VoxelMesh::VoxelMesh(const Parameters & params, Renderer::Ptr r)
 	mRenderer = r;
 }
 
-void VoxelMesh::load(size_t size, Buffer color, Buffer normal, Buffer material)
+void VoxelMesh::load(size_t size,float scale, Buffer color, Buffer normal, Buffer material)
 {
 	const auto* colordata = color->data();
 
@@ -55,7 +55,7 @@ void VoxelMesh::load(size_t size, Buffer color, Buffer normal, Buffer material)
 	};
 	faces[3] = {
 			Vector3(0, -1.0f, 0),
-			{ Vector3(0,0,0), Vector3(0,0,1.0f), Vector3(1.0f,0,1.0f), Vector3(1.0f,0,0) },
+			{ Vector3(0,0,0), Vector3(1.0f,0,0), Vector3(1.0f,0,1.0f), Vector3(0,0,1.0f) },
 	};
 	faces[4] = {
 			Vector3(0,0,1.0f),
@@ -81,18 +81,24 @@ void VoxelMesh::load(size_t size, Buffer color, Buffer normal, Buffer material)
 					if (checkExist(x + f.facing.x, y + f.facing.y, z + f.facing.z))
 						continue;
 
+					UINT startindex = vertices.size();
+
 					for (auto& v : f.verts)
 					{
-						Vertex face = { {x + v.x, y + v.y, z + v.z}, f.facing };
-						vertices.push_back( face);
-						indices.push_back(0);
-						indices.push_back(1);
-						indices.push_back(2);
 
-						indices.push_back(0);
-						indices.push_back(2);
-						indices.push_back(3);
+						Vertex vert = { {x + v.x, y + v.y, z + v.z}, f.facing };
+						vert.pos *= scale;
+						vertices.push_back(vert);
+
 					}
+
+					indices.push_back(0 + startindex);
+					indices.push_back(1 + startindex);
+					indices.push_back(2 + startindex);
+
+					indices.push_back(0 + startindex);
+					indices.push_back(2 + startindex);
+					indices.push_back(3 + startindex);
 				}
 			}
 		}

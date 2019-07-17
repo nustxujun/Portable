@@ -84,7 +84,7 @@ void Voxelize::init(int size)
 		Parameters params;
 		auto scene = getScene();
 		auto vm = new VoxelMesh(params, renderer);
-		vm->load(mSize, std::move(raw), {}, {});
+		vm->load(mSize,10.0f, std::move(raw), {}, {});
 
 		auto model = scene->createModel("voxels", params, [vm](const Parameters& p)
 		{
@@ -132,13 +132,13 @@ void Voxelize::voxelize()
 
 	auto aabb = scene->getRoot()->getWorldAABB();
 	auto vec = aabb.second - aabb.first;
-	float length = std::max(vec.x, std::max(vec.y, vec.z));
+
+	// make scene smaller than texture3d to ensure the scene cannot be clipped by texture3d
+	float bias = 0.00001f;
+	float length = std::max(vec.x, std::max(vec.y, vec.z))  + bias;
 	renderer->setViewport({0,0, (float)mSize, (float)mSize, 0,1.0f });
 	auto center = (aabb.first + aabb.second) * 0.5f;
 	float half = length * 0.5f ;
-
-	// keep the scene smaller than texture3d to make sure that it cannot be clip by texture3d
-	half += 1;
 
 	Matrix proj = DirectX::XMMatrixOrthographicOffCenterLH(-half , half, -half , half , -half , half );
 	auto cam = getCamera();

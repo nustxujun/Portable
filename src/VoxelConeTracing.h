@@ -151,20 +151,20 @@ public:
 
 		}
 
-		//{
-		//	Parameters params;
-		//	//params["file"] = "media/model.obj";
-		//	params["file"] = "media/CornellBox/CornellBox-Empty-RG.obj";
-		//	auto model = mScene->createModel("test", params, [this](const Parameters& p) {
-		//		return Mesh::Ptr(new Mesh(p, mRenderer));
-		//	});
+		{
+			Parameters params;
+			params["file"] = "media/sponza/sponza.obj";
+			//params["file"] = "media/CornellBox/CornellBox-Empty-RG.obj";
+			auto model = mScene->createModel("test", params, [this](const Parameters& p) {
+				return Mesh::Ptr(new Mesh(p, mRenderer));
+			});
 
-		//	model->setCastShadow(true);
-		//	model->attach(mScene->getRoot());
-		//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-		//	Matrix mat = Matrix::CreateFromYawPitchRoll(0, -3.14 / 2, 0);
-		//	//model->getNode()->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
-		//}
+			model->setCastShadow(true);
+			model->attach(mScene->getRoot());
+			model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+			Matrix mat = Matrix::CreateFromYawPitchRoll(0, -3.14 / 2, 0);
+			//model->getNode()->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
+		}
 		auto aabb = root->getWorldAABB();
 
 		Vector3 vec = aabb.second - aabb.first;
@@ -229,14 +229,14 @@ public:
 
 
 
-		mPipeline->pushStage<Voxelize>(8);
+		mPipeline->pushStage<Voxelize>(256);
 		mPipeline->pushStage<GBuffer>(true, [](Scene::Entity::Ptr e)
 		{
-			//return e->getMask() == 1;
-			return true;
+			return e->getMask() == 1;
+			//return true;
 		});
 		mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
-
+		mPipeline->pushStage<AO>();
 		mPipeline->pushStage<SkyBox>("media/white.png", false);
 
 
