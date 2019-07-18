@@ -37,7 +37,8 @@ void GBuffer::render(Renderer::Texture2D::Ptr rt)
 
 	//renderer->clearDepthStencil(mDepth, 1.0f);
 	renderer->setRenderTargets(rts, mDepth);
-	renderer->setDefaultRasterizer();
+	//renderer->setDefaultRasterizer();
+	renderer->setRasterizer(mRasterizer);
 	renderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	renderer->setDefaultBlendState();
 
@@ -121,4 +122,17 @@ void GBuffer::init(bool cleardepth, std::function<bool(Scene::Entity::Ptr)> cond
 
 
 	mRenderCond = cond;
+
+	D3D11_RASTERIZER_DESC rasterDesc;
+	rasterDesc.AntialiasedLineEnable = false;
+	rasterDesc.CullMode = D3D11_CULL_BACK;
+	rasterDesc.DepthBias = 0;
+	rasterDesc.DepthBiasClamp = 0.0f;
+	rasterDesc.DepthClipEnable = true;
+	rasterDesc.FillMode = D3D11_FILL_SOLID;
+	rasterDesc.FrontCounterClockwise = false;
+	rasterDesc.MultisampleEnable = false;
+	rasterDesc.ScissorEnable = false;
+	rasterDesc.SlopeScaledDepthBias = 0.0f;
+	mRasterizer = renderer->createOrGetRasterizer(rasterDesc);
 }

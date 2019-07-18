@@ -20,6 +20,7 @@ private:
 	Renderer::RenderTarget::Ptr mAlbedo;
 	Renderer::RenderTarget::Ptr mNormal;
 	Renderer::DepthStencil::Ptr mDepth;
+	Renderer::Rasterizer::Ptr mRasterizer;
 	bool mClearDepth;
 
 	std::unordered_map<size_t, Renderer::Effect::Ptr> mEffect;

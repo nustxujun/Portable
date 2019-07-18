@@ -44,6 +44,7 @@ public:
 	float roughness = 1.0f;
 	float reflection = 1.0f;
 	DirectX::SimpleMath::Vector3 diffuse = { 1,1,1 };
+	bool usingVertexColor = false;
 private:
 	size_t mShaderID = -1;
 

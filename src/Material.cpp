@@ -59,6 +59,11 @@ std::vector<D3D10_SHADER_MACRO> Material::generateShaderID()
 		}
 	}
 
+	if (usingVertexColor)
+	{
+		macros.push_back({ "DIFFUSE", "1" });
+	}
+
 	macros.push_back({ NULL, NULL });
 
 	mShaderID = Common::hash(macros.data(), macros.size() * sizeof(D3D10_SHADER_MACRO));

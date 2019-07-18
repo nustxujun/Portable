@@ -58,7 +58,6 @@ void Renderer::initCompiledShaders()
 		f.read((char*)&h, sizeof(h));
 		std::vector<char> buffer(size);
 		f.read(buffer.data(), size);
-
 		std::stringstream ss;
 		ss << i;
 		size_t hash;

@@ -10,6 +10,7 @@ public:
 private:
 	Renderer::Effect::Ptr getEffect(Material::Ptr mat);
 	void voxelize();
+	std::unique_ptr<std::vector<char>> readTexture3D(Renderer::Texture3D::Ptr tex);
 private:
 	std::unordered_map<size_t, Renderer::Effect::Ptr> mEffect;
 	Renderer::Rasterizer::Ptr mRasterizer;

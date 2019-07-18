@@ -1,6 +1,6 @@
 #include "Voxelize.h"
-
 #include "VoxelMesh.h"
+#include "D3D11Helper.h"
 
 void Voxelize::init(int size)
 {
@@ -15,7 +15,7 @@ void Voxelize::init(int size)
 	texdesc.Height = mSize;
 	texdesc.Depth = mSize;
 	texdesc.MipLevels = 1;
-	texdesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	texdesc.Format = DXGI_FORMAT_R32_UINT;
 	texdesc.Usage = D3D11_USAGE_DEFAULT;
 	texdesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
 	texdesc.CPUAccessFlags = 0;
@@ -24,11 +24,11 @@ void Voxelize::init(int size)
 	addUnorderedAccess("voxelalbedo", albedo);
 	mAlbedo = albedo;
 
-	texdesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+	texdesc.Format = DXGI_FORMAT_R32_UINT;
 	auto normal = renderer->createTexture3D(texdesc);
 	addUnorderedAccess("voxelnormal", normal);
 
-	texdesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+	texdesc.Format = DXGI_FORMAT_R32_UINT;
 	auto material = renderer->createTexture3D(texdesc);
 	addUnorderedAccess("voxelmaterial", material);
 
@@ -48,52 +48,27 @@ void Voxelize::init(int size)
 
 	voxelize();
 
+
+	Parameters params;
+	auto scene = getScene();
+	auto aabb = scene->getRoot()->getWorldAABB();
+	auto vec = aabb.second - aabb.first;
+	float length = std::max(vec.x, std::max(vec.y, vec.z));
+	float scale = length / mSize;
+	auto vm = new VoxelMesh(params, renderer);
+	vm->load(mSize, scale, readTexture3D(albedo), readTexture3D(normal), {});
+
+	auto model = scene->createModel("voxels", params, [vm](const Parameters& p)
 	{
-		D3D11_TEXTURE3D_DESC texdesc;
-		texdesc.Width = mSize;
-		texdesc.Height = mSize;
-		texdesc.Depth = mSize;
-		texdesc.MipLevels = 1;
-		texdesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-		texdesc.Usage = D3D11_USAGE_STAGING;
-		texdesc.BindFlags = 0;
-		texdesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-		texdesc.MiscFlags = 0;
+		return Mesh::Ptr(vm);
+	});
 
-		auto copy = renderer->createTexture3D(texdesc);
-		auto context = renderer->getContext();
-		context->CopyResource(copy->getTexture(), mAlbedo->getTexture());
-
-		std::unique_ptr<std::vector<Vector4>> raw( new std::vector<Vector4>(mSize * mSize * mSize));
-		Vector4* data = raw->data();
-		D3D11_MAPPED_SUBRESOURCE sr;
-		HRESULT hr = context->Map(copy->getTexture(), 0, D3D11_MAP_READ, 0, &sr);
-		const char* head = (const char*)sr.pData;
-		for (int z = 0; z < mSize; ++z)
-		{
-			for (int y = 0; y < mSize; ++y)
-			{
-				memcpy(data, head + sr.RowPitch * y + sr.DepthPitch * z, sizeof(Vector4) * mSize);
-				data += mSize;
-			}
-		}
-
-		context->Unmap(copy->getTexture(), 0);
-		renderer->destroyTexture(copy);
-
-		Parameters params;
-		auto scene = getScene();
-		auto vm = new VoxelMesh(params, renderer);
-		vm->load(mSize,10.0f, std::move(raw), {}, {});
-
-		auto model = scene->createModel("voxels", params, [vm](const Parameters& p)
-		{
-			return Mesh::Ptr(vm);
-		});
-
-		model->attach(scene->getRoot());
-		model->setMask(1);
-	}
+	auto center = (aabb.first + aabb.second) * 0.5f;
+	Vector3 voxelcenter = { mSize / 2.0f, mSize / 2.0f, mSize / 2.0f };
+	center = center - voxelcenter * scale;
+	model->getNode()->setPosition(center);
+	model->attach(scene->getRoot());
+	model->setMask(1);
 }
 
 void Voxelize::render(Renderer::Texture2D::Ptr rt)
@@ -149,8 +124,10 @@ void Voxelize::voxelize()
 		DirectX::XMMatrixLookToLH(center, Vector3::UnitY, Vector3::UnitZ),
 		DirectX::XMMatrixLookToLH(center, Vector3::UnitZ, Vector3::UnitY),
 	};
-	std::array<float, 4> c = {0,0,0,0 };
+	std::array<UINT, 4> c = {0,0,0,0 };
 	renderer->clearUnorderedAccess(mAlbedo, c);
+	renderer->clearUnorderedAccess(getUnorderedAccess("voxelnormal"), c);
+	renderer->clearUnorderedAccess(getUnorderedAccess("voxelmaterial"), c);
 
 	for (auto view : views)
 	{
@@ -206,4 +183,39 @@ void Voxelize::voxelize()
 
 
 
+}
+
+std::unique_ptr<std::vector<char>> Voxelize::readTexture3D(Renderer::Texture3D::Ptr tex)
+{
+	D3D11_TEXTURE3D_DESC texdesc = tex->getDesc();
+	texdesc.MipLevels = 1;
+	texdesc.Usage = D3D11_USAGE_STAGING;
+	texdesc.BindFlags = 0;
+	texdesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+	texdesc.MiscFlags = 0;
+
+	auto renderer = getRenderer();
+	auto copy = renderer->createTexture3D(texdesc);
+	auto context = renderer->getContext();
+	context->CopyResource(copy->getTexture(), tex->getTexture());
+
+	int stride = D3D11Helper::sizeof_DXGI_FORMAT(texdesc.Format);
+	std::unique_ptr<std::vector<char>> raw(new std::vector<char>(mSize * mSize * mSize * stride));
+	char* data = raw->data();
+	D3D11_MAPPED_SUBRESOURCE sr;
+	HRESULT hr = context->Map(copy->getTexture(), 0, D3D11_MAP_READ, 0, &sr);
+	const char* head = (const char*)sr.pData;
+	for (int z = 0; z < mSize; ++z)
+	{
+		for (int y = 0; y < mSize; ++y)
+		{
+			memcpy(data, head + sr.RowPitch * y + sr.DepthPitch * z, stride * mSize);
+			data += mSize * stride;
+		}
+	}
+
+	context->Unmap(copy->getTexture(), 0);
+	renderer->destroyTexture(copy);
+
+	return raw;
 }

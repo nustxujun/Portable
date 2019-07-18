@@ -116,40 +116,40 @@ public:
 		//	model->setMaterial(mat);
 		//}
 
-		{
-			int spherecount = 1;
-			Parameters params;
-			params["geom"] = "sphere";
-			params["radius"] = "1";
-			params["size"] = "1";
-			Material::Ptr mat = Material::create();
-			std::vector<std::string> textures = {
-			"media/streaked/streaked-metal1-albedo.png",
-			"",
-			"media/streaked/streaked-metal1-rough.png",
-			"media/streaked/streaked-metal1-metalness.png",
-			"media/streaked/streaked-metal1-ao.png",
-			};
-			mat->metallic = 0;
-			mat->roughness = 1;
-			//for (int i = 0; i < textures.size(); ++i)
-			//	if (!textures[i].empty())
-			//		mat->setTexture(i, mRenderer->createTexture(textures[i]));
-			auto model = mScene->createModel(Common::format("sphere"), params, [this, mat](const Parameters& p)
-			{
-				auto sphere = Mesh::Ptr(new GeometryMesh(p, mRenderer));
-				sphere->setMaterial(mat);
+		//{
+		//	int spherecount = 1;
+		//	Parameters params;
+		//	params["geom"] = "sphere";
+		//	params["radius"] = "1";
+		//	params["size"] = "1";
+		//	Material::Ptr mat = Material::create();
+		//	std::vector<std::string> textures = {
+		//	"media/streaked/streaked-metal1-albedo.png",
+		//	"",
+		//	"media/streaked/streaked-metal1-rough.png",
+		//	"media/streaked/streaked-metal1-metalness.png",
+		//	"media/streaked/streaked-metal1-ao.png",
+		//	};
+		//	mat->metallic = 0;
+		//	mat->roughness = 1;
+		//	//for (int i = 0; i < textures.size(); ++i)
+		//	//	if (!textures[i].empty())
+		//	//		mat->setTexture(i, mRenderer->createTexture(textures[i]));
+		//	auto model = mScene->createModel(Common::format("sphere"), params, [this, mat](const Parameters& p)
+		//	{
+		//		auto sphere = Mesh::Ptr(new GeometryMesh(p, mRenderer));
+		//		sphere->setMaterial(mat);
 
-				return sphere;
-			});
+		//		return sphere;
+		//	});
 
 
-			model->getNode()->setPosition({0 , 0, 0 });
-			model->setCastShadow(true);
-			model->attach(root);
-			model->setStatic(false);
+		//	model->getNode()->setPosition({0 , 0, 0 });
+		//	model->setCastShadow(true);
+		//	model->attach(root);
+		//	model->setStatic(false);
 
-		}
+		//}
 
 		{
 			Parameters params;
@@ -184,7 +184,7 @@ public:
 		auto light = mScene->createOrGetLight("main");
 		light->setCastingShadow(false);
 		light->setType(Scene::Light::LT_POINT);
-		light->getNode()->setPosition(0, 1.75, 0);
+		light->getNode()->setPosition((aabb.first + aabb.second) * 0.5f);
 
 		Parameters params;
 		params["geom"] = "sphere";

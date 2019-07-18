@@ -39,9 +39,9 @@ Texture2D aoTex:register(t4);
 Texture2D heightTex:register(t5);
 
 #if VOXELIZE
-RWTexture3D<float4> albedoRT:register(u3);
-RWTexture3D<float4> normalRT:register(u4);
-RWTexture3D<float4> materialRT:register(u5);
+RWTexture3D<uint> albedoRT:register(u3);
+RWTexture3D<uint> normalRT:register(u4);
+RWTexture3D<uint> materialRT:register(u5);
 #endif
 
 
@@ -63,6 +63,9 @@ struct GBufferVertexShaderInput
 	float3 Tangent :TANGENT0;
 	float3 Bitangent: TANGENT1;
 #endif
+#if DIFFUSE
+	float4 Diffuse: COLOR0;
+#endif
 };
 
 struct GBufferVertexShaderOutput
@@ -80,6 +83,10 @@ struct GBufferVertexShaderOutput
 	float3 PosInTangent:TEXCOORD1;
 	float3 CamInTangent:TEXCOORD2;
 	float3 WorldPosition:TEXCOORD3;
+#endif
+
+#if DIFFUSE
+	float4 Diffuse: COLOR0;
 #endif
 };
 
@@ -119,6 +126,10 @@ GBufferVertexShaderOutput vs(GBufferVertexShaderInput input)
 	output.PosInTangent = mul(worldPosition.xyz, toTBN);
 	output.CamInTangent = mul(campos, toTBN);
 	output.WorldPosition = worldPosition.xyz;
+#endif
+
+#if DIFFUSE
+	output.Diffuse = input.Diffuse;
 #endif
 	return output;
 }
@@ -172,6 +183,43 @@ float2 ParallaxMapping(float2 coord, float3 V, int sampleCount)
 #endif
 
 #if VOXELIZE
+float3 encodeNormal(float3 n)
+{
+	return n * 0.5 + 0.5;
+}
+
+float3 decodeNormal(float3 n)
+{
+	return n * 2 - 1;
+}
+
+float4 uintTofloat4(uint val)
+{
+	return float4(float((val & 0x000000FF)),
+		float((val & 0x0000FF00) >> 8U),
+		float((val & 0x00FF0000) >> 16U),
+		float((val & 0xFF000000) >> 24U));
+}
+
+uint float4Touint(float4 val)
+{
+	return (uint(val.w) & 0x000000FF) << 24U |
+		(uint(val.z) & 0x000000FF) << 16U |
+		(uint(val.y) & 0x000000FF) << 8U |
+		(uint(val.x) & 0x000000FF);
+}
+
+uint average(uint avg, float4 val)
+{
+	float4 vec = uintTofloat4(avg);
+	vec = float4((vec.rgb * vec.w + val.rgb * 255) / (vec.w + 1), (vec.w + 1));
+	vec = min(vec, 255);
+	return float4Touint(vec);
+}
+
+#endif
+
+#if VOXELIZE
 void 
 #else
 GBufferPixelShaderOutput 
@@ -200,6 +248,12 @@ ps(GBufferVertexShaderOutput input)
 #else
 	output.Color = 1.0f;
 #endif
+	
+	// vertex color
+#if DIFFUSE
+	output.Color *= input.Diffuse;
+#endif
+
 	output.Color.rgb *= diffuse;
 
 	// ao map
@@ -232,11 +286,11 @@ ps(GBufferVertexShaderOutput input)
 	{
 		pos.x = input.Position.z * width ;
 		pos.y = height - input.Position.y ;
-		pos.z = input.Position.x ;
+		pos.z = depth - input.Position.x ;
 	}
 	else if (viewport == 1)
 	{
-		pos.x = input.Position.x ;
+		pos.x = width - input.Position.x ;
 		pos.y = input.Position.z * height ;
 		pos.z = depth - input.Position.y ;
 	}
@@ -247,9 +301,13 @@ ps(GBufferVertexShaderOutput input)
 		pos.z = input.Position.z * depth ;
 	}
 
-	albedoRT[pos] = output.Color;
-	normalRT[pos] = output.Normal;
-	materialRT[pos] = output.Material;
+	albedoRT[pos] = average(albedoRT[pos], output.Color);
+	normalRT[pos] = average(normalRT[pos], float4(encodeNormal( output.Normal),0) );
+	materialRT[pos] = average(materialRT[pos], output.Material);
+
+	//albedoRT[pos] = output.Color;
+	//normalRT[pos] = output.Normal;
+	//materialRT[pos] = output.Material;
 #else
 	return output;
 #endif

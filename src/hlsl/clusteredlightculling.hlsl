@@ -20,7 +20,7 @@ cbuffer Constants: register(c0)
 
 
 #ifndef LIGHT_THREAD
-#define LIGHT_THREAD 4
+#define LIGHT_THREAD 32
 #endif
 
 #ifndef MAX_LIGHTS_PER_CLUSTER
@@ -87,7 +87,7 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 
 	GroupMemoryBarrierWithGroupSync();
 
-	for (int i = 0; i < numPointLights; i += LIGHT_THREAD)
+	for (int i = localIdx.x; i < numPointLights; i += LIGHT_THREAD)
 	{
 		float4 light = pointlights[i * 2];
 		float3 pos = mul(float4(light.xyz,1.0), view).xyz;
@@ -104,7 +104,7 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 			break;
 	}
 
-	for (int i = 0; i < numSpotLights; i += LIGHT_THREAD)
+	for (int i = localIdx.x; i < numSpotLights; i += LIGHT_THREAD)
 	{
 		float4 light = spotlights[i * 3];
 		float3 pos = mul(float4(light.xyz, 1.0), view).xyz;

@@ -7,26 +7,44 @@ VoxelMesh::VoxelMesh(const Parameters & params, Renderer::Ptr r)
 
 void VoxelMesh::load(size_t size,float scale, Buffer color, Buffer normal, Buffer material)
 {
-	const auto* colordata = color->data();
+	const UINT* colordata = (const UINT*)color->data();
+	const UINT* normaldata = (const UINT*)normal->data();
+
+
+	auto uintTofloat4 = [](UINT val) {
+		return Vector4(Vector4(float((val & 0x000000FF)),
+			float((val & 0x0000FF00) >> 8U),
+			float((val & 0x00FF0000) >> 16U),
+			float((val & 0xFF000000) >> 24U)) / 255);
+	};
+
+	auto decodeNormal = [uintTofloat4](UINT n)
+	{
+		Vector4 data = uintTofloat4(n);
+		Vector3 norm = { data.x * 2 - 1, data.y * 2 - 1, data.z * 2 - 1 };
+		norm.Normalize();
+		return norm;
+	};
+
 
 	auto getIndex = [size](int x, int y, int z)
 	{
 		return x + y * size + z * size * size;
 	};
 
-	auto checkExist = [colordata,size,getIndex](int x, int y, int z)
+	auto checkExist = [uintTofloat4,colordata,size,getIndex](int x, int y, int z)
 	{
 		if (x < 0 || x >= size || y < 0 || y >= size || z < 0 || z >= size)
 			return false;
 		auto index = getIndex(x, y, z);
-		return colordata[index].w != 0;
+		return uintTofloat4(colordata[index]).w != 0;
 	};
 
 	struct Vertex
 	{
 		Vector3 pos;
 		Vector3 norm;
-		//Vector4 color;
+		Vector4 color;
 	};
 
 	std::vector<Vertex> vertices;
@@ -76,6 +94,9 @@ void VoxelMesh::load(size_t size,float scale, Buffer color, Buffer normal, Buffe
 				int index = getIndex(x, y, z);
 				if (!checkExist(x, y, z))
 					continue;
+			
+				auto color = uintTofloat4(colordata[index]) ;
+				auto normal = decodeNormal(normaldata[index]);
 				for (auto& f : faces)
 				{
 					if (checkExist(x + f.facing.x, y + f.facing.y, z + f.facing.z))
@@ -86,7 +107,11 @@ void VoxelMesh::load(size_t size,float scale, Buffer color, Buffer normal, Buffe
 					for (auto& v : f.verts)
 					{
 
-						Vertex vert = { {x + v.x, y + v.y, z + v.z}, f.facing };
+						Vertex vert = { 
+							{x + v.x, y + v.y, z + v.z}, 
+							//f.facing ,
+							normal,
+							color };
 						vert.pos *= scale;
 						vertices.push_back(vert);
 
@@ -115,20 +140,24 @@ void VoxelMesh::load(size_t size,float scale, Buffer color, Buffer normal, Buffe
 	std::vector<D3D11_INPUT_ELEMENT_DESC> layout = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "COLOR", 0 ,DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 
 	auto lo = mRenderer->createLayout(layout.data(), layout.size());
 
+	static Material::Ptr mat = Material::create();
+	mat->usingVertexColor = true;
+	mat->metallic = 1;
 	mMeshs.push_back({
 		vb,
 		ib,
 		vertices.size(),
 		indices.size(),
-		Material::Default,
+		mat,
 		lo,
 		DirectX::SimpleMath::Matrix::Identity
 	});
 
 	mAABB.min = { 0,0,0 };
-	mAABB.max ={(float)size, (float)size, (float)size} ;
+	mAABB.max ={(float)size * scale, (float)size* scale, (float)size* scale } ;
 }

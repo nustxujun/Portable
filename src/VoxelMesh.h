@@ -6,7 +6,7 @@
 class VoxelMesh: public Mesh
 {
 public:
-	using Buffer = std::unique_ptr<std::vector<DirectX::SimpleMath::Vector4>>;
+	using Buffer = std::unique_ptr<std::vector<char>>;
 
 	VoxelMesh(const Parameters& params, Renderer::Ptr r);
 
