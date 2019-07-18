@@ -859,7 +859,7 @@ Renderer::Buffer::Ptr Renderer::createRWBuffer(int size, int stride, DXGI_FORMAT
 Renderer::Buffer::Ptr Renderer::createConstantBuffer(int size, void* data , size_t datasize)
 {
 	size = ALIGN(size, 16);
-	D3D11_SUBRESOURCE_DATA initdata;
+	D3D11_SUBRESOURCE_DATA initdata = { 0 };
 	initdata.pSysMem = data;
 	return createBuffer(size, D3D11_BIND_CONSTANT_BUFFER, data? &initdata:nullptr, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 }

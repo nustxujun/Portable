@@ -39,9 +39,9 @@ Texture2D aoTex:register(t4);
 Texture2D heightTex:register(t5);
 
 #if VOXELIZE
-RWTexture3D<uint> albedoRT:register(u3);
-RWTexture3D<uint> normalRT:register(u4);
-RWTexture3D<uint> materialRT:register(u5);
+RWTexture3D<uint> albedoRT:register(u0);
+RWTexture3D<uint> normalRT:register(u1);
+RWTexture3D<uint> materialRT:register(u2);
 #endif
 
 

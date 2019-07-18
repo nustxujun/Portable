@@ -7,8 +7,8 @@ VoxelMesh::VoxelMesh(const Parameters & params, Renderer::Ptr r)
 
 void VoxelMesh::load(size_t size,float scale, Buffer color, Buffer normal, Buffer material)
 {
-	const UINT* colordata = (const UINT*)color->data();
-	const UINT* normaldata = (const UINT*)normal->data();
+	const Vector4* colordata = (const Vector4*)color->data();
+	//const UINT* normaldata = (const UINT*)normal->data();
 
 
 	auto uintTofloat4 = [](UINT val) {
@@ -37,7 +37,7 @@ void VoxelMesh::load(size_t size,float scale, Buffer color, Buffer normal, Buffe
 		if (x < 0 || x >= size || y < 0 || y >= size || z < 0 || z >= size)
 			return false;
 		auto index = getIndex(x, y, z);
-		return uintTofloat4(colordata[index]).w != 0;
+		return colordata[index].w != 0;
 	};
 
 	struct Vertex
@@ -95,8 +95,8 @@ void VoxelMesh::load(size_t size,float scale, Buffer color, Buffer normal, Buffe
 				if (!checkExist(x, y, z))
 					continue;
 			
-				auto color = uintTofloat4(colordata[index]) ;
-				auto normal = decodeNormal(normaldata[index]);
+				auto color = colordata[index] ;
+				//auto normal = decodeNormal(normaldata[index]);
 				for (auto& f : faces)
 				{
 					if (checkExist(x + f.facing.x, y + f.facing.y, z + f.facing.z))
@@ -109,8 +109,8 @@ void VoxelMesh::load(size_t size,float scale, Buffer color, Buffer normal, Buffe
 
 						Vertex vert = { 
 							{x + v.x, y + v.y, z + v.z}, 
-							//f.facing ,
-							normal,
+							f.facing ,
+							//normal,
 							color };
 						vert.pos *= scale;
 						vertices.push_back(vert);

@@ -1,6 +1,7 @@
 #include "Voxelize.h"
 #include "VoxelMesh.h"
 #include "D3D11Helper.h"
+#include "GPUComputer.h"
 
 void Voxelize::init(int size)
 {
@@ -22,15 +23,24 @@ void Voxelize::init(int size)
 	texdesc.MiscFlags = 0;
 	auto albedo = renderer->createTexture3D(texdesc);
 	addUnorderedAccess("voxelalbedo", albedo);
-	mAlbedo = albedo;
+	addShaderResource("voxelalbedo", albedo);
+
 
 	texdesc.Format = DXGI_FORMAT_R32_UINT;
 	auto normal = renderer->createTexture3D(texdesc);
 	addUnorderedAccess("voxelnormal", normal);
+	addShaderResource("voxelnormal", normal);
 
 	texdesc.Format = DXGI_FORMAT_R32_UINT;
 	auto material = renderer->createTexture3D(texdesc);
 	addUnorderedAccess("voxelmaterial", material);
+	addShaderResource("voxelmaterial", material);
+
+	texdesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	auto color = renderer->createTexture3D(texdesc);
+	addUnorderedAccess("voxelcolor", color);
+	addShaderResource("voxelcolor", color);
+	mColor = color;
 
 
 	D3D11_RASTERIZER_DESC rasterDesc;
@@ -48,15 +58,22 @@ void Voxelize::init(int size)
 
 	voxelize();
 
+	mInitialize = [this]() {
+		voxelLighting();
+		visualize();
+	};
+}
 
+void Voxelize::visualize()
+{
 	Parameters params;
 	auto scene = getScene();
 	auto aabb = scene->getRoot()->getWorldAABB();
 	auto vec = aabb.second - aabb.first;
 	float length = std::max(vec.x, std::max(vec.y, vec.z));
 	float scale = length / mSize;
-	auto vm = new VoxelMesh(params, renderer);
-	vm->load(mSize, scale, readTexture3D(albedo), readTexture3D(normal), {});
+	auto vm = new VoxelMesh(params, getRenderer());
+	vm->load(mSize, scale, readTexture3D(mColor), {}, {});
 
 	auto model = scene->createModel("voxels", params, [vm](const Parameters& p)
 	{
@@ -71,8 +88,13 @@ void Voxelize::init(int size)
 	model->setMask(1);
 }
 
+
 void Voxelize::render(Renderer::Texture2D::Ptr rt)
 {
+	if (mInitialize) {
+		mInitialize();
+		mInitialize = nullptr;
+	}
 }
 
 Renderer::Effect::Ptr Voxelize::getEffect(Material::Ptr mat)
@@ -125,7 +147,7 @@ void Voxelize::voxelize()
 		DirectX::XMMatrixLookToLH(center, Vector3::UnitZ, Vector3::UnitY),
 	};
 	std::array<UINT, 4> c = {0,0,0,0 };
-	renderer->clearUnorderedAccess(mAlbedo, c);
+	renderer->clearUnorderedAccess(getUnorderedAccess("voxelalbedo"), c);
 	renderer->clearUnorderedAccess(getUnorderedAccess("voxelnormal"), c);
 	renderer->clearUnorderedAccess(getUnorderedAccess("voxelmaterial"), c);
 
@@ -182,7 +204,60 @@ void Voxelize::voxelize()
 	}
 
 
+	ID3D11UnorderedAccessView* nil[] = { nullptr,nullptr ,nullptr };
+	context->OMSetRenderTargetsAndUnorderedAccessViews(0, 0, 0, 0, 3, nil,0);
 
+}
+
+void Voxelize::voxelLighting()
+{
+	auto renderer = getRenderer();
+	auto scene = getScene();
+
+	auto aabb = scene->getRoot()->getWorldAABB();
+	auto vec = aabb.second - aabb.first;
+	float length = std::max(vec.x, std::max(vec.y, vec.z));
+	float scale = length / mSize;
+
+	auto center = (aabb.first + aabb.second) * 0.5f;
+	Vector3 voxelcenter = { mSize / 2.0f, mSize / 2.0f, mSize / 2.0f };
+	Vector3 offset = center - voxelcenter * scale;
+
+
+	ALIGN16
+	struct Constants
+	{
+		Vector3 offset;
+		float scaling;
+		int size;
+		int numpoints;
+		int numdirs;
+	} c = 
+	{
+		offset,
+		scale,
+		mSize,
+		getValue<int>("numpoints"),
+		getValue<int>("numdirs"),
+	};
+
+	auto constants = renderer->createConstantBuffer(sizeof(Constants),&c, sizeof(c));
+	auto cs = renderer->createComputeShader("hlsl/voxel_illumination.hlsl","main");
+
+
+	GPUComputer com(renderer);
+	com.setShader(cs);
+	com.setConstants({ constants });
+	com.setInputs({
+		getShaderResource("voxelalbedo"),
+		getShaderResource("voxelnormal"),
+		getShaderResource("voxelmaterial"),
+		getShaderResource("pointlights"),
+		getShaderResource("dirlights"),
+	});
+
+	com.setOuputs({ getUnorderedAccess("voxelcolor") });
+	com.compute(mSize, mSize, mSize);
 }
 
 std::unique_ptr<std::vector<char>> Voxelize::readTexture3D(Renderer::Texture3D::Ptr tex)

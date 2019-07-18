@@ -10,12 +10,15 @@ public:
 private:
 	Renderer::Effect::Ptr getEffect(Material::Ptr mat);
 	void voxelize();
+	void voxelLighting();
+	void visualize();
 	std::unique_ptr<std::vector<char>> readTexture3D(Renderer::Texture3D::Ptr tex);
 private:
+	int mSize;
 	std::unordered_map<size_t, Renderer::Effect::Ptr> mEffect;
 	Renderer::Rasterizer::Ptr mRasterizer;
-	int mSize;
-	Renderer::Texture3D::Ptr mAlbedo;
-
+	Renderer::ComputeShader::Weak mVoxelIllumination;
+	std::function<void(void)> mInitialize;
+	Renderer::Texture3D::Ptr mColor;
 };
 
