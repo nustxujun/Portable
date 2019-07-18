@@ -133,12 +133,13 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 		float len = size * 1.74;
 		for (int i = 0; i < numdirs; ++i)
 		{
-			float4 lightdir = pointlights[i * 2];
-			float4 lightcolor = pointlights[i * 2 + 1];
+			float4 lightdir = dirlights[i * 2];
+			float4 lightcolor = dirlights[i * 2 + 1];
 
 			float3 V = -normalize(lightdir.xyz);
 
 			float v = rayMarch(pos, V, len);
+			//color += lightcolor.rgb * albedo;
 			color += v * lightcolor.rgb * brdf(roughness, metallic, albedo, normal, V);
 		}
 	}

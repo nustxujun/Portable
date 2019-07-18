@@ -32,10 +32,10 @@ public:
 		int numdirs = 1;
 
 		set("time", { {"value", 3.14f}, {"min", "1.57"}, {"max", "4.71"}, {"interval", "0.001"}, {"type","set"} });
-		//set("numdirs", { {"value", numdirs}, {"min", 0}, {"max", numdirs}, {"interval", 1}, {"type","set"} });
-		//set("dirradiance", { {"type","set"}, {"value",100},{"min","0.1"},{"max",100},{"interval", "0.1"} });
+		set("numdirs", { {"value", numdirs}, {"min", 0}, {"max", numdirs}, {"interval", 1}, {"type","set"} });
+		set("dirradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
 		set("lightRange", { {"value", 1000}, {"min", 1}, {"max", 1000}, {"interval", 1}, {"type","set"} });
-		set("numpoints", { {"value", 1}, {"min", 0}, {"max", 1}, {"interval", 1}, {"type","set"} });
+		set("numpoints", { {"value", 0}, {"min", 0}, {"max", 1}, {"interval", 1}, {"type","set"} });
 		set("pointradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
 
 		auto root = mScene->getRoot();
@@ -183,9 +183,9 @@ public:
 
 		auto light = mScene->createOrGetLight("main");
 		light->setCastingShadow(false);
-		light->setType(Scene::Light::LT_POINT);
-		light->getNode()->setPosition((aabb.first + aabb.second) * 0.5f);
-
+		//light->setType(Scene::Light::LT_POINT);
+		//light->getNode()->setPosition((aabb.first + aabb.second) * 0.5f);
+		light->setDirection({ 0,-1,0.1 });
 		Parameters params;
 		params["geom"] = "sphere";
 		params["radius"] = "0.1";
