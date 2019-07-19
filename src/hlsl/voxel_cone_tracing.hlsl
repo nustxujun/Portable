@@ -12,7 +12,7 @@ struct ConeTracingParams
 };
 float4 coneTracing(ConeTracingParams params)
 {
-	return params.octree.SampleLevel(params.samp, params.start, 0);
+	return params.octree.SampleLevel(params.samp, params.start / 256, 0);
 	float3 start = params.start;
 	float3 dir = params.dir;
 	float theta = params.theta;

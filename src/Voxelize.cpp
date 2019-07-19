@@ -125,7 +125,7 @@ void Voxelize::render(Renderer::Texture2D::Ptr rt)
 
 	auto cam = getCamera();
 	Constants c;
-	c.invertViewProj = cam->getProjectionMatrix().Invert().Transpose();
+	c.invertViewProj = (cam->getViewMatrix() * cam->getProjectionMatrix()).Invert().Transpose();
 	c.campos = cam->getNode()->getRealPosition();
 	c.numMips = mColor->getDesc().MipLevels;
 	c.offset = mOffset;

@@ -43,6 +43,8 @@ float4 main(PS_INPUT input):SV_TARGET
 	worldpos.y = -(uv.y * 2.0f - 1.0f);
 	worldpos.z = depthVal;
 	worldpos.w = 1.0f;
+	worldpos = mul(worldpos, invertViewProj);
+	worldpos /= worldpos.w;
 
 	float3 V = normalize(campos - worldpos.xyz);
 	float3 R = normalize(reflect(-V, N));
@@ -57,4 +59,5 @@ float4 main(PS_INPUT input):SV_TARGET
 	float4 color = coneTracing(ctr);
 
 	return voxelTex.Load(int4(ctr.start,0));
+	//return float4(worldpos.xyz,1);
 }
