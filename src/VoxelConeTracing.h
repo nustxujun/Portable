@@ -185,7 +185,7 @@ public:
 		light->setCastingShadow(false);
 		//light->setType(Scene::Light::LT_POINT);
 		//light->getNode()->setPosition((aabb.first + aabb.second) * 0.5f);
-		light->setDirection({ 0,-1,0.1 });
+		light->setDirection({ 0,-1,0.2 });
 		Parameters params;
 		params["geom"] = "sphere";
 		params["radius"] = "0.1";
@@ -231,8 +231,8 @@ public:
 
 		mPipeline->pushStage<GBuffer>(true, [](Scene::Entity::Ptr e)
 		{
-			return e->getMask() == 1;
-			//return true;
+			//return e->getMask() == 1;
+			return true;
 		});
 		mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
 		mPipeline->pushStage<AO>();

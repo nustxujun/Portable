@@ -65,15 +65,16 @@ float rayMarch(float3 pos, float3 dir, float range)
 	float numstep = 1;
 	float visibility = 1;
 
-	while (numstep < maxstep)
+	while (numstep <= maxstep)
 	{
 		float3 hit = pos + dir * numstep * step;
 		if (checkVoxelExist(hit))
 		{
-			if (visibility != 1)
-				return 0;
-			else
-				visibility = pow(length(pos - hit) / range, 1);
+			return 0;
+			//if (visibility != 1)
+			//	return 0;
+			//else
+			//	visibility = pow(length(pos - hit) / range, 1);
 		}
 
 		numstep += 1;
@@ -107,7 +108,8 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 
 	float3 color = 0;
 	float3 pos = globalIdx;
-	pos += 0.5;
+	//pos += 0.5;
+	//pos.y +=  0.4;
 	{
 		for (int i = 0; i < numpoints; i++)
 		{
@@ -144,5 +146,7 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 		}
 	}
 
-	targetTex[globalIdx] = float4(color,1);
+	//targetTex[globalIdx] = float4(color,1);
+	targetTex[globalIdx] = float4(albedo, 1);
+
 }

@@ -2,6 +2,17 @@
 #include "Pipeline.h"
 class Voxelize :public Pipeline::Stage
 {
+	ALIGN16 
+	struct Constants
+	{
+		Matrix invertViewProj;
+		Vector3 offset;
+		float scaling;
+
+		Vector3 campos;
+		int numMips;
+	};
+
 public:
 	using Pipeline::Stage::Stage;
 
@@ -19,6 +30,11 @@ private:
 	Renderer::Rasterizer::Ptr mRasterizer;
 	Renderer::ComputeShader::Weak mVoxelIllumination;
 	std::function<void(void)> mInitialize;
+	Vector3 mOffset;
+	float mScale;
 	Renderer::Texture3D::Ptr mColor;
+
+	Renderer::PixelShader::Weak mVoxelGI;
+	Renderer::Buffer::Ptr mVoxelGIConstants;
 };
 

@@ -1689,9 +1689,23 @@ void Renderer::Texture3D::initTexture()
 
 	if (unorderedAccess)
 	{
-		ID3D11UnorderedAccessView* uav;
-		checkResult(getDevice()->CreateUnorderedAccessView(mTexture, nullptr, &uav));
-		UnorderedAccess::addView(uav);
+		//ID3D11UnorderedAccessView* uav;
+		//checkResult(getDevice()->CreateUnorderedAccessView(mTexture, nullptr, &uav));
+		//UnorderedAccess::addView(uav);
+
+
+		for (UINT i = 0; i < mDesc.MipLevels; ++i)
+		{
+			D3D11_UNORDERED_ACCESS_VIEW_DESC desc;
+			desc.Format = mDesc.Format;
+			desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE3D;
+			desc.Texture3D.MipSlice = i;
+			desc.Texture3D.FirstWSlice = 0;
+			desc.Texture3D.WSize = -1;
+			ID3D11UnorderedAccessView* uav;
+			checkResult(getDevice()->CreateUnorderedAccessView(mTexture, &desc, &uav));
+			UnorderedAccess::addView(uav);
+		}
 	}
 
 	if (shaderRecource)
@@ -1699,6 +1713,5 @@ void Renderer::Texture3D::initTexture()
 		ID3D11ShaderResourceView* srv;
 		checkResult(getDevice()->CreateShaderResourceView(mTexture, nullptr, &srv));
 		ShaderResource::addView(srv);
-
 	}
 }

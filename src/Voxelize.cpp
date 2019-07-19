@@ -6,8 +6,10 @@
 void Voxelize::init(int size)
 {
 	mName = "Voxelize";
-	mSize = ALIGN(size, 2);
-
+	int level = 0;
+	mSize = 0;
+	while (mSize < size)
+		mSize = std::pow(2, level++);
 	
 	auto renderer = getRenderer();
 
@@ -37,6 +39,9 @@ void Voxelize::init(int size)
 	addShaderResource("voxelmaterial", material);
 
 	texdesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	texdesc.MipLevels = level;
+	texdesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
+	texdesc.BindFlags |= D3D11_BIND_RENDER_TARGET;
 	auto color = renderer->createTexture3D(texdesc);
 	addUnorderedAccess("voxelcolor", color);
 	addShaderResource("voxelcolor", color);
@@ -56,11 +61,26 @@ void Voxelize::init(int size)
 	rasterDesc.SlopeScaledDepthBias = 0.0f;
 	mRasterizer = renderer->createOrGetRasterizer(rasterDesc);
 
+	mVoxelGI = renderer->createPixelShader("hlsl/voxel_indirectLighting.hlsl");
+	mVoxelGIConstants = renderer->createConstantBuffer(sizeof(Constants));
+
+
+	auto scene = getScene();
+
+	auto aabb = scene->getRoot()->getWorldAABB();
+	auto vec = aabb.second - aabb.first;
+	float length = std::max(vec.x, std::max(vec.y, vec.z));
+	mScale = length / mSize;
+
+	auto center = (aabb.first + aabb.second) * 0.5f;
+	Vector3 voxelcenter = { mSize / 2.0f, mSize / 2.0f, mSize / 2.0f };
+	mOffset = center - voxelcenter * mScale;
+
 	voxelize();
 
 	mInitialize = [this]() {
 		voxelLighting();
-		visualize();
+		//visualize();
 	};
 }
 
@@ -68,22 +88,17 @@ void Voxelize::visualize()
 {
 	Parameters params;
 	auto scene = getScene();
-	auto aabb = scene->getRoot()->getWorldAABB();
-	auto vec = aabb.second - aabb.first;
-	float length = std::max(vec.x, std::max(vec.y, vec.z));
-	float scale = length / mSize;
+
 	auto vm = new VoxelMesh(params, getRenderer());
-	vm->load(mSize, scale, readTexture3D(mColor), {}, {});
+	vm->load(mSize, mScale, readTexture3D(mColor), {}, {});
 
 	auto model = scene->createModel("voxels", params, [vm](const Parameters& p)
 	{
 		return Mesh::Ptr(vm);
 	});
 
-	auto center = (aabb.first + aabb.second) * 0.5f;
-	Vector3 voxelcenter = { mSize / 2.0f, mSize / 2.0f, mSize / 2.0f };
-	center = center - voxelcenter * scale;
-	model->getNode()->setPosition(center);
+
+	model->getNode()->setPosition(mOffset);
 	model->attach(scene->getRoot());
 	model->setMask(1);
 }
@@ -95,6 +110,30 @@ void Voxelize::render(Renderer::Texture2D::Ptr rt)
 		mInitialize();
 		mInitialize = nullptr;
 	}
+
+	auto quad = getQuad();
+	quad->setDefaultSampler();
+	quad->setDefaultViewport();
+	quad->setDefaultBlend(false);
+	quad->setPixelShader(mVoxelGI);
+	quad->setTextures({
+		getShaderResource("voxelcolor"),
+		getShaderResource("depth"),
+		getShaderResource("normal"),
+	});
+	quad->setRenderTarget(rt);
+
+	auto cam = getCamera();
+	Constants c;
+	c.invertViewProj = cam->getProjectionMatrix().Invert().Transpose();
+	c.campos = cam->getNode()->getRealPosition();
+	c.numMips = mColor->getDesc().MipLevels;
+	c.offset = mOffset;
+	c.scaling = mScale;
+	mVoxelGIConstants->blit(c);
+	quad->setConstant(mVoxelGIConstants);
+
+	quad->draw();
 }
 
 Renderer::Effect::Ptr Voxelize::getEffect(Material::Ptr mat)
@@ -256,8 +295,10 @@ void Voxelize::voxelLighting()
 		getShaderResource("dirlights"),
 	});
 
-	com.setOuputs({ getUnorderedAccess("voxelcolor") });
+	com.setOuputs({ mColor });
 	com.compute(mSize, mSize, mSize);
+
+	renderer->getContext()->GenerateMips(mColor->Renderer::ShaderResource::getView());
 }
 
 std::unique_ptr<std::vector<char>> Voxelize::readTexture3D(Renderer::Texture3D::Ptr tex)
@@ -272,7 +313,7 @@ std::unique_ptr<std::vector<char>> Voxelize::readTexture3D(Renderer::Texture3D::
 	auto renderer = getRenderer();
 	auto copy = renderer->createTexture3D(texdesc);
 	auto context = renderer->getContext();
-	context->CopyResource(copy->getTexture(), tex->getTexture());
+	context->CopySubresourceRegion(copy->getTexture(),0,0,0,0, tex->getTexture(),0,0);
 
 	int stride = D3D11Helper::sizeof_DXGI_FORMAT(texdesc.Format);
 	std::unique_ptr<std::vector<char>> raw(new std::vector<char>(mSize * mSize * mSize * stride));
