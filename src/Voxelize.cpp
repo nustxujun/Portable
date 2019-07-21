@@ -76,12 +76,19 @@ void Voxelize::init(int size)
 	Vector3 voxelcenter = { mSize / 2.0f, mSize / 2.0f, mSize / 2.0f };
 	mOffset = center - voxelcenter * mScale;
 
+	mSampler = renderer->createSampler("voxel_sampler", D3D11_FILTER_ANISOTROPIC, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
+
 	voxelize();
 
 	mInitialize = [this]() {
 		voxelLighting();
+		genMipmap();
 		//visualize();
 	};
+
+
+	set("vct-gi", { {"type","set"}, {"value",1},{"min","0"},{"max",1},{"interval", "1"} });
+
 }
 
 void Voxelize::visualize()
@@ -111,15 +118,25 @@ void Voxelize::render(Renderer::Texture2D::Ptr rt)
 		mInitialize = nullptr;
 	}
 
+	if (getValue<int>("vct-gi") == 1)
+		gi(rt);
+
+}
+
+void Voxelize::gi(Renderer::Texture2D::Ptr rt)
+{
 	auto quad = getQuad();
-	quad->setDefaultSampler();
+	//quad->setDefaultSampler();
+	quad->setSamplers({ mSampler });
 	quad->setDefaultViewport();
-	quad->setDefaultBlend(false);
+	//quad->setDefaultBlend(false);
+	quad->setBlendColorAdd();
 	quad->setPixelShader(mVoxelGI);
 	quad->setTextures({
 		getShaderResource("voxelcolor"),
 		getShaderResource("depth"),
 		getShaderResource("normal"),
+		getShaderResource("albedo"),
 	});
 	quad->setRenderTarget(rt);
 
@@ -130,11 +147,13 @@ void Voxelize::render(Renderer::Texture2D::Ptr rt)
 	c.numMips = mColor->getDesc().MipLevels;
 	c.offset = mOffset;
 	c.scaling = mScale;
+	c.range = mSize;
 	mVoxelGIConstants->blit(c);
 	quad->setConstant(mVoxelGIConstants);
 
 	quad->draw();
-}
+	}
+
 
 Renderer::Effect::Ptr Voxelize::getEffect(Material::Ptr mat)
 {
@@ -161,7 +180,7 @@ void Voxelize::voxelize()
 	renderer->setDefaultDepthStencilState();
 
 
-	// [use effect framework to bind views, otherwise it would be fail to bind views using OMSetRenderTargetsAndUnorderedAccessViews!!!!]
+	// [use effect framework to bind unordered access views, otherwise it would be fail to bind views using OMSetRenderTargetsAndUnorderedAccessViews!!!!]
 	//context->OMSetRenderTargetsAndUnorderedAccessViews(1, rtv, 0, 3, 3, uavs, 0);
 	renderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -298,7 +317,31 @@ void Voxelize::voxelLighting()
 	com.setOuputs({ mColor });
 	com.compute(mSize, mSize, mSize);
 
+}
+
+void Voxelize::genMipmap()
+{
+	auto renderer = getRenderer();
 	renderer->getContext()->GenerateMips(mColor->Renderer::ShaderResource::getView());
+
+
+
+	//auto shader = renderer->createComputeShader("hlsl/voxel_mipmap_gen.hlsl", "main");
+	//GPUComputer computer(renderer);
+
+	//auto desc = mColor->getDesc();
+	//auto size = desc.Width;
+	//for (int i = 1; i < desc.MipLevels; ++i)
+	//{
+	//	size /= 2;
+	//	computer.setInputs({ mColor });
+	//	computer.setOuputs({mColor->Renderer::UnorderedAccess::getView(i)});
+	//	computer.setShader(shader);
+	//	computer.compute(size, size, size);
+	//}
+
+
+
 }
 
 std::unique_ptr<std::vector<char>> Voxelize::readTexture3D(Renderer::Texture3D::Ptr tex)

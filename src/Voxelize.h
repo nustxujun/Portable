@@ -11,6 +11,7 @@ class Voxelize :public Pipeline::Stage
 
 		Vector3 campos;
 		int numMips;
+		float range;
 	};
 
 public:
@@ -22,7 +23,9 @@ private:
 	Renderer::Effect::Ptr getEffect(Material::Ptr mat);
 	void voxelize();
 	void voxelLighting();
+	void genMipmap();
 	void visualize();
+	void gi(Renderer::Texture2D::Ptr rt);
 	std::unique_ptr<std::vector<char>> readTexture3D(Renderer::Texture3D::Ptr tex);
 private:
 	int mSize;
@@ -33,6 +36,8 @@ private:
 	Vector3 mOffset;
 	float mScale;
 	Renderer::Texture3D::Ptr mColor;
+	Renderer::Sampler::Ptr mSampler;
+
 
 	Renderer::PixelShader::Weak mVoxelGI;
 	Renderer::Buffer::Ptr mVoxelGIConstants;

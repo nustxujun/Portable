@@ -30,12 +30,13 @@ public:
 	virtual void initScene()
 	{
 		int numdirs = 1;
+		int numpoints = 0;
 
 		set("time", { {"value", 3.14f}, {"min", "1.57"}, {"max", "4.71"}, {"interval", "0.001"}, {"type","set"} });
 		set("numdirs", { {"value", numdirs}, {"min", 0}, {"max", numdirs}, {"interval", 1}, {"type","set"} });
-		set("dirradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
+		set("dirradiance", { {"type","set"}, {"value",20},{"min","0.1"},{"max",100},{"interval", "0.1"} });
 		set("lightRange", { {"value", 1000}, {"min", 1}, {"max", 1000}, {"interval", 1}, {"type","set"} });
-		set("numpoints", { {"value", 0}, {"min", 0}, {"max", 1}, {"interval", 1}, {"type","set"} });
+		set("numpoints", { {"value", numpoints}, {"min", 0}, {"max", 1}, {"interval", 1}, {"type","set"} });
 		set("pointradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
 
 		auto root = mScene->getRoot();
@@ -120,7 +121,7 @@ public:
 		//	int spherecount = 1;
 		//	Parameters params;
 		//	params["geom"] = "sphere";
-		//	params["radius"] = "1";
+		//	params["radius"] = "0.1";
 		//	params["size"] = "1";
 		//	Material::Ptr mat = Material::create();
 		//	std::vector<std::string> textures = {
@@ -144,7 +145,7 @@ public:
 		//	});
 
 
-		//	model->getNode()->setPosition({0 , 0, 0 });
+		//	model->getNode()->setPosition({0.6 , 0.5, 0 });
 		//	model->setCastShadow(true);
 		//	model->attach(root);
 		//	model->setStatic(false);
@@ -182,10 +183,10 @@ public:
 
 
 		auto light = mScene->createOrGetLight("main");
-		light->setCastingShadow(false);
+		light->setCastingShadow(true);
 		//light->setType(Scene::Light::LT_POINT);
 		//light->getNode()->setPosition((aabb.first + aabb.second) * 0.5f);
-		light->setDirection({ 0,-1,0.2 });
+		light->setDirection({ 0,-1,0.33 });
 		Parameters params;
 		params["geom"] = "sphere";
 		params["radius"] = "0.1";
@@ -234,12 +235,13 @@ public:
 			//return e->getMask() == 1;
 			return true;
 		});
+		mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
 		mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
-		mPipeline->pushStage<AO>();
+		//mPipeline->pushStage<AO>();
 		mPipeline->pushStage<Voxelize>(256);
-
+		
 		mPipeline->pushStage<SkyBox>("media/white.png", false);
-
+		//mPipeline->pushStage<HDR>();
 
 		mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 		Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
@@ -267,6 +269,8 @@ public:
 		//	float cos = std::cos(time) * 0.5;
 		//	model->getNode()->setPosition(cos, cos + 1, sin);
 		//}
+
+
 	}
 
 };

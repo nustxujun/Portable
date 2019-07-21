@@ -92,16 +92,57 @@ float3 brdf(float roughness, float metallic, float3 albedo, float3 normal, float
 }
 
 
+static const int3 offsets[6] = {
+	int3(1,0,0),
+	int3(-1,0,0),
+	int3(0,1,0),
+	int3(0,-1,0),
+	int3(0,0,1),
+	int3(0,0,-1),
+};
+
+
+float4 filter(Texture3D<uint> tex, int3 uv)
+{
+	float4 v;
+	for (int i = 0; i < 6; i++)
+	{
+		float4 c = uintTofloat4(tex.Load(int4(uv +offsets[i], 0)));
+		v += c;
+	}
+	return v / 6;
+}
+
 [numthreads(1, 1, 1)]
 void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadID, uint3 groupIdx : SV_GroupID)
 {
-	if (!checkVoxelExist(globalIdx))
-		return;
+	//float3 albedo = uintTofloat4(albedoTex.Load(float4(globalIdx, 0))).rgb;
+	float4 albedo = filter(albedoTex, globalIdx);
+	//{
+	//	for (int i = 0; i < 6; i++)
+	//	{
+	//		float3 c = uintTofloat4(albedoTex.Load(int4(int3(globalIdx)+offsets[i], 0))).rgb;
+	//		albedo += c;
+	//	}
+	//}
 
-	float3 albedo = uintTofloat4(albedoTex.Load(float4(globalIdx,0))).rgb;
-	float3 normal = uintTofloat4(normalTex.Load(float4(globalIdx,0))).rgb;
+	//albedo /= 6;
+
+	int exist = checkVoxelExist(globalIdx);
+	//if (!checkVoxelExist(globalIdx))
+	//{
+	//	targetTex[globalIdx] = float4(albedo, 0);
+	//	return;
+	//}
+
+	//float3 normal = uintTofloat4(normalTex.Load(float4(globalIdx,0))).rgb;
+	//normal = normal * 2 - 1;
+	//float3 material = uintTofloat4(materialTex.Load(float4(globalIdx, 0))).rgb;
+
+	float3 normal = filter(normalTex, globalIdx).rgb;
 	normal = normal * 2 - 1;
-	float3 material = uintTofloat4(materialTex.Load(float4(globalIdx, 0))).rgb;
+	float4 material = filter(materialTex, globalIdx);
+
 	float roughness = material.r;
 	float metallic = material.g;
 
@@ -124,9 +165,9 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 			if (len > range)
 				continue;
 
-			float v = rayMarch(pos, V, min(len, range));
+			float shadow = rayMarch(pos, V, min(len, range));
 
-			color += v * lightcolor.rgb * brdf(roughness, metallic, albedo, normal, V);
+			color += shadow * lightcolor.rgb * brdf(roughness, metallic, albedo.rgb, normal, V);
 		}
 	}
 
@@ -140,13 +181,13 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 
 			float3 V = -normalize(lightdir.xyz);
 
-			float v = rayMarch(pos, V, len);
+			float shadow = rayMarch(pos, V, len);
 			//color += lightcolor.rgb * albedo;
-			color += v * lightcolor.rgb * brdf(roughness, metallic, albedo, normal, V);
+			color += shadow * lightcolor.rgb * brdf(roughness, metallic, albedo.rgb, normal, V);
 		}
 	}
 
-	//targetTex[globalIdx] = float4(color,1);
-	targetTex[globalIdx] = float4(albedo, 1);
+	targetTex[globalIdx] = float4(color , albedo.a);
+	//targetTex[globalIdx] = float4(albedo.rgb, albedo.a);
 
 }
