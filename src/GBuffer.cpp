@@ -67,7 +67,11 @@ void GBuffer::render(Renderer::Texture2D::Ptr rt)
 		auto& texs = r.material->textures;
 		std::vector<ID3D11ShaderResourceView*> srvs;
 		for (auto&i : texs)
-			srvs.push_back(i->Renderer::ShaderResource::getView());
+			if (!i.expired())
+				srvs.push_back(i->Renderer::ShaderResource::getView());
+			else
+				srvs.push_back({});
+
 		if (!texs.empty())
 			e->getVariable("diffuseTex")->AsShaderResource()->SetResourceArray(srvs.data(), 0, srvs.size());
 

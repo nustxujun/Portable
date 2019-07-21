@@ -102,10 +102,10 @@ void Framework::initPipeline()
 	mPipeline->pushStage<GBuffer>(true);
 	mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
 	mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
-	mPipeline->pushStage<EnvironmentMapping>(EnvironmentMapping::T_ONCE, std::string("media/Alexs_Apt_2k.hdr"));
+	//mPipeline->pushStage<EnvironmentMapping>(EnvironmentMapping::T_ONCE, std::string("media/Alexs_Apt_2k.hdr"));
 	//mPipeline->pushStage<SSR>();
 	mPipeline->pushStage<AO>(3.0f);
-	mPipeline->pushStage<SkyBox>("media/Alexs_Apt_2k.hdr", false);
+	mPipeline->pushStage<SkyBox>("media/black.png", false);
 	mPipeline->pushStage<MotionVector>();
 	//mPipeline->pushStage<MotionBlur>();
 	//mPipeline->pushStage<HDR>();
@@ -183,7 +183,9 @@ void Framework::initScene()
 	{
 		Parameters params;
 		//params["file"] = "tiny.x";
-		params["file"] = "media/sponza/sponza.obj";
+		//params["file"] = "media/sponza/sponza.obj";
+		params["file"] = "media/terrain.obj";
+
 		auto model = mScene->createModel("test", params, [this](const Parameters& p) {
 			return Mesh::Ptr(new Mesh(p, mRenderer));
 		});
@@ -261,7 +263,7 @@ void Framework::initInput()
 	mInput->listen([=](const Input::Mouse& m, const Input::Keyboard& k) {
 		auto aabb = mScene->getRoot()->getWorldAABB();
 		Vector3 vec = aabb.second - aabb.first;
-		float com_step = std::max(std::max(vec.x, vec.y), vec.z) * 0.001f;
+		float com_step = std::max(std::max(vec.x, vec.y), vec.z) * 0.0005f;
 
 		static auto lasttime = GetTickCount();
 		auto dtime = GetTickCount() - lasttime;

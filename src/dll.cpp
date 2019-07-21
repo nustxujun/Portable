@@ -20,7 +20,7 @@ using namespace nlohmann;
 #define EXPORT
 #endif
 
-using FRAMEWORK = VoxelConeTracing;
+using FRAMEWORK = Reflections;
 using Ptr = std::shared_ptr<FRAMEWORK>;
 Ptr framework;
 std::shared_ptr<std::thread> loop;
