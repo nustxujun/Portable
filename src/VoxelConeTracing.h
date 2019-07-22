@@ -235,15 +235,19 @@ public:
 			//return e->getMask() == 1;
 			return true;
 		});
+		mPipeline->pushStage<MotionVector>();
+
 		mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
 		mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
 		//mPipeline->pushStage<AO>();
 		mPipeline->pushStage<Voxelize>(256);
 		
 		mPipeline->pushStage<SkyBox>("media/white.png", false);
-		//mPipeline->pushStage<HDR>();
+		mPipeline->pushStage<HDR>();
 
 		mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
+		mPipeline->pushStage<TAA>();
+
 		Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
 		mPipeline->pushStage("draw to backbuffer", [bb, quad](Renderer::Texture2D::Ptr rt)
 		{

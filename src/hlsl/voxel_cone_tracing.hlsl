@@ -16,13 +16,13 @@ float4 coneTracing(ConeTracingParams params)
 	float3 start = params.start;
 	float3 dir = params.dir;
 	float tantheta = tan(params.theta * 0.5);
-	int numMips = params.numMips;
+	int numMips = params.numMips - 1;
 	SamplerState samp = params.samp;
 	Texture3D<float4> octree = params.octree;
 	float range = params.range;
 	float inv = 1 / range;
 
-	start = start + dir * 1.414 * 2;
+	start = start + dir * 1.414 ;
 	float dist = 1;
 	const float maxdist = range * 1.414;
 	float alpha = 0;

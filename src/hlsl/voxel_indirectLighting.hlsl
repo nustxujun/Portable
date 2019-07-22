@@ -112,7 +112,7 @@ float3 calSpecular(float3 N, float3 R, float3 worldpos)
 	ctr.numMips = numMips;
 	ctr.range = range;
 	ctr.dir = R;
-	ctr.theta = 0.2;
+	ctr.theta = 0.1;
 	float4 color = coneTracing(ctr);
 	return color.rgb * color.a;
 }
@@ -136,11 +136,12 @@ float4 main(PS_INPUT input):SV_TARGET
 	float3 V = normalize(campos - worldpos.xyz);
 	float3 R = normalize(reflect(-V, N));
 
+	  
 
-
-	float3 color = calDiffuse(N, worldpos.xyz) * albedo;
+	float3 color = 0;
+	color += calDiffuse(N, worldpos.xyz) * albedo;
 	//color += calSpecular(N, R, worldpos.xyz);
-	 
+	  
 	return float4(color, 1);
-	//return voxelTex.SampleLevel(samp, ctr.start / range, 0);
+	//return voxelTex.SampleLevel(samp, getPosInVoxelSpace(worldpos.xyz) / range, 0);
 }

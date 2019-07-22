@@ -38,7 +38,7 @@ void Voxelize::init(int size)
 	addUnorderedAccess("voxelmaterial", material);
 	addShaderResource("voxelmaterial", material);
 
-	texdesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	texdesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	texdesc.MipLevels = level;
 	texdesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
 	texdesc.BindFlags |= D3D11_BIND_RENDER_TARGET;

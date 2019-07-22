@@ -35,10 +35,14 @@ float3 getPosInVoxelSpace(float3 wp)
 
 float4 uintTofloat4(uint val)
 {
-	return float4(float((val & 0x000000FF)),
+	float4 c= float4(float((val & 0x000000FF)),
 		float((val & 0x0000FF00) >> 8U),
 		float((val & 0x00FF0000) >> 16U),
-		float((val & 0xFF000000) >> 24U)) / 255;
+		float((val & 0xFF000000) >> 24U));
+
+	c.rgb = c.rgb / 255.0f;
+	c.a = min(c.a, 1);
+	return c;
 }
 
 bool checkVoxelExist(float3 pos)
@@ -104,13 +108,13 @@ static const int3 offsets[6] = {
 
 float4 filter(Texture3D<uint> tex, int3 uv)
 {
-	float4 v;
-	for (int i = 0; i < 6; i++)
+	float4 v = 0;
+	for (int i = 0; i < 1; i++)
 	{
 		float4 c = uintTofloat4(tex.Load(int4(uv +offsets[i], 0)));
 		v += c;
 	}
-	return v / 6;
+	return v / 1;
 }
 
 [numthreads(1, 1, 1)]
@@ -187,7 +191,7 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 		}
 	}
 
-	targetTex[globalIdx] = float4(color , albedo.a);
-	//targetTex[globalIdx] = float4(albedo.rgb, albedo.a);
+	targetTex[globalIdx] = float4(color, albedo.a);
+	//targetTex[globalIdx] = float4(albedo.rgb * 20 , albedo.a);
 
 }
