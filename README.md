@@ -43,7 +43,9 @@ CSM
 
 ![](https://github.com/nustxujun/Portable/blob/master/img/csm.png)
 
+VCT indirect diffuse + specular
 
+![](https://github.com/nustxujun/Portable/blob/master/img/vct_s_d.png)
 
 
 [更多](https://github.com/nustxujun/Portable/wiki)

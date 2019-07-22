@@ -5,7 +5,7 @@ Texture3D<float4> voxelTex:register(t0);
 Texture2D depthTex:register(t1);
 Texture2D normalTex:register(t2);
 Texture2D albedoTex:register(t3);
-
+Texture2D materialTex:register(t4);
 
 SamplerState samp: register(s0);
 
@@ -103,7 +103,7 @@ float3 calDiffuse(float3 N, float3 worldpos)
 	return color.rgb * color.a ;
 }
 
-float3 calSpecular(float3 N, float3 R, float3 worldpos)
+float3 calSpecular(float3 N, float3 R, float3 worldpos,float roughness)
 {
 	ConeTracingParams ctr;
 	ctr.start = getPosInVoxelSpace(worldpos.xyz);
@@ -112,7 +112,7 @@ float3 calSpecular(float3 N, float3 R, float3 worldpos)
 	ctr.numMips = numMips;
 	ctr.range = range;
 	ctr.dir = R;
-	ctr.theta = 0.1;
+	ctr.theta = lerp(0,1, roughness);
 	float4 color = coneTracing(ctr);
 	return color.rgb * color.a;
 }
@@ -121,8 +121,11 @@ float4 main(PS_INPUT input):SV_TARGET
 {
 	float2 uv = input.Tex;
 	float3 albedo = albedoTex.SampleLevel(samp, uv, 0).rgb;
+	float3 material = materialTex.SampleLevel(samp, uv, 0).rgb;
 	float4 normalData = normalTex.SampleLevel(samp, uv, 0);
 	float3 N = normalize(normalData.xyz);
+	float roughness = material.r;
+	float metallic = material.g;
 
 	float depthVal = depthTex.SampleLevel(samp, uv, 0).r;
 	float4 worldpos;
@@ -135,12 +138,17 @@ float4 main(PS_INPUT input):SV_TARGET
 
 	float3 V = normalize(campos - worldpos.xyz);
 	float3 R = normalize(reflect(-V, N));
+	float3 L = R;
+
 
 	  
 
-	float3 color = 0;
-	color += calDiffuse(N, worldpos.xyz) * albedo;
-	//color += calSpecular(N, R, worldpos.xyz);
+	
+	float3 diffuse = calDiffuse(N, worldpos.xyz) * albedo;
+	float3 specular = calSpecular(N, R, worldpos.xyz, roughness);
+
+	float3 color =  specular * (1 - roughness) +  diffuse * (1 - metallic);
+
 	  
 	return float4(color, 1);
 	//return voxelTex.SampleLevel(samp, getPosInVoxelSpace(worldpos.xyz) / range, 0);

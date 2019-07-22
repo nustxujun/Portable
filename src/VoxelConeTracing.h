@@ -34,19 +34,13 @@ public:
 
 		set("time", { {"value", 3.14f}, {"min", "1.57"}, {"max", "4.71"}, {"interval", "0.001"}, {"type","set"} });
 		set("numdirs", { {"value", numdirs}, {"min", 0}, {"max", numdirs}, {"interval", 1}, {"type","set"} });
-		set("dirradiance", { {"type","set"}, {"value",20},{"min","0.1"},{"max",100},{"interval", "0.1"} });
+		set("dirradiance", { {"type","set"}, {"value",10},{"min","0.1"},{"max",100},{"interval", "0.1"} });
 		set("lightRange", { {"value", 1000}, {"min", 1}, {"max", 1000}, {"interval", 1}, {"type","set"} });
 		set("numpoints", { {"value", numpoints}, {"min", 0}, {"max", 1}, {"interval", 1}, {"type","set"} });
 		set("pointradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
 
 		auto root = mScene->getRoot();
 		//{
-		//	std::vector<std::string> textures = {
-		//			"media/rustediron/rustediron2_basecolor.png",
-		//			"media/rustediron/rustediron2_normal.png",
-		//			"media/rustediron/rustediron2_roughness.png",
-		//			"media/rustediron/rustediron2_metallic.png",
-		//	};
 		//	Parameters params;
 		//	params["geom"] = "plane";
 		//	params["size"] = "50";
@@ -60,102 +54,37 @@ public:
 		//	mat->roughness = 1;
 		//	mat->metallic = 1;
 		//	mat->reflection = 1;
-		//	for (int i = 0; i < textures.size(); ++i)
-		//		if (!textures[i].empty())
-		//			mat->setTexture(i, mRenderer->createTexture(textures[i]));
+
 		//	model->setMaterial(mat);
 		//}
 
-		//{
-		//	Parameters params;
-		//	params["geom"] = "plane";
-		//	params["size"] = "50";
-		//	auto model = mScene->createModel("wall1", params, [this](const Parameters& p)
-		//	{
-		//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		//	});
-		//	model->getNode()->setPosition({ 0,25,25 });
-		//	model->getNode()->rotate(-3.1415926  , 0, 0);
-		//	model->setCastShadow(true);
-		//	model->attach(root);
-		//	Material::Ptr mat = Material::create();
-		//	mat->roughness = 1;
-		//	mat->metallic = 0;
-		//	mat->reflection = 0;
-		//	mat->diffuse = { 0,1, 0 };
-		//	model->setMaterial(mat);
-
-
-		//	model = mScene->createModel("wall2", params, [this](const Parameters& p)
-		//	{
-		//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		//	});
-		//	model->getNode()->setPosition({ 0,25,-25 });
-		//	model->getNode()->rotate(3.1415926 , 0, 0);
-		//	model->setCastShadow(true);
-		//	model->attach(root);
-		//	mat = Material::create();
-		//	mat->roughness = 1;
-		//	mat->metallic = 0;
-		//	mat->reflection = 0;
-		//	mat->diffuse = { 0,0, 1 };
-		//	model->setMaterial(mat);
-
-		//	model = mScene->createModel("wall3", params, [this](const Parameters& p)
-		//	{
-		//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		//	});
-		//	model->getNode()->setPosition({ 24,25,0 });
-		//	model->getNode()->rotate(0, 0, 3.1415926 * 0.5);
-		//	model->setCastShadow(true);
-		//	model->attach(root);
-		//	mat = Material::create();
-		//	mat->roughness = 1;
-		//	mat->metallic = 0;
-		//	mat->reflection = 0;
-		//	mat->diffuse = { 1,0, 0 };
-		//	model->setMaterial(mat);
-		//}
 
 		//{
-		//	int spherecount = 1;
 		//	Parameters params;
-		//	params["geom"] = "sphere";
-		//	params["radius"] = "0.1";
-		//	params["size"] = "1";
+		//	params["geom"] = "cube";
+		//	params["radius"] = "20";
+		//	params["size"] = "10";
 		//	Material::Ptr mat = Material::create();
-		//	std::vector<std::string> textures = {
-		//	"media/streaked/streaked-metal1-albedo.png",
-		//	"",
-		//	"media/streaked/streaked-metal1-rough.png",
-		//	"media/streaked/streaked-metal1-metalness.png",
-		//	"media/streaked/streaked-metal1-ao.png",
-		//	};
 		//	mat->metallic = 0;
 		//	mat->roughness = 1;
-		//	//for (int i = 0; i < textures.size(); ++i)
-		//	//	if (!textures[i].empty())
-		//	//		mat->setTexture(i, mRenderer->createTexture(textures[i]));
+		//	mat->diffuse = { 1,0,0 };
 		//	auto model = mScene->createModel(Common::format("sphere"), params, [this, mat](const Parameters& p)
 		//	{
 		//		auto sphere = Mesh::Ptr(new GeometryMesh(p, mRenderer));
 		//		sphere->setMaterial(mat);
-
 		//		return sphere;
 		//	});
-
-
-		//	model->getNode()->setPosition({0.6 , 0.5, 0 });
 		//	model->setCastShadow(true);
 		//	model->attach(root);
-		//	model->setStatic(false);
+		//	model->getNode()->setPosition({ 0,5,0 });
+		//	//model->setStatic(false);
 
 		//}
 
 		{
 			Parameters params;
 			params["file"] = "media/sponza/sponza.obj";
-			//params["file"] = "media/CornellBox/CornellBox-Empty-RG.obj";
+			//params["file"] = "media/CornellBox/CornellBox-Sphere.obj";
 			auto model = mScene->createModel("test", params, [this](const Parameters& p) {
 				return Mesh::Ptr(new Mesh(p, mRenderer));
 			});
@@ -184,9 +113,9 @@ public:
 
 		auto light = mScene->createOrGetLight("main");
 		light->setCastingShadow(true);
+		light->setDirection({ 0,-1,0.32 });
 		//light->setType(Scene::Light::LT_POINT);
 		//light->getNode()->setPosition((aabb.first + aabb.second) * 0.5f);
-		light->setDirection({ 0,-1,0.33 });
 		Parameters params;
 		params["geom"] = "sphere";
 		params["radius"] = "0.1";

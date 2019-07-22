@@ -108,40 +108,22 @@ static const int3 offsets[6] = {
 
 float4 filter(Texture3D<uint> tex, int3 uv)
 {
-	float4 v = 0;
-	for (int i = 0; i < 1; i++)
-	{
-		float4 c = uintTofloat4(tex.Load(int4(uv +offsets[i], 0)));
-		v += c;
-	}
-	return v / 1;
+	return  uintTofloat4(tex.Load(int4(uv, 0)));
+	//float4 v = 0;
+	//for (int i = 0; i < 6; i++)
+	//{
+	//	float4 c = uintTofloat4(tex.Load(int4(uv +offsets[i], 0)));
+	//	v += c;
+	//}
+	//return v / 6;
 }
 
 [numthreads(1, 1, 1)]
 void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadID, uint3 groupIdx : SV_GroupID)
 {
-	//float3 albedo = uintTofloat4(albedoTex.Load(float4(globalIdx, 0))).rgb;
 	float4 albedo = filter(albedoTex, globalIdx);
-	//{
-	//	for (int i = 0; i < 6; i++)
-	//	{
-	//		float3 c = uintTofloat4(albedoTex.Load(int4(int3(globalIdx)+offsets[i], 0))).rgb;
-	//		albedo += c;
-	//	}
-	//}
-
-	//albedo /= 6;
 
 	int exist = checkVoxelExist(globalIdx);
-	//if (!checkVoxelExist(globalIdx))
-	//{
-	//	targetTex[globalIdx] = float4(albedo, 0);
-	//	return;
-	//}
-
-	//float3 normal = uintTofloat4(normalTex.Load(float4(globalIdx,0))).rgb;
-	//normal = normal * 2 - 1;
-	//float3 material = uintTofloat4(materialTex.Load(float4(globalIdx, 0))).rgb;
 
 	float3 normal = filter(normalTex, globalIdx).rgb;
 	normal = normal * 2 - 1;
@@ -153,8 +135,6 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 
 	float3 color = 0;
 	float3 pos = globalIdx;
-	//pos += 0.5;
-	//pos.y +=  0.4;
 	{
 		for (int i = 0; i < numpoints; i++)
 		{
@@ -192,6 +172,4 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 	}
 
 	targetTex[globalIdx] = float4(color, albedo.a);
-	//targetTex[globalIdx] = float4(albedo.rgb * 20 , albedo.a);
-
 }

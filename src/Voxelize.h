@@ -1,5 +1,7 @@
 #pragma once
 #include "Pipeline.h"
+#include "GPUComputer.h"
+
 class Voxelize :public Pipeline::Stage
 {
 	ALIGN16 
@@ -37,7 +39,8 @@ private:
 	float mScale;
 	Renderer::Texture3D::Ptr mColor;
 	Renderer::Sampler::Ptr mSampler;
-
+	Renderer::Buffer::Ptr mVoxelLighting;
+	GPUComputer::Ptr mGpuComputer;
 
 	Renderer::PixelShader::Weak mVoxelGI;
 	Renderer::Buffer::Ptr mVoxelGIConstants;

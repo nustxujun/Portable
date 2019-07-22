@@ -1,7 +1,6 @@
 #include "Voxelize.h"
 #include "VoxelMesh.h"
 #include "D3D11Helper.h"
-#include "GPUComputer.h"
 
 void Voxelize::init(int size)
 {
@@ -86,6 +85,7 @@ void Voxelize::init(int size)
 		//visualize();
 	};
 
+	mGpuComputer = GPUComputer::Ptr(new GPUComputer(renderer));
 
 	set("vct-gi", { {"type","set"}, {"value",1},{"min","0"},{"max",1},{"interval", "1"} });
 
@@ -137,6 +137,7 @@ void Voxelize::gi(Renderer::Texture2D::Ptr rt)
 		getShaderResource("depth"),
 		getShaderResource("normal"),
 		getShaderResource("albedo"),
+		getShaderResource("material"),
 	});
 	quad->setRenderTarget(rt);
 
@@ -299,14 +300,14 @@ void Voxelize::voxelLighting()
 		getValue<int>("numdirs"),
 	};
 
-	auto constants = renderer->createConstantBuffer(sizeof(Constants),&c, sizeof(c));
+	auto mVoxelLighting = renderer->createConstantBuffer(sizeof(Constants),&c, sizeof(c));
 	auto cs = renderer->createComputeShader("hlsl/voxel_illumination.hlsl","main");
 
 
-	GPUComputer com(renderer);
-	com.setShader(cs);
-	com.setConstants({ constants });
-	com.setInputs({
+	
+	mGpuComputer->setShader(cs);
+	mGpuComputer->setConstants({ mVoxelLighting });
+	mGpuComputer->setInputs({
 		getShaderResource("voxelalbedo"),
 		getShaderResource("voxelnormal"),
 		getShaderResource("voxelmaterial"),
@@ -314,8 +315,9 @@ void Voxelize::voxelLighting()
 		getShaderResource("dirlights"),
 	});
 
-	com.setOuputs({ mColor });
-	com.compute(mSize, mSize, mSize);
+
+	mGpuComputer->setOuputs({ mColor });
+	mGpuComputer->compute(mSize, mSize, mSize);
 
 }
 
