@@ -371,14 +371,16 @@ void EnvironmentMapping::render(Renderer::Texture2D::Ptr rt)
 	quad->setConstant(mConstants);
 
 
-
+	Renderer::ShaderResource::Ptr depthCorrected;
+	if (probe->getProxy() == Scene::Probe::PP_DEPTH)
+		depthCorrected = mDepthCorrected[selected]->get();
 
 	std::vector<Renderer::ShaderResource::Ptr> srvs = {
 		getShaderResource("albedo"),
 		getShaderResource("normal"),
 		getShaderResource("material"),
 		getShaderResource("depth"),
-		mDepthCorrected[selected]->get(),
+		depthCorrected,
 		mLUT
 	};
 

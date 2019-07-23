@@ -9,6 +9,8 @@
 #include "SkyBox.h"
 #include "SSR.h"
 #include "EnvironmentMapping.h"
+#include "TAA.h";
+#include "MotionVector.h"
 
 class PBRMaterial :public Observer
 {
@@ -118,7 +120,8 @@ public:
 			index++;
 			
 			Material::Ptr mat = Material::create();
-
+			mat->roughness = 1;
+			mat->metallic = 1;
 			for (size_t t = 0; t < m.size(); ++t)
 				if (m[t] != "")
 					mat->setTexture(t, mRenderer->createTexture(m[t]));
@@ -224,7 +227,7 @@ public:
 
 		//plane();
 		differentMaterials();
-		roughAndMetal();
+		//roughAndMetal();
 		//gun();
 
 		auto cam = mScene->createOrGetCamera("main");
@@ -243,6 +246,11 @@ public:
 		mainlight->setDirection({ 0,-1,0.1f });
 		mainlight->setType(Scene::Light::LT_DIR);
 		mainlight->setCastingShadow(false);
+
+		auto probe = mScene->createProbe("main");
+		probe->attach(root);
+		probe->setType(Scene::Probe::PT_IBL);
+		probe->setProxy(Scene::Probe::PP_NONE);
 	}
 
 	virtual void framemove()
@@ -270,6 +278,7 @@ public:
 		});
 
 		mPipeline->pushStage<GBuffer>(true);
+		mPipeline->pushStage<MotionVector>();
 		mPipeline->pushStage<PBR>();
 		//mPipeline->pushStage<AO>(3.0f);
 		//mPipeline->pushStage<SSR>();
@@ -277,6 +286,7 @@ public:
 		mPipeline->pushStage<SkyBox>(hdrenvfile, false);
 		mPipeline->pushStage<HDR>();
 		mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
+		mPipeline->pushStage<TAA>();
 		Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
 		mPipeline->pushStage("draw to backbuffer", [bb, quad](Renderer::Texture2D::Ptr rt)
 		{
