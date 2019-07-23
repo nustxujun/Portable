@@ -14,6 +14,7 @@ class Voxelize :public Pipeline::Stage
 		Vector3 campos;
 		int numMips;
 		float range;
+		float aointensity;
 	};
 
 public:
@@ -40,6 +41,7 @@ private:
 	Renderer::Texture3D::Ptr mColor;
 	Renderer::Sampler::Ptr mSampler;
 	Renderer::Buffer::Ptr mVoxelLighting;
+	Renderer::BlendState::Weak mBlend;
 	GPUComputer::Ptr mGpuComputer;
 
 	Renderer::PixelShader::Weak mVoxelGI;

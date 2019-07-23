@@ -85,10 +85,26 @@ void Voxelize::init(int size)
 		//visualize();
 	};
 
+
+	D3D11_BLEND_DESC desc = {0};
+	desc.RenderTarget[0] = {
+		TRUE,
+		D3D11_BLEND_SRC_ALPHA,
+		D3D11_BLEND_SRC_ALPHA,
+		D3D11_BLEND_OP_ADD,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_ONE,
+		D3D11_BLEND_OP_ADD,
+		D3D11_COLOR_WRITE_ENABLE_ALL
+	};
+	mBlend = renderer->createBlendState("voxel_gi_blend", desc);
+
 	mGpuComputer = GPUComputer::Ptr(new GPUComputer(renderer));
 
 	set("vct-gi", { {"type","set"}, {"value",1},{"min","0"},{"max",1},{"interval", "1"} });
+	set("vct-aointensity", { {"type","set"}, {"value",1},{"min","1"},{"max",10},{"interval", "0.01"} });
 
+	
 }
 
 void Voxelize::visualize()
@@ -130,7 +146,8 @@ void Voxelize::gi(Renderer::Texture2D::Ptr rt)
 	quad->setSamplers({ mSampler });
 	quad->setDefaultViewport();
 	//quad->setDefaultBlend(false);
-	quad->setBlendColorAdd();
+	//quad->setBlendColorAdd();
+	quad->setBlend(mBlend);
 	quad->setPixelShader(mVoxelGI);
 	quad->setTextures({
 		getShaderResource("voxelcolor"),
@@ -149,6 +166,7 @@ void Voxelize::gi(Renderer::Texture2D::Ptr rt)
 	c.offset = mOffset;
 	c.scaling = mScale;
 	c.range = mSize;
+	c.aointensity = getValue<float>("vct-aointensity");
 	mVoxelGIConstants->blit(c);
 	quad->setConstant(mVoxelGIConstants);
 

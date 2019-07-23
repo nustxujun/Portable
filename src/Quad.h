@@ -36,6 +36,13 @@ public:
 	void setDefaultBlend(bool blend = true) ;
 	void setBlendColorMul();
 	void setBlendColorAdd();
+	void setBlend(Renderer::BlendState::Weak b) { 
+		mBlendState = {
+			b,
+		{1,1,1,1},
+		0xffffffff,
+		};
+	};
 
 private:
 	template<class T>

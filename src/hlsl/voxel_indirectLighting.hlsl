@@ -24,8 +24,8 @@ cbuffer Constants:register(c0)
 
 	float3 campos;
 	int numMips;
-
 	float range;
+	float aointensity;
 }
 
 
@@ -78,7 +78,7 @@ const static float diffuseConeWeights[] =
 };
 
 
-float3 calDiffuse(float3 N, float3 worldpos)
+float3 calDiffuse(float3 N, float3 worldpos,out float ao)
 {
 	// here we make normal as Y-axis
 	float3x3 TNB = calTNB(N);
@@ -100,7 +100,8 @@ float3 calDiffuse(float3 N, float3 worldpos)
 		ctr.dir = mul(diffuseConeDirs[i], TNB);
 		color += coneTracing(ctr) * diffuseConeWeights[i];
 	}
-	return color.rgb * color.a ;
+	ao = min(1,color.a);
+	return color.rgb;
 }
 
 float3 calSpecular(float3 N, float3 R, float3 worldpos,float roughness)
@@ -143,13 +144,13 @@ float4 main(PS_INPUT input):SV_TARGET
 
 	  
 
-	
-	float3 diffuse = calDiffuse(N, worldpos.xyz) * albedo;
+	float ao = 1;
+	float3 diffuse = calDiffuse(N, worldpos.xyz, ao) * albedo;
+	ao = pow(ao, aointensity);
 	float3 specular = calSpecular(N, R, worldpos.xyz, roughness);
-
 	float3 color =  specular * (1 - roughness) +  diffuse * (1 - metallic);
 
 	  
-	return float4(color, 1);
+	return float4(color, ao);
 	//return voxelTex.SampleLevel(samp, getPosInVoxelSpace(worldpos.xyz) / range, 0);
 }
