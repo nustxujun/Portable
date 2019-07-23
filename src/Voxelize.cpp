@@ -121,7 +121,7 @@ void Voxelize::init(int size)
 	mGpuComputer = GPUComputer::Ptr(new GPUComputer(renderer));
 
 	set("vct-gi", { {"type","set"}, {"value",1},{"min","0"},{"max",1},{"interval", "1"} });
-	set("vct-aointensity", { {"type","set"}, {"value",1},{"min","0"},{"max",2},{"interval", "0.01"} });
+	set("vct-aointensity", { {"type","set"}, {"value",0.3},{"min","0"},{"max",2},{"interval", "0.01"} });
 
 	
 }
