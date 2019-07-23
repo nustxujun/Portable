@@ -77,6 +77,24 @@ void Voxelize::init(int size)
 
 	mSampler = renderer->createSampler("voxel_sampler", D3D11_FILTER_ANISOTROPIC, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
 
+	ALIGN16
+		struct Constants
+	{
+		Vector3 offset;
+		float scaling;
+		int size;
+		int numpoints;
+		int numdirs;
+	} c =
+	{
+		mOffset,
+		mScale,
+		mSize,
+		getValue<int>("numpoints"),
+		getValue<int>("numdirs"),
+	};
+	mVoxelLighting = renderer->createConstantBuffer(sizeof(Constants), &c, sizeof(c));
+
 	voxelize();
 
 	mInitialize = [this]() {
@@ -90,7 +108,7 @@ void Voxelize::init(int size)
 	desc.RenderTarget[0] = {
 		TRUE,
 		D3D11_BLEND_SRC_ALPHA,
-		D3D11_BLEND_SRC_ALPHA,
+		D3D11_BLEND_ONE,
 		D3D11_BLEND_OP_ADD,
 		D3D11_BLEND_ONE,
 		D3D11_BLEND_ONE,
@@ -98,11 +116,12 @@ void Voxelize::init(int size)
 		D3D11_COLOR_WRITE_ENABLE_ALL
 	};
 	mBlend = renderer->createBlendState("voxel_gi_blend", desc);
+	mVoxelIllumCS = renderer->createComputeShader("hlsl/voxel_illumination.hlsl", "main");
 
 	mGpuComputer = GPUComputer::Ptr(new GPUComputer(renderer));
 
 	set("vct-gi", { {"type","set"}, {"value",1},{"min","0"},{"max",1},{"interval", "1"} });
-	set("vct-aointensity", { {"type","set"}, {"value",1},{"min","1"},{"max",10},{"interval", "0.01"} });
+	set("vct-aointensity", { {"type","set"}, {"value",1},{"min","0"},{"max",2},{"interval", "0.01"} });
 
 	
 }
@@ -291,39 +310,9 @@ void Voxelize::voxelLighting()
 	auto renderer = getRenderer();
 	auto scene = getScene();
 
-	auto aabb = scene->getRoot()->getWorldAABB();
-	auto vec = aabb.second - aabb.first;
-	float length = std::max(vec.x, std::max(vec.y, vec.z));
-	float scale = length / mSize;
-
-	auto center = (aabb.first + aabb.second) * 0.5f;
-	Vector3 voxelcenter = { mSize / 2.0f, mSize / 2.0f, mSize / 2.0f };
-	Vector3 offset = center - voxelcenter * scale;
-
-
-	ALIGN16
-	struct Constants
-	{
-		Vector3 offset;
-		float scaling;
-		int size;
-		int numpoints;
-		int numdirs;
-	} c = 
-	{
-		offset,
-		scale,
-		mSize,
-		getValue<int>("numpoints"),
-		getValue<int>("numdirs"),
-	};
-
-	auto mVoxelLighting = renderer->createConstantBuffer(sizeof(Constants),&c, sizeof(c));
-	auto cs = renderer->createComputeShader("hlsl/voxel_illumination.hlsl","main");
-
 
 	
-	mGpuComputer->setShader(cs);
+	mGpuComputer->setShader(mVoxelIllumCS);
 	mGpuComputer->setConstants({ mVoxelLighting });
 	mGpuComputer->setInputs({
 		getShaderResource("voxelalbedo"),

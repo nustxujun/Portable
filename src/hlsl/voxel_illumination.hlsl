@@ -72,6 +72,10 @@ float rayMarch(float3 pos, float3 dir, float range)
 	while (numstep <= maxstep)
 	{
 		float3 hit = pos + dir * numstep * step;
+		if (hit.x < 0 || hit.x >= size ||
+			hit.y < 0 || hit.y >= size ||
+			hit.z < 0 || hit.z >= size)
+			return 1;
 		if (checkVoxelExist(hit))
 		{
 			return 0;
@@ -83,7 +87,7 @@ float rayMarch(float3 pos, float3 dir, float range)
 
 		numstep += 1;
 	}
-	return visibility;
+	return 1;
 }
 
 float3 brdf(float roughness, float metallic, float3 albedo, float3 normal, float3 tolight)
@@ -166,7 +170,6 @@ void main(uint3 globalIdx: SV_DispatchThreadID, uint3 localIdx : SV_GroupThreadI
 			float3 V = -normalize(lightdir.xyz);
 
 			float shadow = rayMarch(pos, V, len);
-			//color += lightcolor.rgb * albedo;
 			color += shadow * lightcolor.rgb * brdf(roughness, metallic, albedo.rgb, normal, V);
 		}
 	}

@@ -100,14 +100,14 @@ float3 calDiffuse(float3 N, float3 worldpos,out float ao)
 		ctr.dir = mul(diffuseConeDirs[i], TNB);
 		color += coneTracing(ctr) * diffuseConeWeights[i];
 	}
-	ao = min(1,color.a);
+	ao = 1 - min(1, color.a *aointensity);
 	return color.rgb;
 }
 
 float3 calSpecular(float3 N, float3 R, float3 worldpos,float roughness)
 {
 	ConeTracingParams ctr;
-	ctr.start = getPosInVoxelSpace(worldpos.xyz);
+	ctr.start = getPosInVoxelSpace(worldpos.xyz) ;
 	ctr.octree = voxelTex;
 	ctr.samp = samp;
 	ctr.numMips = numMips;
@@ -146,7 +146,6 @@ float4 main(PS_INPUT input):SV_TARGET
 
 	float ao = 1;
 	float3 diffuse = calDiffuse(N, worldpos.xyz, ao) * albedo;
-	ao = pow(ao, aointensity);
 	float3 specular = calSpecular(N, R, worldpos.xyz, roughness);
 	float3 color =  specular * (1 - roughness) +  diffuse * (1 - metallic);
 

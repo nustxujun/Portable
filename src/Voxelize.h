@@ -46,5 +46,6 @@ private:
 
 	Renderer::PixelShader::Weak mVoxelGI;
 	Renderer::Buffer::Ptr mVoxelGIConstants;
+	Renderer::ComputeShader::Weak mVoxelIllumCS;
 };
 
