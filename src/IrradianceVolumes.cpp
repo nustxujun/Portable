@@ -8,13 +8,14 @@
 #include "ShadowMap.h"
 #include <thread>
 #include <iostream>
+#include "Voxelize.h"
 
 const size_t IrradianceVolumes::SH_DEGREE = 2;
 const size_t IrradianceVolumes::NUM_COEFS = (IrradianceVolumes::SH_DEGREE + 1) * (IrradianceVolumes::SH_DEGREE + 1);
 const size_t IrradianceVolumes::COEFS_ARRAY_SIZE = ALIGN(NUM_COEFS * 3, 4)  / 4;
-const size_t IrradianceVolumes::RESOLUTION = 128;
+const size_t IrradianceVolumes::RESOLUTION = 512;
 
-#define SHOW_DEBUG_OBJECT 0
+#define SHOW_DEBUG_OBJECT 1
 
 void IrradianceVolumes::init(const Vector3 & size, const std::string& sky)
 {
@@ -100,12 +101,13 @@ void IrradianceVolumes::initBakedPipeline(const std::string& sky)
 	});
 	mBakedPipeline->pushStage<ShadowMap>(cubesize, 1, shadowmaps);
 	mBakedPipeline->pushStage<PBR>(Vector3(), shadowmaps);
+	//mBakedPipeline->pushStage<Voxelize>(cubesize);
 	mBakedPipeline->pushStage<SkyBox>(sky, false);
 
 	//mBakedPipeline->setValue("ambient", 1.0f);
-	mBakedPipeline->setValue("dirradiance", 1);
-	mBakedPipeline->setValue("pointradiance", 1);
-	mBakedPipeline->setValue("lightRange", vec.Length());
+	mBakedPipeline->setValue("dirradiance", getValue<float>("dirradiance"));
+	mBakedPipeline->setValue("pointradiance", getValue<float>("pointradiance"));
+	//mBakedPipeline->setValue("lightRange", vec.Length());
 
 	int numdirs = 0;
 	int numpoints = 0;

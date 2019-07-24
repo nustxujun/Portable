@@ -159,9 +159,9 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 	//mCubePipeline->setValue("numdirs", 1.0f);
 	//mCubePipeline->setValue("dirradiance", 1.0f);
 
-	mCubePipeline->setValue("dirradiance", 1);
-	mCubePipeline->setValue("pointradiance", 1);
-	mCubePipeline->setValue("lightRange", vec.Length());
+	mCubePipeline->setValue("dirradiance", getValue<float>("dirradiance"));
+	mCubePipeline->setValue("pointradiance", getValue<float>("pointradiance"));
+	//mCubePipeline->setValue("lightRange", vec.Length());
 
 
 	int numdirs = 0;

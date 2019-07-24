@@ -204,7 +204,7 @@ void PBR::updateLights()
 			case Scene::Light::LT_POINT:
 				{
 					auto pos = light->getNode()->getRealPosition();
-					Vector4 vpos = { pos.x, pos.y, pos.z,range };
+					Vector4 vpos = { pos.x, pos.y, pos.z,light->getRange() * range };
 					copy(data, vpos);
 					auto color = light->getColor();
 					if (has("pointradiance"))
@@ -227,7 +227,7 @@ void PBR::updateLights()
 			case Scene::Light::LT_SPOT:
 				{
 					auto pos = light->getNode()->getRealPosition();
-					Vector4 vpos = { pos.x, pos.y, pos.z,range };
+					Vector4 vpos = { pos.x, pos.y, pos.z,light->getRange() *range };
 					copy(data, vpos);
 
 					auto dir = light->getDirection();
