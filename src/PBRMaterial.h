@@ -293,7 +293,6 @@ public:
 			quad->setRenderTarget(bb);
 			quad->drawTexture(rt, false);
 		});
-
 	}
 
 
