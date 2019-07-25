@@ -33,8 +33,11 @@ void GBuffer::render(Renderer::Texture2D::Ptr rt)
 	//renderer->clearRenderTarget(mNormal, { 0,0,0,0 });
 	//renderer->clearRenderTarget(getRenderTarget("material"), { 0,0,0,0 });
 	if (mClearDepth)
-		renderer->clearDepth(mDepth,1.0f);
-
+	{
+		renderer->clearDepth(mDepth, 1.0f);
+		renderer->clearRenderTarget(mAlbedo, { 0,0,0,0 });
+		renderer->clearRenderTarget(mNormal, { 0,0,0,0 });
+	}
 	//renderer->clearDepthStencil(mDepth, 1.0f);
 	renderer->setRenderTargets(rts, mDepth);
 	//renderer->setDefaultRasterizer();

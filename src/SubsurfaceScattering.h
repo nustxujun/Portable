@@ -33,7 +33,7 @@ public:
 
 		set("time", { {"value", 3.14f}, {"min", "1.57"}, {"max", "4.71"}, {"interval", "0.001"}, {"type","set"} });
 		set("numdirs", { {"value", numdirs}, {"min", 0}, {"max", numdirs}, {"interval", 1}, {"type","set"} });
-		set("dirradiance", { {"type","set"}, {"value",100},{"min","0.1"},{"max",100},{"interval", "0.1"} });
+		set("dirradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
 		set("lightRange", { {"value", 1}, {"min", 1}, {"max", 1000}, {"interval", 1}, {"type","set"} });
 		set("numpoints", { {"value", 0}, {"min", 0}, {"max", 1}, {"interval", 1}, {"type","set"} });
 		set("pointradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
@@ -76,7 +76,7 @@ public:
 
 		{
 			Parameters params;
-			params["file"] = "lpshead/Head.fbx";
+			params["file"] = "media/head/Head.fbx";
 			//params["file"] = "media/CornellBox/CornellBox-Empty-RG.obj";
 			auto model = mScene->createModel("test", params, [this](const Parameters& p) {
 				return Mesh::Ptr(new Mesh(p, mRenderer));
@@ -85,7 +85,7 @@ public:
 			model->setCastShadow(true);
 			model->attach(mScene->getRoot());
 			model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-			model->getMesh()->getMesh(0).material->setTexture(0,mRenderer->createTexture("lpshead/lambertian.jpg"));
+			model->getMesh()->getMesh(0).material->setTexture(0,mRenderer->createTexture("media/head/DiffuseMap.dds"));
 			//model->getMesh()->getMesh(0).material->setTexture(1, mRenderer->createTexture("lpshead/NormalMap.dds"));
 
 			//model->getNode()->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
@@ -110,7 +110,7 @@ public:
 		light->setCastingShadow(true);
 		//light->setType(Scene::Light::LT_POINT);
 		//light->getNode()->setPosition(0, 1.75, 0);
-		light->setDirection({ 1,-1,1 });
+		light->setDirection({ 1,-1,0 });
 
 		Parameters params;
 		params["geom"] = "sphere";

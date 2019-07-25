@@ -24,7 +24,7 @@ void SeparableSSS::init(int numSamples)
 
 	
 	Vector3 strength = {1,0,0};
-	Vector3 falloff = {1,0,0};
+	Vector3 falloff = {1,1,1};
 	auto kernels = CalculateKernel(numSamples, strength, falloff);
 	memcpy(c.kernels, kernels.data(), kernels.size() * sizeof(Vector4));	
 	c.numKernels = numSamples;
@@ -35,7 +35,7 @@ void SeparableSSS::init(int numSamples)
 	mPoint = renderer->createSampler("point_clamp", D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
 	mLinear = renderer->createSampler("linear_clamp", D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
 
-	set("sss-width", { {"type","set"}, {"value",0},{"min","0"},{"max",0.01},{"interval", "0.0001"} });
+	set("sss-width", { {"type","set"}, {"value",0.0005},{"min","0"},{"max",0.01},{"interval", "0.0001"} });
 
 }
 
