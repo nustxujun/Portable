@@ -20,16 +20,16 @@ float4 main(PS_INPUT input) : SV_TARGET
 	{
 		for (int i = 1; i < 5; ++i)
 		{
-			result += frameTex.Sample(smp, coords, uint2(i, 0)).rgb * weight[i];
-			result += frameTex.Sample(smp, coords, uint2(-i, 0)).rgb * weight[i];
+			result += frameTex.Sample(smp, coords, int2(i, 0)).rgb * weight[i];
+			result += frameTex.Sample(smp, coords, int2(-i, 0)).rgb * weight[i];
 		}
 	}
 #else
 	{
 		for (int i = 1; i < 5; ++i)
 		{
-			result += frameTex.Sample(smp, coords, uint2(0, i)).rgb * weight[i];
-			result += frameTex.Sample(smp, coords, uint2(0, -i)).rgb * weight[i];
+			result += frameTex.Sample(smp, coords, int2(0, i)).rgb * weight[i];
+			result += frameTex.Sample(smp, coords, int2(0, -i)).rgb * weight[i];
 		}
 	}
 #endif

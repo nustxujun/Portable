@@ -1,5 +1,76 @@
 #include "SeparableSSS.h"
 
+void SeparableSSS::init(int numSamples)
+{
+	const auto MAX_SAMPLES = 25;
+	mName = "separable sss";
+	numSamples = std::min(numSamples, MAX_SAMPLES);
+
+	auto renderer = getRenderer();
+
+	std::vector<D3D10_SHADER_MACRO> macros = {
+		{"HORIZONTAL", "1"},
+		{NULL, NULL}
+	};
+	mPS[0] = renderer->createPixelShader("hlsl/separable_sss.hlsl","main",macros.data());
+	mPS[1] = renderer->createPixelShader("hlsl/separable_sss.hlsl", "main");
+
+
+	ALIGN16 struct
+	{
+		Vector4 kernels[MAX_SAMPLES];
+		int numKernels;
+	} c;
+
+	
+	Vector3 strength = {1,0,0};
+	Vector3 falloff = {1,0,0};
+	auto kernels = CalculateKernel(numSamples, strength, falloff);
+	memcpy(c.kernels, kernels.data(), kernels.size() * sizeof(Vector4));	
+	c.numKernels = numSamples;
+
+	mKernelConst = renderer->createConstantBuffer(sizeof(c), &c, sizeof(c));
+	mConstants = renderer->createConstantBuffer(sizeof(Constants));
+
+	mPoint = renderer->createSampler("point_clamp", D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
+	mLinear = renderer->createSampler("linear_clamp", D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
+
+	set("sss-width", { {"type","set"}, {"value",0},{"min","0"},{"max",0.01},{"interval", "0.0001"} });
+
+}
+
+void SeparableSSS::render(Renderer::Texture2D::Ptr rt)
+{
+	auto quad = getQuad();
+	quad->setDefaultViewport();
+
+	quad->setSamplers({ mPoint, mLinear });
+
+	auto cam = getCamera();
+	Constants c;
+	c.invertProj = cam->getProjectionMatrix().Invert().Transpose();
+	c.width = getValue<float>("sss-width");
+	c.distToProjWin = 1.0f / std::tan(0.5f * cam->getFOVy());
+	c.texelsize = { 1.0f / rt->getDesc().Width, 1.0f / rt->getDesc().Height };
+	mConstants->blit(c);
+
+	quad->setConstants({ mKernelConst, mConstants });
+
+	auto temp = getRenderer()->createTemporaryRT(rt->getDesc());
+	quad->setDefaultBlend(false);
+	quad->setRenderTarget(temp->get());
+	quad->setTextures({ rt });
+	quad->setPixelShader(mPS[0]);
+	quad->draw();
+
+	quad->setBlendColorAdd();
+	quad->setRenderTarget(rt);
+	quad->setTextures({ temp->get() });
+	quad->setPixelShader(mPS[1]);
+	quad->draw();
+
+}
+
 std::vector<Vector4> SeparableSSS::CalculateKernel(int nSamples, const Vector3 & strength, const Vector3 & falloff)
 {
 	std::vector<Vector4> kernel;
@@ -56,6 +127,7 @@ std::vector<Vector4> SeparableSSS::CalculateKernel(int nSamples, const Vector3 &
 		vect.z *= strength.z;
 		kernel[i] = vect;
 	}
+	return kernel;
 }
 
 Vector3 SeparableSSS::gaussian(float variance, float r, const Vector3 & falloff)

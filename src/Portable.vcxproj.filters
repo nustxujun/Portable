@@ -189,11 +189,11 @@
     <ClInclude Include="VoxelMesh.h">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="SubsurfaceScattering.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="SeparableSSS.h">
       <Filter>Pipeline\Stage</Filter>
+    </ClInclude>
+    <ClInclude Include="SubsurfaceScattering.h">
+      <Filter>Framework</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

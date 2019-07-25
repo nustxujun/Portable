@@ -12,6 +12,8 @@
 #include "Reflections.h"
 #include "SHSample.h"
 #include "VoxelConeTracing.h"
+#include "SubsurfaceScattering.h"
+
 using namespace nlohmann;
 
 #ifdef _WINDLL
@@ -20,7 +22,7 @@ using namespace nlohmann;
 #define EXPORT
 #endif
 
-using FRAMEWORK = PBRMaterial;
+using FRAMEWORK = SubsurfaceScattering;
 using Ptr = std::shared_ptr<FRAMEWORK>;
 Ptr framework;
 std::shared_ptr<std::thread> loop;

@@ -17,6 +17,7 @@
 #include "IrradianceVolumes.h"
 #include "TAA.h"
 #include "MotionVector.h"
+#include "SeparableSSS.h"
 
 
 #include <random>
@@ -31,18 +32,52 @@ public:
 		int numdirs = 1;
 
 		set("time", { {"value", 3.14f}, {"min", "1.57"}, {"max", "4.71"}, {"interval", "0.001"}, {"type","set"} });
-		//set("numdirs", { {"value", numdirs}, {"min", 0}, {"max", numdirs}, {"interval", 1}, {"type","set"} });
-		//set("dirradiance", { {"type","set"}, {"value",100},{"min","0.1"},{"max",100},{"interval", "0.1"} });
-		set("lightRange", { {"value", 100}, {"min", 1}, {"max", 1000}, {"interval", 1}, {"type","set"} });
-		set("numpoints", { {"value", 1}, {"min", 0}, {"max", 1}, {"interval", 1}, {"type","set"} });
+		set("numdirs", { {"value", numdirs}, {"min", 0}, {"max", numdirs}, {"interval", 1}, {"type","set"} });
+		set("dirradiance", { {"type","set"}, {"value",100},{"min","0.1"},{"max",100},{"interval", "0.1"} });
+		set("lightRange", { {"value", 1}, {"min", 1}, {"max", 1000}, {"interval", 1}, {"type","set"} });
+		set("numpoints", { {"value", 0}, {"min", 0}, {"max", 1}, {"interval", 1}, {"type","set"} });
 		set("pointradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
 
 		auto root = mScene->getRoot();
-	
+		//{
+		//	int spherecount = 1;
+		//	Parameters params;
+		//	params["geom"] = "sphere";
+		//	params["radius"] = "0.1";
+		//	Material::Ptr mat = Material::create();
+		//	std::vector<std::string> textures = {
+		//	"media/streaked/streaked-metal1-albedo.png",
+		//	"",
+		//	"media/streaked/streaked-metal1-rough.png",
+		//	"media/streaked/streaked-metal1-metalness.png",
+		//	"media/streaked/streaked-metal1-ao.png",
+		//	};
+		//	mat->metallic = 0;
+		//	mat->roughness = 1;
+		//	//for (int i = 0; i < textures.size(); ++i)
+		//	//	if (!textures[i].empty())
+		//	//		mat->setTexture(i, mRenderer->createTexture(textures[i]));
+		//	auto model = mScene->createModel(Common::format("sphere"), params, [this, mat](const Parameters& p)
+		//	{
+		//		auto sphere = Mesh::Ptr(new GeometryMesh(p, mRenderer));
+		//		sphere->setMaterial(mat);
+
+		//		return sphere;
+		//	});
+
+
+		//	model->getNode()->setPosition({ 0 , 0, 0 });
+		//	model->setCastShadow(true);
+		//	model->attach(root);
+		//	model->setStatic(false);
+
+		//}
+
+
 		{
 			Parameters params;
-			//params["file"] = "media/model.obj";
-			params["file"] = "media/CornellBox/CornellBox-Empty-RG.obj";
+			params["file"] = "lpshead/Head.fbx";
+			//params["file"] = "media/CornellBox/CornellBox-Empty-RG.obj";
 			auto model = mScene->createModel("test", params, [this](const Parameters& p) {
 				return Mesh::Ptr(new Mesh(p, mRenderer));
 			});
@@ -50,7 +85,9 @@ public:
 			model->setCastShadow(true);
 			model->attach(mScene->getRoot());
 			model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-			Matrix mat = Matrix::CreateFromYawPitchRoll(0, -3.14 / 2, 0);
+			model->getMesh()->getMesh(0).material->setTexture(0,mRenderer->createTexture("lpshead/lambertian.jpg"));
+			//model->getMesh()->getMesh(0).material->setTexture(1, mRenderer->createTexture("lpshead/NormalMap.dds"));
+
 			//model->getNode()->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
 		}
 		auto aabb = root->getWorldAABB();
@@ -70,9 +107,10 @@ public:
 
 
 		auto light = mScene->createOrGetLight("main");
-		light->setCastingShadow(false);
-		light->setType(Scene::Light::LT_POINT);
-		light->getNode()->setPosition(0, 1.75, 0);
+		light->setCastingShadow(true);
+		//light->setType(Scene::Light::LT_POINT);
+		//light->getNode()->setPosition(0, 1.75, 0);
+		light->setDirection({ 1,-1,1 });
 
 		Parameters params;
 		params["geom"] = "sphere";
@@ -83,7 +121,7 @@ public:
 
 		auto probe = mScene->createProbe("probe");
 		probe->getNode()->setPosition((aabb.first + aabb.second)*0.5f);
-		probe->setDebugObject(sphere);
+		//probe->setDebugObject(sphere);
 		probe->setProxy(Scene::Probe::PP_DEPTH);
 		probe->setType(Scene::Probe::PT_SPECULAR);
 		probe->attach(root);
@@ -123,13 +161,9 @@ public:
 		mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
 		mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
 
-		//mPipeline->pushStage<AO>();
-		//mPipeline->pushStage<SSR>();
-		//mPipeline->pushStage<MotionBlur>(true);
-		mPipeline->pushStage<IrradianceVolumes>(Vector3(10, 10, 10), "media/black.png");
-		mPipeline->pushStage<EnvironmentMapping>(EnvironmentMapping::T_EVERYFRAME, "media/black.png");
+		mPipeline->pushStage<SeparableSSS>();
 		mPipeline->pushStage<SkyBox>("media/black.png", false);
-		//mPipeline->pushStage<TAA>();
+		mPipeline->pushStage<TAA>();
 		//mPipeline->pushStage<HDR>();
 		mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 		Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
@@ -144,14 +178,14 @@ public:
 
 	void framemove()
 	{
-		auto model = mScene->getModel("sphere");
-		if (model)
-		{
-			float time = GetTickCount() * 0.001;
-			float sin = std::sin(time) * 0.5;
-			float cos = std::cos(time) * 0.5;
-			model->getNode()->setPosition(cos, cos + 1, sin);
-		}
+		//auto model = mScene->getModel("sphere");
+		//if (model)
+		//{
+		//	float time = GetTickCount() * 0.001;
+		//	float sin = std::sin(time) * 0.5;
+		//	float cos = std::cos(time) * 0.5;
+		//	model->getNode()->setPosition(cos, cos + 1, sin);
+		//}
 	}
 
 };
