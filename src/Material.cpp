@@ -32,30 +32,22 @@ std::vector<D3D10_SHADER_MACRO> Material::generateShaderID()
 	if (!texs.empty())
 	{
 		macros.push_back({ "UV", "1" });
-		if (texs.size() > Material::TU_ALBEDO &&
-			!texs[Material::TU_ALBEDO].expired())
+		for (size_t i = TU_ALBEDO; i < TU_MAX; ++i)
 		{
-			macros.push_back({ "ALBEDO","1" });
-		}
-		if (texs.size() > Material::TU_NORMAL &&
-			!texs[Material::TU_NORMAL].expired())
-		{
-			macros.push_back({ "NORMAL_MAP","1" });
-		}
-		if (texs.size() > Material::TU_ROUGH && !texs[Material::TU_ROUGH].expired())
-		{
-			macros.push_back({ "PBR_MAP","1" });
-		}
+			if (texs.size() <= i ||
+				texs[i].expired())
+				continue;
 
-		if (texs.size() > Material::TU_HEIGHT &&
-			!texs[Material::TU_HEIGHT].expired())
-		{
-			macros.push_back({ "HEIGHT_MAP","1" });
-		}
-
-		if (texs.size() > Material::TU_AO && !texs[Material::TU_AO].expired())
-		{
-			macros.push_back({ "AO_MAP","1" });
+			switch (i)
+			{
+			case TU_ALBEDO: macros.push_back({ "ALBEDO","1" }); break;
+			case TU_NORMAL: macros.push_back({ "NORMAL_MAP","1" }); break;
+			case TU_ROUGH: macros.push_back({ "PBR_MAP","1" }); break;
+			//case TU_METAL: macros.push_back({ "ALBEDO","1" }); break;
+			case TU_AO: macros.push_back({ "AO_MAP","1" }); break;
+			case TU_HEIGHT: macros.push_back({ "HEIGHT_MAP","1" }); break;
+			case TU_BUMP: macros.push_back({ "BUMP_MAP","1" }); break;
+			}
 		}
 	}
 

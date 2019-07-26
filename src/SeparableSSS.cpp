@@ -35,7 +35,7 @@ void SeparableSSS::init(int numSamples)
 	mPoint = renderer->createSampler("point_clamp", D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
 	mLinear = renderer->createSampler("linear_clamp", D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
 
-	set("sss-width", { {"type","set"}, {"value",0.0005},{"min","0"},{"max",0.01},{"interval", "0.0001"} });
+	set("sss-width", { {"type","set"}, {"value",0.001},{"min","0"},{"max",0.1},{"interval", "0.0001"} });
 
 }
 
@@ -59,13 +59,13 @@ void SeparableSSS::render(Renderer::Texture2D::Ptr rt)
 	auto temp = getRenderer()->createTemporaryRT(rt->getDesc());
 	quad->setDefaultBlend(false);
 	quad->setRenderTarget(temp->get());
-	quad->setTextures({ rt });
+	quad->setTextures({ rt , getShaderResource("depth")});
 	quad->setPixelShader(mPS[0]);
 	quad->draw();
 
 	quad->setBlendColorAdd();
 	quad->setRenderTarget(rt);
-	quad->setTextures({ temp->get() });
+	quad->setTextures({ temp->get(), getShaderResource("depth") });
 	quad->setPixelShader(mPS[1]);
 	quad->draw();
 

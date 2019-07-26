@@ -60,6 +60,8 @@ void GBuffer::render(Renderer::Texture2D::Ptr rt)
 		e->getVariable("roughness")->AsScalar()->SetFloat(r.material->roughness * getValue<float>("roughness"));
 		e->getVariable("metallic")->AsScalar()->SetFloat(r.material->metallic * getValue<float>("metallic"));
 		e->getVariable("reflection")->AsScalar()->SetFloat(r.material->reflection);
+		e->getVariable("bumpiness")->AsScalar()->SetFloat(getValue<float>("bumpiness"));
+
 		e->getVariable("diffuse")->AsVector()->SetFloatVector((const float*)&r.material->diffuse);
 
 		e->getVariable("campos")->AsVector()->SetFloatVector((const float*)&cam->getNode()->getRealPosition());
@@ -102,6 +104,7 @@ void GBuffer::init(bool cleardepth, std::function<bool(Scene::Entity::Ptr)> cond
 	set("heightscale", { {"type","set"}, {"value",0.05f},{"min","0"},{"max",2},{"interval", "0.01"} });
 	set("minSampleCount", { {"type","set"}, {"value",8},{"min","1"},{"max",1000},{"interval", "1"} });
 	set("maxSampleCount", { {"type","set"}, {"value",100},{"min","1"},{"max",1000},{"interval", "1"} });
+	set("bumpiness", { {"type","set"}, {"value",0.5},{"min","0"},{"max",1},{"interval", "0.01"} });
 
 	auto cam = getCamera();
 	auto vp = cam->getViewport();

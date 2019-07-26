@@ -22,6 +22,7 @@ public:
 		TU_METAL,
 		TU_AO,
 		TU_HEIGHT,
+		TU_BUMP,
 
 		TU_MAX
 	};

@@ -11,6 +11,7 @@ cbuffer ConstantBuffer: register(b0)
 	float roughness;
 	float metallic;
 	float reflection;
+	float bumpiness;
 };
 
 cbuffer ParallaxConstants:register(b1)
@@ -37,6 +38,7 @@ Texture2D roughTex:register(t2);
 Texture2D metalTex:register(t3);
 Texture2D aoTex:register(t4);
 Texture2D heightTex:register(t5);
+Texture2D bumpTex:register(t6);
 
 #if VOXELIZE
 RWTexture3D<uint> albedoRT:register(u0);
@@ -59,7 +61,7 @@ struct GBufferVertexShaderInput
 #if UV
 	float2 TexCoord : TEXCOORD0;
 #endif
-#if NORMAL_MAP || HEIGHT_MAP
+#if NORMAL_MAP || HEIGHT_MAP || BUMP_MAP
 	float3 Tangent :TANGENT0;
 	float3 Bitangent: TANGENT1;
 #endif
@@ -75,7 +77,7 @@ struct GBufferVertexShaderOutput
 #if UV
 	float2 TexCoord : TEXCOORD0;
 #endif
-#if NORMAL_MAP
+#if NORMAL_MAP || HEIGHT_MAP|| BUMP_MAP
 	float3 Tangent: TANGENT0;
 	float3 Bitangent: TANGENT1;
 #endif
@@ -110,12 +112,12 @@ GBufferVertexShaderOutput vs(GBufferVertexShaderInput input)
 	output.TexCoord = input.TexCoord;
 #endif
 
-#if NORMAL_MAP || HEIGHT_MAP
+#if NORMAL_MAP || HEIGHT_MAP || BUMP_MAP
 	float3 tangent = mul(input.Tangent, (float3x3)World);
 	float3 bitangent = mul(input.Bitangent, (float3x3)World);
 #endif
 
-#if NORMAL_MAP
+#if NORMAL_MAP || BUMP_MAP
 	output.Tangent = tangent;
 	output.Bitangent = bitangent;
 #endif
@@ -265,6 +267,16 @@ ps(GBufferVertexShaderOutput input)
 #if NORMAL_MAP 
 	float3x3 TBN = float3x3(input.Tangent, input.Bitangent, input.Normal);
 	float3 normal = normalize(normalTex.Sample(sampLinear, coord).rgb * 2.0f - 1.0f);
+	output.Normal.xyz = mul(normal, TBN);
+#elif BUMP_MAP
+	float height_pu = bumpTex.Sample(sampLinear, coord, int2(1, 0)).r;
+	float height_mu = bumpTex.Sample(sampLinear, coord, int2(-1, 0)).r;
+	float height_pv = bumpTex.Sample(sampLinear, coord, int2(0, 1)).r;
+	float height_mv = bumpTex.Sample(sampLinear, coord, int2(0, -1)).r;
+	float du = height_mu - height_pu;
+	float dv = height_mv - height_pv;
+	float3 normal = normalize(lerp(float3(0,0,1), float3(du, dv, 0), bumpiness));
+	float3x3 TBN = float3x3(input.Tangent, input.Bitangent, input.Normal);
 	output.Normal.xyz = mul(normal, TBN);
 #else
 	output.Normal.xyz = input.Normal;

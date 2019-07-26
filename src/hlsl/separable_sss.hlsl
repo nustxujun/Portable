@@ -68,7 +68,7 @@ float4 main(PS_INPUT input) :SV_TARGET
 	// Calculate the final step to fetch the surrounding pixels:
 	float2 finalStep = width * scale * dir;
 	//finalStep *= SSSS_STREGTH_SOURCE; // Modulate it using the alpha channel.
-	finalStep *= 1.0 / 3.0; // Divide by 3 as the kernels range from -3 to 3.
+	//finalStep *= 1.0 / 3.0; // Divide by 3 as the kernels range from -3 to 3.
 
 	// Accumulate the center sample:
 	float4 colorBlurred = colorM;

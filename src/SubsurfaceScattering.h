@@ -85,7 +85,12 @@ public:
 			model->setCastShadow(true);
 			model->attach(mScene->getRoot());
 			model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-			model->getMesh()->getMesh(0).material->setTexture(0,mRenderer->createTexture("media/head/DiffuseMap.dds"));
+			model->getMesh()->getMesh(0).material->diffuse = { 1,0.5,0.5 };
+			model->getMesh()->getMesh(0).material->setTexture(0,mRenderer->createTexture("media/head/lambertian.jpg"));
+			model->getMesh()->getMesh(0).material->setTexture(Material::TU_BUMP, mRenderer->createTexture("media/head/bump.png"));
+
+			//model->getMesh()->getMesh(0).material->setTexture(1, mRenderer->createTexture("media/head/NormalMap.dds"));
+
 			//model->getMesh()->getMesh(0).material->setTexture(1, mRenderer->createTexture("lpshead/NormalMap.dds"));
 
 			//model->getNode()->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
@@ -164,7 +169,7 @@ public:
 		mPipeline->pushStage<SeparableSSS>();
 		mPipeline->pushStage<SkyBox>("media/black.png", false);
 		mPipeline->pushStage<TAA>();
-		//mPipeline->pushStage<HDR>();
+		mPipeline->pushStage<HDR>();
 		mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 		Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
 		mPipeline->pushStage("draw to backbuffer", [bb, quad](Renderer::Texture2D::Ptr rt)
