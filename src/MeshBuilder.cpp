@@ -64,6 +64,8 @@ MeshBuilder::Data MeshBuilder::buildByAssimp(const std::string & filename)
 					aiTextureMapping mapping;
 					UINT index;
 					m->GetTexture(type, 0, &path, &mapping, &index);
+					if (path.length == 0)
+						return std::string();
 					std::string realpath = totalpath + path.C_Str();
 					return realpath;
 				}

@@ -23,6 +23,8 @@ using namespace nlohmann;
 #endif
 
 using FRAMEWORK = SubsurfaceScattering;
+
+
 using Ptr = std::shared_ptr<FRAMEWORK>;
 Ptr framework;
 std::shared_ptr<std::thread> loop;
