@@ -50,4 +50,9 @@ VCT indirect diffuse + specular
 ![](https://github.com/nustxujun/Portable/blob/master/img/vct_s_d.png)
 
 
+Separable SSS
+
+![](https://github.com/nustxujun/Portable/blob/master/img/ssss.png)
+
+
 [更多](https://github.com/nustxujun/Portable/wiki)
