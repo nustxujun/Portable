@@ -69,23 +69,34 @@ void GBuffer::render(Renderer::Texture2D::Ptr rt)
 		e->getVariable("minsamplecount")->AsScalar()->SetInt(getValue<int>("minSampleCount"));
 		e->getVariable("maxsamplecount")->AsScalar()->SetInt(getValue<int>("maxSampleCount"));
 
+		std::vector<std::string> texnames = {
+			"diffuseTex", "normalTex", "roughTex", "metalTex", "aoTex", "heightTex", "bumpTex"
+		};
 		auto& texs = r.material->textures;
-		std::vector<ID3D11ShaderResourceView*> srvs;
-		for (auto&i : texs)
-			if (!i.expired())
-				srvs.push_back(i->Renderer::ShaderResource::getView());
+		for (int i = 0; i < Material::TU_MAX; ++i)
+		{
+			if (!texs[i].expired())
+				e->getVariable(texnames[i])->AsShaderResource()->SetResource(texs[Material::TU_ALBEDO]->Renderer::ShaderResource::getView());
 			else
-				srvs.push_back({});
+				e->getVariable(texnames[i])->AsShaderResource()->SetResource(0);
+		}
 
-		if (!texs.empty())
-			e->getVariable("diffuseTex")->AsShaderResource()->SetResourceArray(srvs.data(), 0, srvs.size());
+		//std::vector<ID3D11ShaderResourceView*> srvs;
+		//for (auto&i : texs)
+			//if (!i.expired())
+				//srvs.push_back(i->Renderer::ShaderResource::getView());
+			//else
+				//srvs.push_back({});
+
+		//if (!texs.empty())
+			//e->getVariable("diffuseTex")->AsShaderResource()->SetResourceArray(srvs.data(), 0, srvs.size());
 
 		getRenderer()->setIndexBuffer(r.indices, DXGI_FORMAT_R32_UINT, 0);
 		getRenderer()->setVertexBuffer(r.vertices, r.layout.lock()->getSize(), 0);
 	
 		e->render(getRenderer(), [ this, &r](ID3DX11EffectPass* pass)
 		{
-			getRenderer()->setTextures(r.material->textures);
+			//getRenderer()->setTextures(r.material->textures);
 			getRenderer()->setLayout(r.layout.lock()->bind(pass));
 			getRenderer()->getContext()->DrawIndexed(r.numIndices, 0, 0);
 		});
@@ -104,7 +115,7 @@ void GBuffer::init(bool cleardepth, std::function<bool(Scene::Entity::Ptr)> cond
 	set("heightscale", { {"type","set"}, {"value",0.05f},{"min","0"},{"max",2},{"interval", "0.01"} });
 	set("minSampleCount", { {"type","set"}, {"value",8},{"min","1"},{"max",1000},{"interval", "1"} });
 	set("maxSampleCount", { {"type","set"}, {"value",100},{"min","1"},{"max",1000},{"interval", "1"} });
-	set("bumpiness", { {"type","set"}, {"value",0.5},{"min","0"},{"max",1},{"interval", "0.01"} });
+	set("bumpiness", { {"type","set"}, {"value",0.8},{"min","0"},{"max",1},{"interval", "0.01"} });
 
 	auto cam = getCamera();
 	auto vp = cam->getViewport();

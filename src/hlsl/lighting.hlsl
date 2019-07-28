@@ -109,12 +109,12 @@ float3 travelLights(float roughness, float metallic,uint pointoffset, uint point
 	float3 Lo = 0;
 	float3 V = normalize(campos.xyz - pos);
 
-	float shadowlist[NUM_SHADOWMAPS];
+	float4 shadowlist[NUM_SHADOWMAPS];
 	shadowlist[0] = 1.0f;
 	{
 		for (uint i = 1; i < NUM_SHADOWMAPS; ++i)
 		{
-			shadowlist[i] = shadows[i - 1].SampleLevel(sampPoint, uv, 0).r;
+			shadowlist[i] = shadows[i - 1].SampleLevel(sampPoint, uv, 0);
 		}
 	}
 
@@ -127,14 +127,12 @@ float3 travelLights(float roughness, float metallic,uint pointoffset, uint point
 			float4 lightpos = pointlights[index * 2]; // pos and range
 			float4 lightcolor = pointlights[index * 2 + 1]; // color and shadow index
 
-			uint shadowindex = lightcolor.w;
-			float shadow = shadowlist[shadowindex];
 
 			float3 L = normalize(lightpos.xyz - pos);
 
 			float dist = length(pos - lightpos.xyz);
 			float3 radiance = pointlight(dist, lightpos.w, lightcolor.rgb);
-			Lo += directBRDF(roughness, metallic, F0, albedo, N, L, V) * radiance * shadow;
+			Lo += directBRDF(roughness, metallic, F0, albedo, N, L, V) * radiance ;
 		}
 	}
 	{
@@ -145,14 +143,12 @@ float3 travelLights(float roughness, float metallic,uint pointoffset, uint point
 			float4 lightdir = spotlights[index * 3 + 1]; // dir and phi
 			float4 lightcolor = spotlights[index * 3 + 2];
 
-			uint shadowindex = lightcolor.w;
-			float shadow = shadowlist[shadowindex];
 
 			float3 L = normalize(lightpos.xyz - pos);
 
 			float dist = length(pos - lightpos.xyz);
 			float3 radiance = spotlight(dist, lightpos.w, dot(-L, lightdir.xyz), lightdir.w, lightcolor.rgb);
-			Lo += directBRDF(roughness, metallic, F0, albedo, N, L, V) * radiance * shadow;
+			Lo += directBRDF(roughness, metallic, F0, albedo, N, L, V) * radiance ;
 		}
 	}
 #endif
@@ -163,11 +159,16 @@ float3 travelLights(float roughness, float metallic,uint pointoffset, uint point
 			float4 lightcolor = dirlights[i * 2 + 1];
 
 			uint shadowindex = lightcolor.w;
-			float shadow = shadowlist[shadowindex];
+			float4 shadow = shadowlist[shadowindex];
 
 			float3 L = normalize(-lightdir.xyz);
 			float3 radiance = lightcolor.xyz;
-			Lo += directBRDF(roughness, metallic, F0, albedo, N, L, V) * radiance * shadow;
+#if TRANSMITTANCE
+			Lo += directBRDF(roughness, metallic, F0, albedo, N, L, V) * radiance * shadow.a;
+			Lo += shadow.rgb * albedo * lightcolor.rgb; 
+#else
+			Lo += directBRDF(roughness, metallic, F0, albedo, N, L, V) * radiance * shadow.r;
+#endif
 		}
 	}
 //	float3 R = normalize(reflect(-V, N));

@@ -26,22 +26,25 @@ class ShadowMap: public Pipeline::Stage
 		Matrix lightView;
 		Matrix lightProjs[8];
 		Vector4 cascadeDepths[8];
+		Vector3 lightdir;
 		int numcascades;
 		float scale;
 		float shadowcolor;
 		float depthbias;
+		float translucency;
+		float translucency_bias;
 	};
 public:
 	ShadowMap(Renderer::Ptr r, Scene::Ptr s,Quad::Ptr q, Setting::Ptr set, Pipeline* p);
 	~ShadowMap();
 
 
-	void init(int mapsize, int numlevels, const std::vector<Renderer::Texture2D::Ptr>& rts);
+	void init(int mapsize, int numlevels, const std::vector<Renderer::Texture2D::Ptr>& rts, bool transmittance = false);
 	void render(Renderer::Texture2D::Ptr rt) ;
 private:
 	void fitToScene(int index, Scene::Light::Ptr l);
 	void renderToShadowMap(int index);
-	void renderShadow(int index, Renderer::RenderTarget::Ptr rt);
+	void renderShadow(int index, Renderer::RenderTarget::Ptr rt, const Vector3& dir);
 
 
 private:

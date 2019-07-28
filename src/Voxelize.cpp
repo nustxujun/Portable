@@ -281,7 +281,10 @@ void Voxelize::voxelize()
 			auto& texs = r.material->textures;
 			std::vector<ID3D11ShaderResourceView*> srvs;
 			for (auto&i : texs)
-				srvs.push_back(i->Renderer::ShaderResource::getView());
+				if (i.expired())
+					srvs.push_back({});
+				else
+					srvs.push_back(i->Renderer::ShaderResource::getView());
 			if (!texs.empty())
 				e->getVariable("diffuseTex")->AsShaderResource()->SetResourceArray(srvs.data(), 0, srvs.size());
 

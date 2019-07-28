@@ -15,7 +15,7 @@ const size_t IrradianceVolumes::NUM_COEFS = (IrradianceVolumes::SH_DEGREE + 1) *
 const size_t IrradianceVolumes::COEFS_ARRAY_SIZE = ALIGN(NUM_COEFS * 3, 4)  / 4;
 const size_t IrradianceVolumes::RESOLUTION = 512;
 
-#define SHOW_DEBUG_OBJECT 1
+#define SHOW_DEBUG_OBJECT 0
 
 void IrradianceVolumes::init(const Vector3 & size, const std::string& sky)
 {

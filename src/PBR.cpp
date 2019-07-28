@@ -19,6 +19,8 @@ PBR::PBR(
 	{
 
 		std::vector<D3D10_SHADER_MACRO> macros = { {definitions[i],"1"} };
+		if (has("translucency"))
+			macros.push_back({ "TRANSMITTANCE", "1" });
 		macros.push_back({ NULL, NULL });
 		auto blob = r->compileFile("hlsl/lighting.hlsl", "main", "ps_5_0", macros.data());
 		mPSs.push_back( r->createPixelShader(blob->GetBufferPointer(), blob->GetBufferSize()) );

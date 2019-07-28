@@ -222,6 +222,7 @@
     <ClInclude Include="TAA.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="tiny_obj_loader.h" />
+    <ClInclude Include="Transmittance.h" />
     <ClInclude Include="VolumetricLighting.h" />
     <ClInclude Include="VoxelConeTracing.h" />
     <ClInclude Include="Voxelize.h" />

@@ -13,12 +13,18 @@ ShadowMap::~ShadowMap()
 {
 }
 
-void ShadowMap::init(int mapsize, int numlevels, const std::vector<Renderer::Texture2D::Ptr>& rts)
+void ShadowMap::init(int mapsize, int numlevels, const std::vector<Renderer::Texture2D::Ptr>& rts, bool transmittance )
 {
 	this->set("shadowcolor", { {"type","set"}, {"value",0.00f},{"min","0"},{"max",1.0f},{"interval", "0.001"} });
 	this->set("depthbias", { {"type","set"}, {"value",0.001f},{"min","0"},{"max","0.01"},{"interval", "0.0001"} });
 	this->set("lambda", { {"type","set"}, {"value",0.5f},{"min","0"},{"max","1"},{"interval", "0.01"} });
 
+	if (transmittance)
+	{
+		this->set("translucency", { {"type","set"}, {"value",0.85f},{"min","0"},{"max","1"},{"interval", "0.01"} });
+		this->set("translucency_bias", { {"type","set"}, {"value",0.03f},{"min","0"},{"max","0.01"},{"interval", "0.0001"} });
+
+	}
 
 	mShadowMapSize = mapsize;
 	mNumLevels = std::min(numlevels, MAX_LEVELS);
@@ -26,13 +32,20 @@ void ShadowMap::init(int mapsize, int numlevels, const std::vector<Renderer::Tex
 	mShadowTextures = rts;
 
 	auto r = getRenderer();
-	std::stringstream ss;
-	ss << MAX_LIGHTS;
-	D3D10_SHADER_MACRO macros[] = { {"NUM_SHADOWMAPS", ss.str().c_str()} ,{ NULL,NULL} };
-	auto blob = getRenderer()->compileFile("hlsl/receiveshadow.hlsl", "ps", "ps_5_0");
-	mReceiveShadowPS = getRenderer()->createPixelShader(blob->GetBufferPointer(), blob->GetBufferSize());
-	blob = r->compileFile("hlsl/simple_vs.hlsl", "main", "vs_5_0", macros);
-	mShadowVS = r->createVertexShader(blob->GetBufferPointer(), blob->GetBufferSize());
+	{
+		auto tran = Common::format((int)transmittance);
+
+		D3D10_SHADER_MACRO macros[] = { {"TRANSMITTANCE", tran.c_str()} ,{ NULL,NULL} };
+
+		mReceiveShadowPS = getRenderer()->createPixelShader("hlsl/receiveshadow.hlsl", "ps", macros);
+	}
+	{
+		std::stringstream ss;
+		ss << MAX_LIGHTS;
+		D3D10_SHADER_MACRO macros[] = { {"NUM_SHADOWMAPS", ss.str().c_str()} ,{ NULL,NULL} };
+
+		mShadowVS = r->createVertexShader("hlsl/simple_vs.hlsl", "main", macros);
+	}
 	//blob = r->compileFile("hlsl/castshadow.hlsl", "ps", "ps_5_0", macros);
 	//mShadowPS = r->createPixelShader(blob->GetBufferPointer(), blob->GetBufferSize());
 
@@ -174,6 +187,7 @@ void ShadowMap::fitToScene(int index, Scene::Light::Ptr light)
 		mMapParams[index].projs[i] = DirectX::XMMatrixOrthographicOffCenterLH(min.x, max.x, min.y, max.y, scenemin.z, scenemax.z);
 
 		mMapParams[index].depths[i] = f;
+
 	}
 
 }
@@ -233,7 +247,7 @@ void ShadowMap::renderToShadowMap(int index)
 	getRenderer()->removeRenderTargets();
 }
 
-void ShadowMap::renderShadow(int index, Renderer::RenderTarget::Ptr rt)
+void ShadowMap::renderShadow(int index, Renderer::RenderTarget::Ptr rt, const Vector3& dir)
 {
 	ReceiveConstants constants;
 	for (int j = 0; j < mNumLevels; ++j)
@@ -250,6 +264,10 @@ void ShadowMap::renderShadow(int index, Renderer::RenderTarget::Ptr rt)
 	constants.scale = 1.0f / mNumLevels;
 	constants.shadowcolor = getValue<float>("shadowcolor");
 	constants.depthbias = getValue<float>("depthbias");
+	constants.lightdir = dir;
+	constants.translucency = getValue<float>("translucency");
+	constants.translucency_bias = getValue<float>("translucency_bias");
+
 	mReceiveConstants.lock()->blit(&constants, sizeof(constants));
 
 	mQuad.setRenderTarget(rt);
@@ -257,7 +275,7 @@ void ShadowMap::renderShadow(int index, Renderer::RenderTarget::Ptr rt)
 	mQuad.setSamplers({ mLinear, mPoint,mShadowSampler });
 	mQuad.setDefaultBlend(false);
 
-	mQuad.setTextures({ getShaderResource("depth"), mShadowMaps[index] });
+	mQuad.setTextures({ getShaderResource("depth"), mShadowMaps[index] , getShaderResource("normal")});
 	mQuad.setPixelShader(mReceiveShadowPS);
 	mQuad.setDefaultViewport();
 	mQuad.draw();
@@ -268,7 +286,7 @@ void ShadowMap::render(Renderer::Texture2D::Ptr rt)
 {
 	std::vector<Scene::Light::Ptr> lights;
 	getScene()->visitLights([&lights, this](Scene::Light::Ptr l) {
-		if (l->isCastingShadow() && lights.size() < mNumMaps)
+		if (l->isCastingShadow() && lights.size() < mNumMaps&& l->getType() == Scene::Light::LT_DIR)
 			lights.push_back(l);
 	});
 
@@ -276,7 +294,7 @@ void ShadowMap::render(Renderer::Texture2D::Ptr rt)
 	{
 		fitToScene(i, lights[i]);
 		renderToShadowMap(i);
-		renderShadow(i, mShadowTextures[i]);
+		renderShadow(i, mShadowTextures[i], lights[i]->getDirection());
 	}
 
 

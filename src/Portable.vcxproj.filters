@@ -195,6 +195,9 @@
     <ClInclude Include="SubsurfaceScattering.h">
       <Filter>Framework</Filter>
     </ClInclude>
+    <ClInclude Include="Transmittance.h">
+      <Filter>Pipeline\Stage</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
