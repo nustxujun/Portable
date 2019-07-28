@@ -19,10 +19,6 @@ a collections of rendering techniques based on d3d11 for study
 - [x] TAA
 - [x] Separable SSS
 
-- [ ] Precomputed radiance transfer
-- [ ] Stochastic SSR 
-- [ ] VSM ESM
-
 
 PBR 
 
