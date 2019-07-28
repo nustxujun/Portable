@@ -73,10 +73,10 @@ void GBuffer::render(Renderer::Texture2D::Ptr rt)
 			"diffuseTex", "normalTex", "roughTex", "metalTex", "aoTex", "heightTex", "bumpTex"
 		};
 		auto& texs = r.material->textures;
-		for (int i = 0; i < Material::TU_MAX; ++i)
+		for (int i = 0; i < Material::TU_MAX && i < texs.size(); ++i)
 		{
 			if (!texs[i].expired())
-				e->getVariable(texnames[i])->AsShaderResource()->SetResource(texs[Material::TU_ALBEDO]->Renderer::ShaderResource::getView());
+				e->getVariable(texnames[i])->AsShaderResource()->SetResource(texs[i]->Renderer::ShaderResource::getView());
 			else
 				e->getVariable(texnames[i])->AsShaderResource()->SetResource(0);
 		}

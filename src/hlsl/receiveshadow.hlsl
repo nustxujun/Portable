@@ -15,6 +15,7 @@ cbuffer ConstantBuffer: register(b0)
 	float shadowcolor;
 	float depthbias;
 	float translucency;
+	float thickness;
 	float translucency_bias;
 }
 SamplerState sampLinear: register(s0);
@@ -89,7 +90,7 @@ float4 ps(PS_INPUT input) : SV_TARGET
 
 		float d1 = shadowmapTex.Sample(sampLinear, uv).r;
 		float d2 = shrinkpos.z;
-		float d =  (1 - translucency) * abs(d1 - d2) * cascadeDepths[i].r * 1000;
+		float d =  (1 - translucency) * abs(d1 - d2) * cascadeDepths[i].r * thickness;
 		float dd = -d * d;
 		float3 profile = float3(0.233, 0.455, 0.649) * exp(dd / 0.0064) +
 			float3(0.1, 0.336, 0.344) * exp(dd / 0.0484) +

@@ -22,7 +22,8 @@ void ShadowMap::init(int mapsize, int numlevels, const std::vector<Renderer::Tex
 	if (transmittance)
 	{
 		this->set("translucency", { {"type","set"}, {"value",0.85f},{"min","0"},{"max","1"},{"interval", "0.01"} });
-		this->set("translucency_bias", { {"type","set"}, {"value",0.03f},{"min","0"},{"max","0.01"},{"interval", "0.0001"} });
+		this->set("translucency_thickness", { {"type","set"}, {"value",100},{"min","0"},{"max","1000"},{"interval", "1"} });
+		this->set("translucency_bias", { {"type","set"}, {"value",0.003},{"min","0"},{"max","0.01"},{"interval", "0.0001"} });
 
 	}
 
@@ -267,6 +268,7 @@ void ShadowMap::renderShadow(int index, Renderer::RenderTarget::Ptr rt, const Ve
 	constants.lightdir = dir;
 	constants.translucency = getValue<float>("translucency");
 	constants.translucency_bias = getValue<float>("translucency_bias");
+	constants.thickness = getValue<float>("translucency_thickness");
 
 	mReceiveConstants.lock()->blit(&constants, sizeof(constants));
 

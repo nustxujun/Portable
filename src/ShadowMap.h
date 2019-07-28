@@ -32,6 +32,7 @@ class ShadowMap: public Pipeline::Stage
 		float shadowcolor;
 		float depthbias;
 		float translucency;
+		float thickness;
 		float translucency_bias;
 	};
 public:
