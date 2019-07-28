@@ -17,10 +17,7 @@ a collections of rendering techniques based on d3d11 for study
 - [x] Object motion blur(from unity)
 - [x] Irradiance volumes represented by spherical harmonics
 - [x] TAA
-
-- [ ] Precomputed radiance transfer
-- [ ] Stochastic SSR 
-- [ ] VSM ESM
+- [x] Separable SSS
 
 
 PBR 
