@@ -44,24 +44,18 @@ public:
 	void render(Renderer::Texture2D::Ptr rt) ;
 private:
 	void fitToScene(int index, Scene::Light::Ptr l);
-	void renderToShadowMap(int index);
-	void renderShadow(int index, Renderer::RenderTarget::Ptr rt, const Vector3& dir);
+	void renderToShadowMap(const Matrix& lightview, const Scene::Light::Cascades& cascades, Renderer::Texture2D::Ptr tex);
+	void renderShadow(const Matrix& lightview, const Scene::Light::Cascades& cascades, const Vector3& dir, Renderer::Texture2D::Ptr depth, Renderer::RenderTarget::Ptr rt);
 
 
 private:
 	int mNumLevels;
 	int mNumMaps;
-	struct MapParams
-	{
-		std::array<DirectX::SimpleMath::Matrix, MAX_LEVELS> projs;
-		std::array<float, MAX_LEVELS> depths;
-	};
-	std::vector<MapParams> mMapParams;
 
-	std::vector<Renderer::Texture2D::Ptr> mShadowMaps;
+
+	std::map<Scene::Light::Ptr,Renderer::Texture2D::Ptr> mShadowMaps;
 	std::vector<Renderer::Texture2D::Ptr> mShadowTextures;
 	int mShadowMapSize = 2048;
-	Matrix mLightView;
 	Renderer::Buffer::Ptr mCastConstants;
 	Renderer::Buffer::Ptr mReceiveConstants;
 

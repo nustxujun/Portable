@@ -36,4 +36,6 @@ private:
 	Quad mQuad;
 	Renderer::Buffer::Ptr mConstants;
 	Renderer::Sampler::Ptr mLinearClamp;
+	Renderer::Sampler::Ptr mSampleCmp ;
+
 };

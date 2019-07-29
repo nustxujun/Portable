@@ -424,6 +424,125 @@ Scene::Light::~Light()
 {
 }
 
+Matrix Scene::Light::getViewMatrix()
+{
+	if (mType == LT_DIR)
+	{
+		auto dir = getDirection();
+
+		Vector3 up(0, 1, 0);
+		if (std::abs(up.Dot(dir)) >= 1.0f)
+			up = { 0 ,0, 1 };
+		Vector3 x = up.Cross(dir);
+		x.Normalize();
+		Vector3 y = dir.Cross(x);
+		y.Normalize();
+		auto lighttoworld = MathUtilities::makeMatrixFromAxis(x, y, dir);
+		return lighttoworld.Invert();
+	}
+	else
+	{
+		abort();
+		return {};
+	}
+}
+
+void Scene::Light::setShadowMapParameters(int numcascades, float lambda, float size)
+{
+	mNumCascades = numcascades;
+	mLambda = lambda;
+	mShadowmapSize = size;
+}
+
+Scene::Light::Cascades Scene::Light::fitToScene(Camera::Ptr cam)
+{
+	if (mType != LT_DIR)
+		abort();
+
+	Cascades ret(mNumCascades);
+	auto worldtolight = getViewMatrix();
+
+	auto corners = cam->getWorldCorners();
+
+	Vector3 min = { FLT_MAX, FLT_MAX ,FLT_MAX };
+	Vector3 max = { FLT_MIN, FLT_MIN, FLT_MIN };
+
+	for (auto & i : corners)
+	{
+		Vector3 tc = Vector3::Transform(i, worldtolight);
+		min = Vector3::Min(min, tc);
+		max = Vector3::Max(max, tc);
+	}
+	Vector3 scenemin = { FLT_MAX, FLT_MAX ,FLT_MAX };
+	Vector3 scenemax = { FLT_MIN, FLT_MIN, FLT_MIN };
+	cam->visitVisibleObject([&scenemin, &scenemax, worldtolight](Scene::Entity::Ptr e)
+	{
+		if (!e->isCastShadow()) return;
+
+		auto aabb = e->getWorldAABB();
+		const auto& omin = aabb.first;
+		const auto& omax = aabb.second;
+		Vector3 corners[] = {
+			{omin.x , omin.y, omin.z},
+			{omin.x , omin.y, omax.z},
+			{omin.x , omax.y, omin.z},
+			{omin.x , omax.y, omax.z},
+
+			{omax.x , omin.y, omin.z},
+			{omax.x , omin.y, omax.z},
+			{omax.x , omax.y, omin.z},
+			{omax.x , omax.y, omax.z},
+		};
+
+		for (const auto& i : corners)
+		{
+			Vector3 tc = Vector3::Transform(i, worldtolight);
+			scenemin = Vector3::Min(scenemin, tc);
+			scenemax = Vector3::Max(scenemax, tc);
+		}
+	});
+
+	auto calClip = [this](int level, float n, float f) {
+		float k = (float)level / (float)mNumCascades;
+
+		float clog = n * std::pow(f / n, k);
+		float cuni = n + (f - n) * k;
+
+		float weight = mLambda;
+		return clog * weight + (1 - weight) * cuni;
+	};
+
+	auto vp = cam->getViewport();
+	auto fovy = cam->getFOVy();
+	auto nd = cam->getNear();
+	auto fd = cam->getFar();
+	auto viewtoWorld = cam->getViewMatrix().Invert();
+	auto camproj = cam->getProjectionMatrix();
+
+	for (int i = 0; i < mNumCascades; ++i)
+	{
+		auto n = calClip(0, nd, fd);
+		auto f = calClip(i + 1, nd, fd);
+
+		float half = mShadowmapSize * 0.5;
+		auto corners = MathUtilities::calFrustumCorners(vp.Width, vp.Height, n, f, fovy);
+
+		Vector3 min = { FLT_MAX, FLT_MAX ,FLT_MAX };
+		Vector3 max = { FLT_MIN, FLT_MIN, FLT_MIN };
+		for (auto &c : corners)
+		{
+			c = Vector3::Transform(Vector3::Transform(c, viewtoWorld), worldtolight);
+			min = Vector3::Min(min, c);
+			max = Vector3::Max(max, c);
+		}
+
+		
+		ret[i].proj = DirectX::XMMatrixOrthographicOffCenterLH(min.x, max.x, min.y, max.y, scenemin.z, scenemax.z);
+		ret[i].range = { n, f };
+	}
+	return ret;
+}
+
 Scene::Probe::Probe()
 {
 //#ifdef _DEBUG

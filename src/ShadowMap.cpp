@@ -50,11 +50,11 @@ void ShadowMap::init(int mapsize, int numlevels, const std::vector<Renderer::Tex
 	//blob = r->compileFile("hlsl/castshadow.hlsl", "ps", "ps_5_0", macros);
 	//mShadowPS = r->createPixelShader(blob->GetBufferPointer(), blob->GetBufferSize());
 
-	mMapParams.resize(mNumMaps);
-	for (int i = 0; i < mNumMaps; ++i)
-	{
-		mShadowMaps.push_back(r->createDepthStencil(mShadowMapSize * mNumLevels, mShadowMapSize, DXGI_FORMAT_R32_TYPELESS, true));
-	}
+	//mMapParams.resize(mNumMaps);
+	//for (int i = 0; i < mNumMaps; ++i)
+	//{
+	//	mShadowMaps.push_back(r->createDepthStencil(mShadowMapSize * mNumLevels, mShadowMapSize, DXGI_FORMAT_R32_TYPELESS, true));
+	//}
 	D3D11_INPUT_ELEMENT_DESC depthlayout[] =
 	{
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -95,116 +95,23 @@ void ShadowMap::init(int mapsize, int numlevels, const std::vector<Renderer::Tex
 void ShadowMap::fitToScene(int index, Scene::Light::Ptr light)
 {
 
-	auto dir = light->getDirection();
-
-	Vector3 up(0, 1, 0);
-	if (fabs(up.Dot(dir)) >= 1.0f)
-		up = { 0 ,0, 1 };
-	Vector3 x = up.Cross(dir);
-	x.Normalize();
-	Vector3 y = dir.Cross(x);
-	y.Normalize();
-
-	auto lighttoworld = MathUtilities::makeMatrixFromAxis(x, y, dir);
-	auto worldtolight = lighttoworld.Invert();
-
-	auto cam = getCamera();
-	auto corners = cam->getWorldCorners();
-
-	Vector3 min = { FLT_MAX, FLT_MAX ,FLT_MAX };
-	Vector3 max = { FLT_MIN, FLT_MIN, FLT_MIN };
-
-	for (auto & i : corners)
-	{
-		Vector3 tc = Vector3::Transform(i, worldtolight);
-		min = Vector3::Min(min, tc);
-		max = Vector3::Max(max, tc);
-	}
-	Vector3 scenemin = { FLT_MAX, FLT_MAX ,FLT_MAX };
-	Vector3 scenemax = { FLT_MIN, FLT_MIN, FLT_MIN };
-	cam->visitVisibleObject([&scenemin,&scenemax, worldtolight](Scene::Entity::Ptr e)
-	{
-		if (!e->isCastShadow()) return;
-
-		auto aabb = e->getWorldAABB();
-		const auto& omin = aabb.first;
-		const auto& omax = aabb.second;
-		Vector3 corners[] = {
-			{omin.x , omin.y, omin.z},
-			{omin.x , omin.y, omax.z},
-			{omin.x , omax.y, omin.z},
-			{omin.x , omax.y, omax.z},
-
-			{omax.x , omin.y, omin.z},
-			{omax.x , omin.y, omax.z},
-			{omax.x , omax.y, omin.z},
-			{omax.x , omax.y, omax.z},
-		};
-
-		for (const auto& i : corners)
-		{
-			Vector3 tc = Vector3::Transform(i, worldtolight);
-			scenemin = Vector3::Min(scenemin, tc);
-			scenemax = Vector3::Max(scenemax, tc);
-		}
-	});
-
-	auto calClip = [this](int level, float n, float f) {
-		float k = (float)level / (float)mNumLevels;
-
-		float clog = n * std::pow(f / n, k);
-		float cuni = n + (f - n) * k;
-
-		float weight = getValue<float>("lambda");
-		return clog * weight + (1 - weight) * cuni;
-	};
-
-	auto vp = cam->getViewport();
-	auto fovy = cam->getFOVy();
-	auto nd = cam->getNear();
-	auto fd = cam->getFar();
-	auto viewtoWorld = cam->getViewMatrix().Invert();
-	auto camproj = cam->getProjectionMatrix();
-
-	mLightView = worldtolight;
-	for (int i = 0; i < mNumLevels; ++i)
-	{
-		auto n =  calClip(0, nd, fd);
-		auto f = calClip(i + 1,nd,fd);
-
-		float half = mShadowMapSize * 0.5;
-		auto corners = MathUtilities::calFrustumCorners(vp.Width, vp.Height, n, f, fovy);
-
-		Vector3 min = { FLT_MAX, FLT_MAX ,FLT_MAX };
-		Vector3 max = { FLT_MIN, FLT_MIN, FLT_MIN };
-		for (auto &c : corners)
-		{
-			c = Vector3::Transform(Vector3::Transform(c, viewtoWorld), mLightView);
-			min = Vector3::Min(min, c);
-			max = Vector3::Max(max, c);
-		}
-
-
-		mMapParams[index].projs[i] = DirectX::XMMatrixOrthographicOffCenterLH(min.x, max.x, min.y, max.y, scenemin.z, scenemax.z);
-
-		mMapParams[index].depths[i] = f;
-
-	}
 
 }
 
-void ShadowMap::renderToShadowMap(int index)
+void ShadowMap::renderToShadowMap(const Matrix& lightview, const Scene::Light::Cascades& cascades, Renderer::Texture2D::Ptr tex)
 {
-	getRenderer()->clearDepth(mShadowMaps[index], 1.0f);
+
+
+	getRenderer()->clearDepth(tex, 1.0f);
 	//mShadowMaps[index]->getDepthStencil().lock()->clearDepth(1.0f);
 
 	using namespace DirectX;
 	using namespace DirectX::SimpleMath;
 
 	CastConstants constant;
-	constant.view = mLightView.Transpose();
+	constant.view = lightview.Transpose();
 
-	getRenderer()->setRenderTarget({}, mShadowMaps[index]);
+	getRenderer()->setRenderTarget({}, tex);
 	getRenderer()->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	getRenderer()->setDefaultBlendState();
 	getRenderer()->setDefaultDepthStencilState();
@@ -215,6 +122,7 @@ void ShadowMap::renderToShadowMap(int index)
 
 	getRenderer()->setLayout(mDepthLayout.lock()->bind(mShadowVS));
 	getRenderer()->setRasterizer(mRasterizer);
+
 
 	for (int i = 0; i < mNumLevels; ++i)
 	{
@@ -227,7 +135,7 @@ void ShadowMap::renderToShadowMap(int index)
 		vp.MaxDepth = 1.0f;
 		getRenderer()->setViewport(vp);
 
-		constant.proj = mMapParams[index].projs[i].Transpose();
+		constant.proj = cascades[i].proj.Transpose();
 
 
 		
@@ -248,15 +156,15 @@ void ShadowMap::renderToShadowMap(int index)
 	getRenderer()->removeRenderTargets();
 }
 
-void ShadowMap::renderShadow(int index, Renderer::RenderTarget::Ptr rt, const Vector3& dir)
+void ShadowMap::renderShadow(const Matrix& lightview, const Scene::Light::Cascades& cascades, const Vector3& dir, Renderer::Texture2D::Ptr depth, Renderer::RenderTarget::Ptr rt)
 {
 	ReceiveConstants constants;
 	for (int j = 0; j < mNumLevels; ++j)
 	{
-		constants.lightProjs[j] = mMapParams[index].projs[j].Transpose();
-		constants.cascadeDepths[j].x = mMapParams[index].depths[j];
+		constants.lightProjs[j] = cascades[j].proj.Transpose();
+		constants.cascadeDepths[j].x = cascades[j].range.y;
 	}
-	constants.lightView = mLightView.Transpose();
+	constants.lightView = lightview.Transpose();
 
 	auto cam = getCamera();
 	constants.invertView = cam->getViewMatrix().Invert().Transpose();
@@ -277,7 +185,7 @@ void ShadowMap::renderShadow(int index, Renderer::RenderTarget::Ptr rt, const Ve
 	mQuad.setSamplers({ mLinear, mPoint,mShadowSampler });
 	mQuad.setDefaultBlend(false);
 
-	mQuad.setTextures({ getShaderResource("depth"), mShadowMaps[index] , getShaderResource("normal")});
+	mQuad.setTextures({ getShaderResource("depth"), depth , getShaderResource("normal")});
 	mQuad.setPixelShader(mReceiveShadowPS);
 	mQuad.setDefaultViewport();
 	mQuad.draw();
@@ -294,36 +202,19 @@ void ShadowMap::render(Renderer::Texture2D::Ptr rt)
 
 	for (size_t i = 0; i < lights.size(); ++i)
 	{
-		fitToScene(i, lights[i]);
-		renderToShadowMap(i);
-		renderShadow(i, mShadowTextures[i], lights[i]->getDirection());
+		auto l = lights[i];
+		auto sm = mShadowMaps.find(l);
+		if (sm == mShadowMaps.end())
+		{
+			sm = mShadowMaps.insert({ l, getRenderer()->createDepthStencil(mShadowMapSize * mNumLevels, mShadowMapSize, DXGI_FORMAT_R32_TYPELESS, true) }).first;
+		}
+		l->setShadowMapParameters(mNumLevels, getValue<float>("lambda"), mShadowMapSize);
+		auto cascades = l->fitToScene(getCamera());
+
+		auto view = l->getViewMatrix();
+		renderToShadowMap(view,cascades, sm->second);
+		renderShadow(view, cascades, l->getDirection(),sm->second, mShadowTextures[i]);
 	}
 
 
-
-//
-//	float w = getRenderer()->getWidth();
-//	float h = getRenderer()->getHeight();
-//
-//
-//	D3D11_BLEND_DESC desc = { 0 };
-//	desc.RenderTarget[0] = {
-//		FALSE,
-//		D3D11_BLEND_ONE,
-//		D3D11_BLEND_ZERO,
-//		D3D11_BLEND_OP_ADD,
-//		D3D11_BLEND_ONE,
-//		D3D11_BLEND_ZERO,
-//		D3D11_BLEND_OP_ADD,
-//		D3D11_COLOR_WRITE_ENABLE_ALL,
-//	};
-//
-//	mQuad.setBlend(desc);
-//	mQuad.setDefaultPixelShader();
-//	mQuad.setDefaultSampler();
-//	mQuad.setViewport({
-//		0.0f,0,w, h *0.3f,0.0f, 1.0f
-//	});
-//	mQuad.setTextures({ mShadowMap });
-//	mQuad.draw();
 }

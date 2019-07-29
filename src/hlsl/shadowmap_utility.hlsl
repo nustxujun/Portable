@@ -19,13 +19,15 @@ float getShadow(ShadowMapParams params)
 	matrix lightView = params.lightview;
 	Texture2D shadowmapTex = params.shadowmap;
 	SamplerComparisonState samp = params.samp;
+	float z = worldpos.z;
+	float scale = 1.0f / (float)numcascades;
 
 	for (int i = 0; i < numcascades; ++i)
 	{
-		if (depthlinear > params.cascadeDepths[i])
+		if (z > params.cascadedepths[i])
 			continue;
 
-		float4 pos = mul(worldPos, lightView);
+		float4 pos = mul(float4(worldpos,1), lightView);
 		pos = mul(pos, params.lightProjs[i]);
 		pos /= pos.w;
 

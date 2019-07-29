@@ -182,6 +182,16 @@ public:
 		};
 
 		static const int MAX_CASCADES = 8;
+
+		struct Cascade
+		{
+			Matrix proj;
+			Vector2 range;
+		};
+
+		using Cascades = std::vector<Cascade>;
+
+
 	public:
 		Light();
 		~Light();
@@ -199,30 +209,22 @@ public:
 		void setCastingShadow(bool v) { mIsCastingShadow = v; }
 		bool isCastingShadow()const { return mIsCastingShadow; }
 
-		void setNumCascades(int num) { mNumCascades = std::min(num, MAX_CASCADES); }
-		int getNumCascades() { return mNumCascades; }
-		Matrix getCascadeProjection();
-		Vector2 getCascadeRange();
 
-		void update();
+		Matrix getViewMatrix();
+		void setShadowMapParameters(int numcascades, float lambda, float size);
+		Cascades fitToScene(Camera::Ptr cam);
 
+	private:
 
 	private:
 		Vector3 mColor = {1,1,1};
 		float mRange = 1000.0f;
 		LightType mType = LT_DIR;
 		float mAngle = 0.7854f;
-		int mNumCascades;
 		bool mIsCastingShadow = false;
-
-		struct Cascade
-		{
-			Matrix proj;
-			Vector2 range;
-		};
-
-		std::array<Cascade, 8> mCascades;
-
+		int mNumCascades = 1;
+		float mLambda = 1;
+		float mShadowmapSize = 1024;
 	};
 
 

@@ -15,8 +15,14 @@ void VolumetricLighting::init()
 
 	mConstants = r->createBuffer(sizeof(Constants), D3D11_BIND_CONSTANT_BUFFER);
 	mLinearClamp = r->createSampler("linear_clamp", D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
-
-	set("vl-numsamples", { {"type","set"}, {"value",256},{"min","0"},{"max",1024},{"interval", "1"} });
+	mSampleCmp = r->createSampler("shadow_sampler",
+		D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT,
+		D3D11_TEXTURE_ADDRESS_BORDER,
+		D3D11_TEXTURE_ADDRESS_BORDER,
+		D3D11_TEXTURE_ADDRESS_BORDER,
+		D3D11_COMPARISON_LESS_EQUAL,
+		0, 0);
+	set("vl-numsamples", { {"type","set"}, {"value",16},{"min","0"},{"max",1024},{"interval", "1"} });
 	set("vl-g", { {"type","set"}, {"value",0.5},{"min","0"},{"max",1},{"interval", "0.01"} });
 	set("vl-density", { {"type","set"}, {"value",1},{"min","0"},{"max",1},{"interval", "0.01"} });
 
@@ -33,7 +39,7 @@ void VolumetricLighting::render(Renderer::Texture2D::Ptr rt)
 	auto scene = getScene();
 	quad->setDefaultViewport();
 	
-	quad->setSamplers({ mLinearClamp });
+	quad->setSamplers({ mLinearClamp ,mSampleCmp });
 	//quad->setDefaultBlend(false);
 	quad->setBlendColorAdd();
 	quad->setRenderTarget(rt);
@@ -53,6 +59,16 @@ void VolumetricLighting::render(Renderer::Texture2D::Ptr rt)
 		if (l->getType() != Scene::Light::LT_DIR)
 			return;
 
+		c.lightView = l->getViewMatrix().Transpose();
+		auto cascades = l->fitToScene(getCamera());
+		float* f = (float*)&c.cascadeDepths;
+		for (int i = 0; i < cascades.size(); ++i)
+		{
+			c.lightProjs[i] = cascades[i].proj;
+			*(f++) = cascades[i].range.y;
+		}
+		c.numcascades = cascades.size();
+		
 		c.lightcolor = l->getColor();
 		c.lightcolor *= getValue<float>("dirradiance");
 		c.lightdir = l->getDirection();
