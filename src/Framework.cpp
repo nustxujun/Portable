@@ -47,6 +47,7 @@ void Framework::update()
 {
 	mInput->update();
 	framemove();
+	mScene->update();
 	mPipeline->render();
 	showFPS();
 
@@ -100,17 +101,18 @@ void Framework::initPipeline()
 
 	//mPipeline->pushStage<PreZ>();
 	mPipeline->pushStage<GBuffer>(true);
-	mPipeline->pushStage<ShadowMap>(2048, 3, shadowmaps);
+	mPipeline->pushStage<ShadowMap>(2048, 2, shadowmaps);
 	mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
 	//mPipeline->pushStage<EnvironmentMapping>(EnvironmentMapping::T_ONCE, std::string("media/Alexs_Apt_2k.hdr"));
 	//mPipeline->pushStage<SSR>();
 	mPipeline->pushStage<AO>(3.0f);
 	mPipeline->pushStage<SkyBox>("media/black.png", false);
-	mPipeline->pushStage<MotionVector>();
 	//mPipeline->pushStage<MotionBlur>();
 	//mPipeline->pushStage<HDR>();
+	mPipeline->pushStage<VolumetricLighting>();
+
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
-	mPipeline->pushStage<TAA>();
+	//mPipeline->pushStage<TAA>();
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
 	mPipeline->pushStage("draw to backbuffer", [bb, quad](Renderer::Texture2D::Ptr rt)
 	{
@@ -183,8 +185,8 @@ void Framework::initScene()
 	{
 		Parameters params;
 		//params["file"] = "tiny.x";
-		//params["file"] = "media/sponza/sponza.obj";
-		params["file"] = "media/terrain.obj";
+		params["file"] = "media/sponza/sponza.obj";
+		//params["file"] = "media/terrain.obj";
 
 		auto model = mScene->createModel("test", params, [this](const Parameters& p) {
 			return Mesh::Ptr(new Mesh(p, mRenderer));
@@ -212,7 +214,7 @@ void Framework::initScene()
 
 
 	auto light = mScene->createOrGetLight("main");
-	light->setDirection({0,-1,0 });
+	light->setDirection({0,-1,0.33 });
 	light->setCastingShadow(true);
 
 
@@ -248,9 +250,9 @@ void Framework::framemove()
 	}
 
 
-	auto l = mScene->createOrGetLight("main");
-	float rad = getValue<float>("time");
-	l->setDirection({ 0.1f, cos(rad), sin(rad) });
+	//auto l = mScene->createOrGetLight("main");
+	//float rad = getValue<float>("time");
+	//l->setDirection({ 0.1f, cos(rad), sin(rad) });
 }
 
 

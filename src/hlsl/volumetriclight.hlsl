@@ -1,10 +1,28 @@
-Texture2D frameTex: register(t0);
-SamplerState linearWrap : register(s0);
+#include "utilities.hlsl"
+#include "shadowmap_utility.hlsl"
+
+Texture2D depthTex: register(t0);
+Texture2D shadowmap:register(t1);
+
+
+SamplerState samp : register(s0);
+SamplerComparisonState smpcmp:register(s1);
 
 cbuffer ConstantBuffer: register(b0)
 {
-	float2 resolution;
-	float2 lightpos;
+	matrix invertViewProj;
+	matrix lightView;
+	matrix lightProjs[8];
+	float4 cascadeDepths[2];
+	int numcascades;
+
+	float3 campos;
+	int numsamples;
+	float3 lightcolor;
+	float G;
+	float3 lightdir;
+	float maxlength;
+	float density;
 }
 
 struct PS_INPUT
@@ -13,40 +31,79 @@ struct PS_INPUT
 	float2 Tex: TEXCOORD0;
 };
 
+float MieScattering(float cosAngle)
+{
+	float GG = G * G;
+	return (1  / (4 * PI)) *((1 - GG) / pow(1 + GG - 2 * G * cosAngle, 1.5));
+}
+
+float4 scatter(float3 accColor, float accTrans, float atten, float density)
+{
+	density = max(density, 0.0001f);
+	float transmittance = exp(-density / numsamples);
+
+	float3 lightintegral = atten * (1 - transmittance) / density;
+	accColor += lightintegral * accTrans;
+	accTrans *= transmittance;
+	return float4(accColor, accTrans);
+}
+
+float4 raymarch(float3 start, float3 end)
+{
+	float4 color = float4(0,0,0,1);
+	float3 dir = normalize(end - start);
+	float cosAngle = dot(lightdir, -dir);
+	float len = length(end - start);
+	float rate = len / maxlength * density;
+	float step = len / (float)numsamples;
+
+	ShadowMapParams smp;
+	smp.lightview = lightView;
+	smp.lightProjs = lightProjs;
+	{
+		smp.cascadedepths[0] = cascadeDepths[0].r;
+		smp.cascadedepths[1] = cascadeDepths[0].g;
+		smp.cascadedepths[2] = cascadeDepths[0].b;
+		smp.cascadedepths[3] = cascadeDepths[0].a;
+
+		smp.cascadedepths[4] = cascadeDepths[1].r;
+		smp.cascadedepths[5] = cascadeDepths[1].g;
+		smp.cascadedepths[6] = cascadeDepths[1].b;
+		smp.cascadedepths[7] = cascadeDepths[1].a;
+	}
+	smp.numcascades = numcascades;
+	smp.depthbias = 0.001f;
+	smp.shadowmap = shadowmap;
+	smp.samp = smpcmp;
+
+	for (int i = 0; i < numsamples; ++i)
+	{
+		float3 cur = start + dir * step;
+		float atten = MieScattering(cosAngle);
+
+		smp.worldpos = cur;
+
+		atten *= getShadow(smp);
+		color = scatter(color.rgb, color.a, atten, rate);
+
+	}
+
+	color.rgb *= lightcolor;
+	color.a = saturate(color.a);
+
+	return color;
+}
 
 float4 main(PS_INPUT input) : SV_TARGET
 {
-	float NUM_SAMPLES = 500;
-	float Density = 1;
-	float Weight =0.1;
-	float Decay = 0.99;
+	float2 uv = input.Tex;
+	float depth = depthTex.SampleLevel(samp, uv, 0).r;
 
-	float2 texCoord = input.Tex;
-	// Calculate vector from pixel to light source in screen space.
-	float2 deltaTexCoord = normalize(lightpos);
-	// Divide by number of samples and scale by control factor.
-	deltaTexCoord *= 1.0f / NUM_SAMPLES * Density;
-	// Store initial sample.
-	float4 color = frameTex.Sample(linearWrap, texCoord);
+	float3 worldpos = getWorldPos(uv, depth, invertViewProj);
 
-	// Set up illumination decay factor.
-	float illuminationDecay = 1.0f;
-	// Evaluate summation from Equation 3 NUM_SAMPLES iterations.
-	for (int i = 0; i < NUM_SAMPLES; i++)
-	{
-		// Step sample location along ray.
-		texCoord -= deltaTexCoord;
-		// Retrieve sample at new location.
-		float4 sample = frameTex.Sample(linearWrap, texCoord);
-		// Apply sample attenuation scale/decay factors.
-		sample *= illuminationDecay * Weight;
-		// Accumulate combined color.
-		color += sample;
-		// Update exponential decay factor.
-		illuminationDecay *= Decay;
-	}
-	// Output final color with a further scale control factor.
-	return float4(color.rgb, 1);
+	float4 color = raymarch(campos, worldpos);
+
+	return color;
 }
 
 

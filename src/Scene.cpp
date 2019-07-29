@@ -131,6 +131,13 @@ Scene::Probe::Ptr Scene::createProbe(const std::string & name)
 	return probe;
 }
 
+void Scene::update()
+{
+	for (auto&l : mLights)
+		l.second->update();
+
+}
+
 
 Scene::Entity::Entity()
 {

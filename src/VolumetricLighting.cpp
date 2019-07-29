@@ -3,18 +3,22 @@
 VolumetricLighting::VolumetricLighting(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr st, Pipeline * p):
 	Pipeline::Stage(r,s,q,st,p), mQuad(r)
 {
+	mName = "volumetric light";
+}
+
+void VolumetricLighting::init()
+{
+	auto r = getRenderer();
 	auto blob = r->compileFile("hlsl/volumetriclight.hlsl", "main", "ps_5_0");
 	mPS = r->createPixelShader(blob->GetBufferPointer(), blob->GetBufferSize());
 
-	blob = r->compileFile("hlsl/volumetriclight_filtercolor.hlsl", "main", "ps_5_0");
-	mColorFilter = r->createPixelShader(blob->GetBufferPointer(), blob->GetBufferSize());
 
-	auto vp = getCamera()->getViewport();
-	mBlur = r->createRenderTarget(vp.Width, vp.Height, DXGI_FORMAT_R8G8B8A8_UNORM);
-
-
-	mConstants = r->createBuffer(sizeof(Vector4), D3D11_BIND_CONSTANT_BUFFER);
+	mConstants = r->createBuffer(sizeof(Constants), D3D11_BIND_CONSTANT_BUFFER);
 	mLinearClamp = r->createSampler("linear_clamp", D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
+
+	set("vl-numsamples", { {"type","set"}, {"value",256},{"min","0"},{"max",1024},{"interval", "1"} });
+	set("vl-g", { {"type","set"}, {"value",0.5},{"min","0"},{"max",1},{"interval", "0.01"} });
+	set("vl-density", { {"type","set"}, {"value",1},{"min","0"},{"max",1},{"interval", "0.01"} });
 
 }
 
@@ -24,11 +28,38 @@ VolumetricLighting::~VolumetricLighting()
 
 void VolumetricLighting::render(Renderer::Texture2D::Ptr rt) 
 {
-	renderBlur(rt);
+	auto quad = getQuad();
+	auto cam = getCamera();
+	auto scene = getScene();
+	quad->setDefaultViewport();
+	
+	quad->setSamplers({ mLinearClamp });
+	//quad->setDefaultBlend(false);
+	quad->setBlendColorAdd();
+	quad->setRenderTarget(rt);
+	quad->setTextures({ getShaderResource("depth") });
+	quad->setConstant(mConstants);
+	quad->setPixelShader(mPS);
+	Constants c;
+	c.invertViewProj = (cam->getViewMatrix() * cam->getProjectionMatrix()).Invert().Transpose();
+	c.campos = cam->getNode()->getRealPosition();
+	c.numsamples = getValue<int>("vl-numsamples");
+	c.G = getValue<float>("vl-g");
+	c.maxlength = cam->getFar();
+	c.density = getValue<float>("vl-density");
 
+	scene->visitLights([quad, &c, this](Scene::Light::Ptr l)
+	{
+		if (l->getType() != Scene::Light::LT_DIR)
+			return;
 
-	//mQuad.setRenderTarget(rt);
-	//mQuad.drawTexture(mBlur,false);
+		c.lightcolor = l->getColor();
+		c.lightcolor *= getValue<float>("dirradiance");
+		c.lightdir = l->getDirection();
+		mConstants->blit(c);
+
+		quad->draw();
+	});
 }
 void VolumetricLighting::renderBlur(Renderer::Texture2D::Ptr rt)
 {

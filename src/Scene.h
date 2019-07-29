@@ -76,6 +76,7 @@ public:
 		virtual void visitRenderable(std::function<void(const Renderable&)>) = 0;
 		virtual std::pair<Vector3, Vector3> getWorldAABB()const = 0;
 		virtual void setMaterial(Material::Ptr mat) { abort(); };
+		virtual void update() {};
 
 		void attach(Node::Ptr n) { n->addChild(mNode); };
 		void detach() { if (!mNode->mParent) return; mNode->mParent->removeChild(mNode); }
@@ -179,6 +180,8 @@ public:
 			LT_DIR,
 			LT_SPOT,
 		};
+
+		static const int MAX_CASCADES = 8;
 	public:
 		Light();
 		~Light();
@@ -195,12 +198,31 @@ public:
 		float getSpotAngle()const { return mAngle; }
 		void setCastingShadow(bool v) { mIsCastingShadow = v; }
 		bool isCastingShadow()const { return mIsCastingShadow; }
+
+		void setNumCascades(int num) { mNumCascades = std::min(num, MAX_CASCADES); }
+		int getNumCascades() { return mNumCascades; }
+		Matrix getCascadeProjection();
+		Vector2 getCascadeRange();
+
+		void update();
+
+
 	private:
 		Vector3 mColor = {1,1,1};
 		float mRange = 1000.0f;
 		LightType mType = LT_DIR;
 		float mAngle = 0.7854f;
+		int mNumCascades;
 		bool mIsCastingShadow = false;
+
+		struct Cascade
+		{
+			Matrix proj;
+			Vector2 range;
+		};
+
+		std::array<Cascade, 8> mCascades;
+
 	};
 
 
@@ -264,6 +286,8 @@ public:
 	Node::Ptr createNode(const std::string& name = {});
 	Probe::Ptr createProbe(const std::string& name);
 	IteratorWrapper<std::unordered_map<std::string, Probe::Ptr>> getProbes() { return IteratorWrapper<decltype(mProbes)>(mProbes); }
+
+	void update();
 private:
 	std::unordered_map<std::string, Model::Ptr> mModels;
 	Node::Ptr mRoot;
