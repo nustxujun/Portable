@@ -7,6 +7,7 @@ class VolumetricLighting:public Pipeline::Stage
 	ALIGN16 struct Constants
 	{
 		Matrix invertViewProj;
+		Matrix view;
 		Matrix lightView;
 		Matrix lightProjs[8];
 		Vector4 cascadeDepths[2];

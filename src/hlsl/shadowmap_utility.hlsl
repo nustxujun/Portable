@@ -2,16 +2,17 @@ struct ShadowMapParams
 {
 	matrix lightview;
 	matrix lightProjs[8];
-	float cascadedepths[8];
+	float3 worldpos;
 	int numcascades;
 	float depthbias;
-	float3 worldpos;
+	float depth_viewspace;
 	Texture2D shadowmap;
 	SamplerComparisonState samp;
+	float cascadedepths[8];
 };
 
 
-float getShadow(ShadowMapParams params)
+float getShadow(ShadowMapParams params, out int index)
 {
 	int numcascades = params.numcascades;
 	float depthbias = params.depthbias;
@@ -19,7 +20,7 @@ float getShadow(ShadowMapParams params)
 	matrix lightView = params.lightview;
 	Texture2D shadowmapTex = params.shadowmap;
 	SamplerComparisonState samp = params.samp;
-	float z = worldpos.z;
+	float z = params.depth_viewspace;
 	float scale = 1.0f / (float)numcascades;
 
 	for (int i = 0; i < numcascades; ++i)
@@ -45,6 +46,7 @@ float getShadow(ShadowMapParams params)
 				percentlit += shadowmapTex.SampleCmpLevelZero(samp, uv, cmpdepth, int2(x, y));
 			}
 		}
+		index = i;
 		return  percentlit * 0.04f ;
 	}
 

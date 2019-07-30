@@ -1,3 +1,5 @@
+#include "utilities.hlsl"
+#include "shadowmap_utility.hlsl"
 Texture2D depthTex: register(t0);
 Texture2D shadowmapTex: register(t1);
 Texture2D normalTex:register(t2);

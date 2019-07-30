@@ -43,7 +43,6 @@ public:
 	void init(int mapsize, int numlevels, const std::vector<Renderer::Texture2D::Ptr>& rts, bool transmittance = false);
 	void render(Renderer::Texture2D::Ptr rt) ;
 private:
-	void fitToScene(int index, Scene::Light::Ptr l);
 	void renderToShadowMap(const Matrix& lightview, const Scene::Light::Cascades& cascades, Renderer::Texture2D::Ptr tex);
 	void renderShadow(const Matrix& lightview, const Scene::Light::Cascades& cascades, const Vector3& dir, Renderer::Texture2D::Ptr depth, Renderer::RenderTarget::Ptr rt);
 

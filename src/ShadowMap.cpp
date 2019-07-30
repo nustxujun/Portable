@@ -92,12 +92,6 @@ void ShadowMap::init(int mapsize, int numlevels, const std::vector<Renderer::Tex
 }
 
 
-void ShadowMap::fitToScene(int index, Scene::Light::Ptr light)
-{
-
-
-}
-
 void ShadowMap::renderToShadowMap(const Matrix& lightview, const Scene::Light::Cascades& cascades, Renderer::Texture2D::Ptr tex)
 {
 
@@ -207,6 +201,7 @@ void ShadowMap::render(Renderer::Texture2D::Ptr rt)
 		if (sm == mShadowMaps.end())
 		{
 			sm = mShadowMaps.insert({ l, getRenderer()->createDepthStencil(mShadowMapSize * mNumLevels, mShadowMapSize, DXGI_FORMAT_R32_TYPELESS, true) }).first;
+			addShaderResource(Common::format(&(*l), "_shadowmap"), sm->second);
 		}
 		l->setShadowMapParameters(mNumLevels, getValue<float>("lambda"), mShadowMapSize);
 		auto cascades = l->fitToScene(getCamera());

@@ -22,7 +22,7 @@ void VolumetricLighting::init()
 		D3D11_TEXTURE_ADDRESS_BORDER,
 		D3D11_COMPARISON_LESS_EQUAL,
 		0, 0);
-	set("vl-numsamples", { {"type","set"}, {"value",16},{"min","0"},{"max",1024},{"interval", "1"} });
+	set("vl-numsamples", { {"type","set"}, {"value",2},{"min","0"},{"max",1024},{"interval", "1"} });
 	set("vl-g", { {"type","set"}, {"value",0.5},{"min","0"},{"max",1},{"interval", "0.01"} });
 	set("vl-density", { {"type","set"}, {"value",1},{"min","0"},{"max",1},{"interval", "0.01"} });
 
@@ -43,11 +43,12 @@ void VolumetricLighting::render(Renderer::Texture2D::Ptr rt)
 	//quad->setDefaultBlend(false);
 	quad->setBlendColorAdd();
 	quad->setRenderTarget(rt);
-	quad->setTextures({ getShaderResource("depth") });
 	quad->setConstant(mConstants);
 	quad->setPixelShader(mPS);
 	Constants c;
-	c.invertViewProj = (cam->getViewMatrix() * cam->getProjectionMatrix()).Invert().Transpose();
+	auto view = cam->getViewMatrix();
+	c.invertViewProj = (view * cam->getProjectionMatrix()).Invert().Transpose();
+	c.view = view.Transpose();
 	c.campos = cam->getNode()->getRealPosition();
 	c.numsamples = getValue<int>("vl-numsamples");
 	c.G = getValue<float>("vl-g");
@@ -59,12 +60,14 @@ void VolumetricLighting::render(Renderer::Texture2D::Ptr rt)
 		if (l->getType() != Scene::Light::LT_DIR)
 			return;
 
+		quad->setTextures({ getShaderResource("depth") , getShaderResource(Common::format(&(*l),"_shadowmap"))});
+
 		c.lightView = l->getViewMatrix().Transpose();
 		auto cascades = l->fitToScene(getCamera());
 		float* f = (float*)&c.cascadeDepths;
 		for (int i = 0; i < cascades.size(); ++i)
 		{
-			c.lightProjs[i] = cascades[i].proj;
+			c.lightProjs[i] = cascades[i].proj.Transpose();
 			*(f++) = cascades[i].range.y;
 		}
 		c.numcascades = cascades.size();

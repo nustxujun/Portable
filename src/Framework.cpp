@@ -15,6 +15,7 @@
 #include "PreZ.h"
 #include "TAA.h"
 #include "MotionVector.h"
+#include "Voxelize.h"
 
 Framework::Framework(HWND win):mWindow(win)
 {
@@ -101,14 +102,15 @@ void Framework::initPipeline()
 
 	//mPipeline->pushStage<PreZ>();
 	mPipeline->pushStage<GBuffer>(true);
-	mPipeline->pushStage<ShadowMap>(2048, 2, shadowmaps);
+	mPipeline->pushStage<ShadowMap>(2048, 1, shadowmaps);
 	mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
 	//mPipeline->pushStage<EnvironmentMapping>(EnvironmentMapping::T_ONCE, std::string("media/Alexs_Apt_2k.hdr"));
 	//mPipeline->pushStage<SSR>();
+	mPipeline->pushStage<Voxelize>(256);
 	mPipeline->pushStage<AO>(3.0f);
 	mPipeline->pushStage<SkyBox>("media/black.png", false);
 	//mPipeline->pushStage<MotionBlur>();
-	//mPipeline->pushStage<HDR>();
+	mPipeline->pushStage<HDR>();
 	mPipeline->pushStage<VolumetricLighting>();
 
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
@@ -214,7 +216,7 @@ void Framework::initScene()
 
 
 	auto light = mScene->createOrGetLight("main");
-	light->setDirection({0,-1,0.33 });
+	light->setDirection({0,-1,0.4 });
 	light->setCastingShadow(true);
 
 

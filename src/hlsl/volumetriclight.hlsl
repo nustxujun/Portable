@@ -11,6 +11,7 @@ SamplerComparisonState smpcmp:register(s1);
 cbuffer ConstantBuffer: register(b0)
 {
 	matrix invertViewProj;
+	matrix view;
 	matrix lightView;
 	matrix lightProjs[8];
 	float4 cascadeDepths[2];
@@ -55,11 +56,17 @@ float4 raymarch(float3 start, float3 end)
 	float cosAngle = dot(lightdir, -dir);
 	float len = length(end - start);
 	float rate = len / maxlength * density;
-	float step = len / (float)numsamples;
+	float step = len / (float)(numsamples );
 
 	ShadowMapParams smp;
 	smp.lightview = lightView;
-	smp.lightProjs = lightProjs;
+	//smp.lightProjs = lightProjs;
+	{
+		for (int i = 0; i < numcascades; ++i)
+		{
+			smp.lightProjs[i] = lightProjs[i];
+		}
+	}
 	{
 		smp.cascadedepths[0] = cascadeDepths[0].r;
 		smp.cascadedepths[1] = cascadeDepths[0].g;
@@ -75,15 +82,18 @@ float4 raymarch(float3 start, float3 end)
 	smp.depthbias = 0.001f;
 	smp.shadowmap = shadowmap;
 	smp.samp = smpcmp;
+	
 
-	for (int i = 0; i < numsamples; ++i)
+	for (int i = 1; i <= numsamples; ++i)
 	{
-		float3 cur = start + dir * step;
+		float3 cur = start + dir * step * i;
 		float atten = MieScattering(cosAngle);
-
+		
 		smp.worldpos = cur;
+		smp.depth_viewspace = mul(float4(cur,1), view).z;
 
-		atten *= getShadow(smp);
+		int index = 0;
+		atten *= getShadow(smp, index);
 		color = scatter(color.rgb, color.a, atten, rate);
 
 	}
@@ -98,7 +108,6 @@ float4 main(PS_INPUT input) : SV_TARGET
 {
 	float2 uv = input.Tex;
 	float depth = depthTex.SampleLevel(samp, uv, 0).r;
-
 	float3 worldpos = getWorldPos(uv, depth, invertViewProj);
 
 	float4 color = raymarch(campos, worldpos);
