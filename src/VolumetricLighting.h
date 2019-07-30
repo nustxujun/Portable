@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Pipeline.h"
-
+#include "ImageProcessing.h"
 class VolumetricLighting:public Pipeline::Stage
 {
 	ALIGN16 struct Constants
@@ -38,5 +38,6 @@ private:
 	Renderer::Buffer::Ptr mConstants;
 	Renderer::Sampler::Ptr mLinearClamp;
 	Renderer::Sampler::Ptr mSampleCmp ;
-
+	ImageProcessing::Ptr mDownsample;
+	
 };

@@ -26,6 +26,7 @@ void VolumetricLighting::init()
 	set("vl-g", { {"type","set"}, {"value",0.5},{"min","0"},{"max",1},{"interval", "0.01"} });
 	set("vl-density", { {"type","set"}, {"value",1},{"min","0"},{"max",1},{"interval", "0.01"} });
 
+	mDownsample = ImageProcessing::create<SamplingBox>(r);
 }
 
 VolumetricLighting::~VolumetricLighting()
@@ -34,15 +35,18 @@ VolumetricLighting::~VolumetricLighting()
 
 void VolumetricLighting::render(Renderer::Texture2D::Ptr rt) 
 {
+	auto tmp = mDownsample->process(rt, 0.5f);
+
+
 	auto quad = getQuad();
 	auto cam = getCamera();
 	auto scene = getScene();
-	quad->setDefaultViewport();
-	
+	//quad->setDefaultViewport();
+	quad->setViewport({ 0,0, (float)tmp->get()->getDesc().Width, (float)tmp->get()->getDesc().Height, 0,1.0f });
 	quad->setSamplers({ mLinearClamp ,mSampleCmp });
-	//quad->setDefaultBlend(false);
-	quad->setBlendColorAdd();
-	quad->setRenderTarget(rt);
+	quad->setDefaultBlend(false);
+	//quad->setBlendColorAdd();
+	quad->setRenderTarget(tmp->get());
 	quad->setConstant(mConstants);
 	quad->setPixelShader(mPS);
 	Constants c;
@@ -79,6 +83,14 @@ void VolumetricLighting::render(Renderer::Texture2D::Ptr rt)
 
 		quad->draw();
 	});
+
+
+	quad->setBlendColorAdd();
+	quad->setRenderTarget(rt);
+	quad->setDefaultViewport();
+	quad->setDefaultPixelShader();
+	quad->setTextures({ tmp->get() });
+	quad->draw();
 }
 void VolumetricLighting::renderBlur(Renderer::Texture2D::Ptr rt)
 {

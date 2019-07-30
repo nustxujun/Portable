@@ -906,7 +906,7 @@ Renderer::SharedCompiledData Renderer::compileFile(const std::string& filename, 
 
 	int flags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if (defined _DEBUG ) || (defined RELEASE_WITH_DEBUGINFO)
-	flags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION ;
+	flags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION | D3DCOMPILE_PREFER_FLOW_CONTROL;
 #endif
 
 
@@ -917,6 +917,8 @@ Renderer::SharedCompiledData Renderer::compileFile(const std::string& filename, 
 	std::cout << "compile " << filename << " "<< entryPoint << " " << shaderModel << " ... ";
 	auto curtime = GetTickCount();
 	HRESULT hr = D3DX11CompileFromMemory(mem.data(), mem.size(),filename.c_str(), macro, NULL, entryPoint.c_str(), shaderModel.c_str(), flags, 0, NULL, &blob, &err, NULL);
+	//HRESULT hr = D3DX11CompileFromFileA(filename.c_str(), macro, NULL, entryPoint.c_str(), shaderModel.c_str(), flags, 0, NULL, &blob, &err, NULL);
+
 	std::cout << GetTickCount() - curtime << "ms." << std::endl;
 	
 	if (hr != S_OK)
