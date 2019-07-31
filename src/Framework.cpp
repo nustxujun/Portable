@@ -104,19 +104,19 @@ void Framework::initPipeline()
 	mPipeline->pushStage<GBuffer>(true);
 	mPipeline->pushStage<MotionVector>();
 
-	mPipeline->pushStage<ShadowMap>(4096, 1, shadowmaps);
+	mPipeline->pushStage<ShadowMap>(1024, 2, shadowmaps);
 	mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
 	//mPipeline->pushStage<EnvironmentMapping>(EnvironmentMapping::T_ONCE, std::string("media/Alexs_Apt_2k.hdr"));
 	//mPipeline->pushStage<SSR>();
-	mPipeline->pushStage<Voxelize>(256);
-	mPipeline->pushStage<AO>(3.0f);
+	//mPipeline->pushStage<Voxelize>(256);
+	//mPipeline->pushStage<AO>(3.0f);
 	mPipeline->pushStage<SkyBox>("media/black.png", false);
 	mPipeline->pushStage<VolumetricLighting>();
 	//mPipeline->pushStage<MotionBlur>();
 	mPipeline->pushStage<HDR>();
 
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
-	mPipeline->pushStage<TAA>();
+	//mPipeline->pushStage<TAA>();
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);
 	mPipeline->pushStage("draw to backbuffer", [bb, quad](Renderer::Texture2D::Ptr rt)
 	{
@@ -133,30 +133,31 @@ void Framework::initScene()
 	set("time", { {"value", 3.14f}, {"min", "1.57"}, {"max", "4.71"}, {"interval", "0.001"}, {"type","set"} });
 	set("numdirs", { {"value", numdirs}, {"min", 0}, {"max", numdirs}, {"interval", 1}, {"type","set"} });
 	set("dirradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
+	set("dist", { {"type","set"}, {"value",2},{"min","0"},{"max",10},{"interval", "0.1"} });
 
 	auto root = mScene->getRoot();
-	//{
-	//	std::vector<std::string> textures = {
-	//			"media/rustediron/rustediron2_basecolor.png",
-	//			"media/rustediron/rustediron2_normal.png",
-	//			"media/rustediron/rustediron2_roughness.png",
-	//			"media/rustediron/rustediron2_metallic.png",
-	//	};
-	//	Parameters params;
-	//	params["geom"] = "plane";
-	//	params["size"] = "100";
-	//	auto model = mScene->createModel("plane", params, [this](const Parameters& p)
-	//	{
-	//		return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-	//	});
-	//	model->setCastShadow(true);
-	//	model->attach(root);
-	//	Material::Ptr mat = Material::create();
-	//	for (int i = 0; i < textures.size(); ++i)
-	//		if (!textures[i].empty())
-	//			mat->setTexture(i, mRenderer->createTexture(textures[i]));
-	//	model->setMaterial(mat);
-	//}
+	{
+		std::vector<std::string> textures = {
+				"media/rustediron/rustediron2_basecolor.png",
+				"media/rustediron/rustediron2_normal.png",
+				"media/rustediron/rustediron2_roughness.png",
+				"media/rustediron/rustediron2_metallic.png",
+		};
+		Parameters params;
+		params["geom"] = "plane";
+		params["size"] = "30";
+		auto model = mScene->createModel("plane", params, [this](const Parameters& p)
+		{
+			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+		});
+		model->setCastShadow(true);
+		model->attach(root);
+		//Material::Ptr mat = Material::create();
+		//for (int i = 0; i < textures.size(); ++i)
+		//	if (!textures[i].empty())
+		//		mat->setTexture(i, mRenderer->createTexture(textures[i]));
+		//model->setMaterial(mat);
+	}
 	{
 		std::vector<std::string> textures = {
 				"media/streaked/streaked-metal1-albedo.png",
@@ -167,42 +168,48 @@ void Framework::initScene()
 		};
 
 		Parameters params;
-		params["geom"] = "sphere";
+		params["geom"] = "cube";
 		params["radius"] = "10";
 		params["size"] = "1";
-		auto model = mScene->createModel("sphere", params, [this](const Parameters& p)
+		for (int i = 0; i < 10; ++i)
 		{
-			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
-		});
-		model->getNode()->setPosition({ 0, 1, 0 });
-		model->setCastShadow(false);
-		model->attach(root);
-		Material::Ptr mat = Material::create();
+			for (int j = 0; j < 10; ++j)
+			{
+				auto model = mScene->createModel(Common::format("cube", i, j), params, [this](const Parameters& p)
+				{
+					return Mesh::Ptr(new GeometryMesh(p, mRenderer));
+				});
+				model->getNode()->setPosition({ i * 2.0f, 5, j * 1.0f });
+				model->setCastShadow(true);
+				model->attach(root);
+				//Material::Ptr mat = Material::create();
 
-		for (int i = 0; i < textures.size(); ++i)
-			if (!textures[i].empty())
-				mat->setTexture(i, mRenderer->createTexture(textures[i]));
-		model->setMaterial(mat);
+				//for (int i = 0; i < textures.size(); ++i)
+				//	if (!textures[i].empty())
+				//		mat->setTexture(i, mRenderer->createTexture(textures[i]));
+				//model->setMaterial(mat);
+			}
+		}
 	}
 
 
-	{
-		Parameters params;
-		//params["file"] = "tiny.x";
-		params["file"] = "media/sponza/sponza.obj";
-		//params["file"] = "media/terrain.obj";
+	//{
+	//	Parameters params;
+	//	//params["file"] = "tiny.x";
+	//	params["file"] = "media/sponza/sponza.obj";
+	//	//params["file"] = "media/terrain.obj";
 
-		auto model = mScene->createModel("test", params, [this](const Parameters& p) {
-			return Mesh::Ptr(new Mesh(p, mRenderer));
-		});
+	//	auto model = mScene->createModel("test", params, [this](const Parameters& p) {
+	//		return Mesh::Ptr(new Mesh(p, mRenderer));
+	//	});
 
-		model->setCastShadow(true);
-		model->attach(mScene->getRoot());
-		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
-		//Matrix mat = Matrix::CreateFromYawPitchRoll(0, -3.14 / 2, 0);
-		//model->getNode()->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
+	//	model->setCastShadow(true);
+	//	model->attach(mScene->getRoot());
+	//	model->getNode()->setPosition(0.0f, 0.f, 0.0f);
+	//	//Matrix mat = Matrix::CreateFromYawPitchRoll(0, -3.14 / 2, 0);
+	//	//model->getNode()->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
 
-	}
+	//}
 	auto aabb = root->getWorldAABB();
 
 	Vector3 vec = aabb.second - aabb.first;
@@ -243,16 +250,18 @@ void Framework::initScene()
 
 void Framework::framemove()
 {
-
-	auto model = mScene->getModel("sphere");
-	if (model)
+	float d = getValue<float>("dist");
+	for (int i = 0; i < 10; ++i)
 	{
-		float time = GetTickCount() * 0.0001;
-		float sin = std::sin(time) * 100;
-		float cos = std::cos(time) * 100;
-		model->getNode()->setPosition(cos - 430, 100, sin - 100);
+		for (int j = 0; j < 10; ++j)
+		{
+			auto model = mScene->getModel(Common::format("cube", i,j));
+			if (model)
+			{
+				model->getNode()->setPosition({ i * d, 5, j * 1.0f });
+			}
+		}
 	}
-
 
 	//auto l = mScene->createOrGetLight("main");
 	//float rad = getValue<float>("time");

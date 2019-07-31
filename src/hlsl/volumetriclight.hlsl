@@ -56,7 +56,7 @@ float4 raymarch(float3 start, float3 end)
 	float cosAngle = dot(lightdir, -dir);
 	float len = length(end - start);
 	float rate = len / maxlength * density;
-	float step = len / (float)(numsamples );
+	float step = len / (float)(numsamples + 1 );
 
 	ShadowMapParams smp;
 	smp.lightview = lightView;
@@ -82,7 +82,9 @@ float4 raymarch(float3 start, float3 end)
 	smp.depthbias = 0.001f;
 	smp.shadowmap = shadowmap;
 	smp.samp = smpcmp;
-	
+	// it will cross the mip border which i cannot reslove now
+	// using the last cascade
+	smp.startcascade = numcascades - 1;
 
 	for (int i = 1; i <= numsamples; ++i)
 	{

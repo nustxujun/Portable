@@ -424,7 +424,7 @@ Scene::Light::~Light()
 {
 }
 
-Matrix Scene::Light::getViewMatrix()
+Matrix Scene::Light::getViewMatrix(size_t face)
 {
 	if (mType == LT_DIR)
 	{
@@ -438,7 +438,24 @@ Matrix Scene::Light::getViewMatrix()
 		Vector3 y = dir.Cross(x);
 		y.Normalize();
 		auto lighttoworld = MathUtilities::makeMatrixFromAxis(x, y, dir);
-		return lighttoworld.Invert();
+		return lighttoworld.Transpose();
+	}
+	else if (mType = LT_POINT)
+	{
+		static const Matrix viewRots[6] = {
+			XMMatrixLookAtLH(Vector3::Zero,Vector3::UnitX, Vector3::UnitY),
+			XMMatrixLookAtLH(Vector3::Zero,-Vector3::UnitX, Vector3::UnitY),
+			XMMatrixLookAtLH(Vector3::Zero,Vector3::UnitY, -Vector3::UnitZ),
+			XMMatrixLookAtLH(Vector3::Zero,-Vector3::UnitY, Vector3::UnitZ),
+			XMMatrixLookAtLH(Vector3::Zero,Vector3::UnitZ, Vector3::UnitY),
+			XMMatrixLookAtLH(Vector3::Zero,-Vector3::UnitZ, Vector3::UnitY),
+		};
+
+		auto rotT = viewRots[face];
+		auto trans = Vector3::Transform( -getNode()->getRealPosition(), rotT);
+		auto view = rotT;
+		view.Translation(trans);
+		return view;
 	}
 	else
 	{

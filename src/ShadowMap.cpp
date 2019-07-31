@@ -92,7 +92,7 @@ void ShadowMap::init(int mapsize, int numlevels, const std::vector<Renderer::Tex
 }
 
 
-void ShadowMap::renderToShadowMap(const Matrix& lightview, const Scene::Light::Cascades& cascades, Renderer::Texture2D::Ptr tex)
+void ShadowMap::renderToShadowMapDir(const Matrix& lightview, const Scene::Light::Cascades& cascades, Renderer::Texture2D::Ptr tex)
 {
 
 
@@ -150,7 +150,7 @@ void ShadowMap::renderToShadowMap(const Matrix& lightview, const Scene::Light::C
 	getRenderer()->removeRenderTargets();
 }
 
-void ShadowMap::renderShadow(const Matrix& lightview, const Scene::Light::Cascades& cascades, const Vector3& dir, Renderer::Texture2D::Ptr depth, Renderer::RenderTarget::Ptr rt)
+void ShadowMap::renderShadowDir(const Matrix& lightview, const Scene::Light::Cascades& cascades, const Vector3& dir, Renderer::Texture2D::Ptr depth, Renderer::RenderTarget::Ptr rt)
 {
 	ReceiveConstants constants;
 	for (int j = 0; j < mNumLevels; ++j)
@@ -186,6 +186,68 @@ void ShadowMap::renderShadow(const Matrix& lightview, const Scene::Light::Cascad
 
 }
 
+void ShadowMap::renderToShadowMapPoint(const std::array<Matrix, 6>& lightview, const Matrix & proj, Renderer::Texture2D::Ptr tex)
+{
+
+
+	getRenderer()->clearDepth(tex, 1.0f);
+	//mShadowMaps[index]->getDepthStencil().lock()->clearDepth(1.0f);
+
+	using namespace DirectX;
+	using namespace DirectX::SimpleMath;
+
+	auto renderer = getRenderer();
+	CastConstants constant;
+
+	renderer->setRenderTarget({}, tex);
+	renderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	renderer->setDefaultBlendState();
+	renderer->setDefaultDepthStencilState();
+	renderer->setSampler(mPoint);
+	renderer->setVertexShader(mShadowVS);
+	//renderer->setPixelShader(mShadowPS);
+	renderer->setPixelShader({});
+
+	renderer->setLayout(mDepthLayout.lock()->bind(mShadowVS));
+	renderer->setRasterizer(mRasterizer);
+
+	D3D11_VIEWPORT vp;
+	vp.Width = mShadowMapSize;
+	vp.Height = mShadowMapSize;
+	vp.TopLeftX = float(mShadowMapSize);
+	vp.TopLeftY = 0;
+	vp.MinDepth = 0.0f;
+	vp.MaxDepth = 1.0f;
+	renderer->setViewport(vp);
+	constant.proj = proj.Transpose();
+
+	for (auto& view: lightview)
+	{
+
+		constant.view = view.Transpose();
+
+
+		getScene()->visitRenderables([&constant, this,renderer](const Renderable& r)
+		{
+			constant.world = r.tranformation.Transpose();
+			mCastConstants.lock()->blit(&constant, sizeof(constant));
+			renderer->setVSConstantBuffers({ mCastConstants });
+
+			renderer->setIndexBuffer(r.indices, DXGI_FORMAT_R32_UINT, 0);
+			renderer->setVertexBuffer(r.vertices, r.layout.lock()->getSize(), 0);
+			renderer->getContext()->DrawIndexed(r.numIndices, 0, 0);
+		}, [](Scene::Entity::Ptr e) {return e->isCastShadow(); });
+
+	}
+
+
+	renderer->removeRenderTargets();
+}
+
+void ShadowMap::renderShadowPoint(const std::array<Matrix, 6>& lightview, const Matrix & proj, Renderer::Texture2D::Ptr depth, Renderer::RenderTarget::Ptr rt)
+{
+}
+
 void ShadowMap::render(Renderer::Texture2D::Ptr rt) 
 {
 	std::vector<Scene::Light::Ptr> lights;
@@ -197,18 +259,66 @@ void ShadowMap::render(Renderer::Texture2D::Ptr rt)
 	for (size_t i = 0; i < lights.size(); ++i)
 	{
 		auto l = lights[i];
+		auto type = l->getType();
 		auto sm = mShadowMaps.find(l);
 		if (sm == mShadowMaps.end())
 		{
-			sm = mShadowMaps.insert({ l, getRenderer()->createDepthStencil(mShadowMapSize * mNumLevels, mShadowMapSize, DXGI_FORMAT_R32_TYPELESS, true) }).first;
-			addShaderResource(Common::format(&(*l), "_shadowmap"), sm->second);
-		}
-		l->setShadowMapParameters(mNumLevels, getValue<float>("lambda"), mShadowMapSize);
-		auto cascades = l->fitToScene(getCamera());
+			switch (type)
+			{
+			case Scene::Light::LT_POINT:
+				{
+					D3D11_TEXTURE2D_DESC desc;
+					desc.Width = mShadowMapSize;
+					desc.Height = mShadowMapSize;
+					desc.MipLevels = 1;
+					desc.ArraySize = 6;
+					desc.Format = DXGI_FORMAT_R32_TYPELESS;
+					desc.Usage = D3D11_USAGE_DEFAULT;
+					desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
+					desc.CPUAccessFlags = 0;
+					desc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+					desc.SampleDesc.Quality = 0;
+					desc.SampleDesc.Count = 1;
 
-		auto view = l->getViewMatrix();
-		renderToShadowMap(view,cascades, sm->second);
-		renderShadow(view, cascades, l->getDirection(),sm->second, mShadowTextures[i]);
+					sm = mShadowMaps.insert({ l, getRenderer()->createTexture(desc)}).first;
+					addShaderResource(Common::format(&(*l), "_shadowmap"), sm->second);
+				}
+				break;
+			case Scene::Light::LT_DIR:
+				{
+					sm = mShadowMaps.insert({ l, getRenderer()->createDepthStencil(mShadowMapSize * mNumLevels, mShadowMapSize, DXGI_FORMAT_R32_TYPELESS, true) }).first;
+					addShaderResource(Common::format(&(*l), "_shadowmap"), sm->second);
+				}
+				break;
+			case Scene::Light::LT_SPOT:
+				break;
+			}
+			
+		}
+
+		switch (type)
+		{
+		case Scene::Light::LT_DIR:
+			{
+				l->setShadowMapParameters(mNumLevels, getValue<float>("lambda"), mShadowMapSize);
+				auto cascades = l->fitToScene(getCamera());
+
+				auto view = l->getViewMatrix();
+				renderToShadowMapDir(view, cascades, sm->second);
+				renderShadowDir(view, cascades, l->getDirection(), sm->second, mShadowTextures[i]);
+			}
+			break;
+		case Scene::Light::LT_POINT:
+			{
+				std::array<Matrix, 6> views;
+				for (int i = 0; i < 6; ++i)
+					views[i] = l->getViewMatrix(i);
+
+				renderToShadowMapPoint(views)
+			}
+			break;
+		}
+
 	}
 
 

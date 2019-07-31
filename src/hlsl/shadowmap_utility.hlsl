@@ -3,6 +3,7 @@ struct ShadowMapParams
 	matrix lightview;
 	matrix lightProjs[8];
 	float3 worldpos;
+	int startcascade;
 	int numcascades;
 	float depthbias;
 	float depth_viewspace;
@@ -22,8 +23,9 @@ float getShadow(ShadowMapParams params, out int index)
 	SamplerComparisonState samp = params.samp;
 	float z = params.depth_viewspace;
 	float scale = 1.0f / (float)numcascades;
+	int startcascade = params.startcascade;
 
-	for (int i = 0; i < numcascades; ++i)
+	for (int i = startcascade; i < numcascades; ++i)
 	{
 		if (z > params.cascadedepths[i])
 			continue;
@@ -31,6 +33,7 @@ float getShadow(ShadowMapParams params, out int index)
 		float4 pos = mul(float4(worldpos,1), lightView);
 		pos = mul(pos, params.lightProjs[i]);
 		pos /= pos.w;
+
 
 		float cmpdepth = pos.z - depthbias;
 

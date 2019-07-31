@@ -210,7 +210,7 @@ public:
 		bool isCastingShadow()const { return mIsCastingShadow; }
 
 
-		Matrix getViewMatrix();
+		Matrix getViewMatrix(size_t face = 0);
 		void setShadowMapParameters(int numcascades, float lambda, float size);
 		Cascades fitToScene(Camera::Ptr cam);
 
