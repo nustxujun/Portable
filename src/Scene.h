@@ -211,7 +211,7 @@ public:
 
 
 		Matrix getViewMatrix(size_t face = 0);
-		void setShadowMapParameters(int numcascades, float lambda, float size);
+		void setShadowMapParameters(float size, int numcascades = 1, float lambda = 0);
 		Cascades fitToScene(Camera::Ptr cam);
 
 	private:

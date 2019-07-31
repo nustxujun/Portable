@@ -464,7 +464,7 @@ Matrix Scene::Light::getViewMatrix(size_t face)
 	}
 }
 
-void Scene::Light::setShadowMapParameters(int numcascades, float lambda, float size)
+void Scene::Light::setShadowMapParameters(float size,int numcascades, float lambda)
 {
 	mNumCascades = numcascades;
 	mLambda = lambda;

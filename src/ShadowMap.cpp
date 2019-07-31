@@ -223,10 +223,7 @@ void ShadowMap::renderToShadowMapPoint(const std::array<Matrix, 6>& lightview, c
 
 	for (auto& view: lightview)
 	{
-
 		constant.view = view.Transpose();
-
-
 		getScene()->visitRenderables([&constant, this,renderer](const Renderable& r)
 		{
 			constant.world = r.tranformation.Transpose();
@@ -244,8 +241,34 @@ void ShadowMap::renderToShadowMapPoint(const std::array<Matrix, 6>& lightview, c
 	renderer->removeRenderTargets();
 }
 
-void ShadowMap::renderShadowPoint(const std::array<Matrix, 6>& lightview, const Matrix & proj, Renderer::Texture2D::Ptr depth, Renderer::RenderTarget::Ptr rt)
+void ShadowMap::renderShadowPoint(const Vector3& lightpos, const Matrix & proj, Renderer::Texture2D::Ptr depth, Renderer::RenderTarget::Ptr rt)
 {
+	//ReceiveConstants constants;
+	//constants.lightProjs[0] = proj.Transpose();
+
+	//auto cam = getCamera();
+	//constants.invertView = cam->getViewMatrix().Invert().Transpose();
+	//constants.invertProj = cam->getProjectionMatrix().Invert().Transpose();
+	//constants.numcascades = mNumLevels;
+	//constants.scale = 1.0f / mNumLevels;
+	//constants.shadowcolor = getValue<float>("shadowcolor");
+	//constants.depthbias = getValue<float>("depthbias");
+	//constants.lightdir = lightpos;
+	//constants.translucency = getValue<float>("translucency");
+	//constants.translucency_bias = getValue<float>("translucency_bias");
+	//constants.thickness = getValue<float>("translucency_thickness");
+
+	//mReceiveConstants.lock()->blit(&constants, sizeof(constants));
+
+	//mQuad.setRenderTarget(rt);
+	//mQuad.setConstant(mReceiveConstants);
+	//mQuad.setSamplers({ mLinear, mPoint,mShadowSampler });
+	//mQuad.setDefaultBlend(false);
+
+	//mQuad.setTextures({ getShaderResource("depth"), depth , getShaderResource("normal") });
+	//mQuad.setPixelShader(mReceiveShadowPS);
+	//mQuad.setDefaultViewport();
+	//mQuad.draw()
 }
 
 void ShadowMap::render(Renderer::Texture2D::Ptr rt) 
@@ -300,7 +323,7 @@ void ShadowMap::render(Renderer::Texture2D::Ptr rt)
 		{
 		case Scene::Light::LT_DIR:
 			{
-				l->setShadowMapParameters(mNumLevels, getValue<float>("lambda"), mShadowMapSize);
+				l->setShadowMapParameters(mShadowMapSize,mNumLevels, getValue<float>("lambda"));
 				auto cascades = l->fitToScene(getCamera());
 
 				auto view = l->getViewMatrix();
@@ -310,11 +333,14 @@ void ShadowMap::render(Renderer::Texture2D::Ptr rt)
 			break;
 		case Scene::Light::LT_POINT:
 			{
+				auto cam = getCamera();
 				std::array<Matrix, 6> views;
 				for (int i = 0; i < 6; ++i)
 					views[i] = l->getViewMatrix(i);
 
-				renderToShadowMapPoint(views)
+				Matrix proj = DirectX::XMMatrixPerspectiveFovLH(3.14159265358f * 0.5f, 1, cam->getNear(), cam->getFar());
+				renderToShadowMapPoint(views, proj, sm->second);
+				//renderShadowPoint(views, proj, sm->second, mShadowTextures[i]);
 			}
 			break;
 		}

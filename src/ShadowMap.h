@@ -47,7 +47,7 @@ private:
 	void renderShadowDir(const Matrix& lightview, const Scene::Light::Cascades& cascades, const Vector3& dir, Renderer::Texture2D::Ptr depth, Renderer::RenderTarget::Ptr rt);
 
 	void renderToShadowMapPoint(const std::array<Matrix, 6>& lightview, const Matrix& proj, Renderer::Texture2D::Ptr tex);
-	void renderShadowPoint(const std::array<Matrix, 6>& lightview, const Matrix& proj, Renderer::Texture2D::Ptr depth, Renderer::RenderTarget::Ptr rt);
+	void renderShadowPoint(const Vector3& lightpos, const Matrix& proj, Renderer::Texture2D::Ptr depth, Renderer::RenderTarget::Ptr rt);
 private:
 	int mNumLevels;
 	int mNumMaps;
