@@ -15,9 +15,9 @@ a collections of rendering techniques based on d3d11 for study
 - [x] Parallax occlusion mapping
 - [x] Camera motion blur
 - [x] Object motion blur(from unity)
-- [x] Irradiance volumes represented by spherical harmonics
+- [x] Irradiance volumes 
 - [x] TAA
-- [x] Separable SSS
+- [x] Separable subsurface scattering
 
 
 PBR 
@@ -46,10 +46,15 @@ VCT indirect diffuse + specular
 
 ![](https://github.com/nustxujun/Portable/blob/master/img/vct_s_d.png)
 
+![](https://github.com/nustxujun/Portable/blob/master/img/vct_1.png)
 
 Separable SSS
 
 ![](https://github.com/nustxujun/Portable/blob/master/img/ssss.png)
+
+skin transmittance
+
+![](https://github.com/nustxujun/Portable/blob/master/img/trans.png)
 
 Volumetric light
 
