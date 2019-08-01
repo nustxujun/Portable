@@ -102,7 +102,7 @@ void Framework::initPipeline()
 
 	//mPipeline->pushStage<PreZ>();
 	mPipeline->pushStage<GBuffer>(true);
-	mPipeline->pushStage<MotionVector>();
+	//mPipeline->pushStage<MotionVector>();
 
 	mPipeline->pushStage<ShadowMap>(1024, 2, shadowmaps);
 	mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
@@ -111,9 +111,9 @@ void Framework::initPipeline()
 	//mPipeline->pushStage<Voxelize>(256);
 	//mPipeline->pushStage<AO>(3.0f);
 	mPipeline->pushStage<SkyBox>("media/black.png", false);
-	mPipeline->pushStage<VolumetricLighting>();
+	//mPipeline->pushStage<VolumetricLighting>();
 	//mPipeline->pushStage<MotionBlur>();
-	mPipeline->pushStage<HDR>();
+	//mPipeline->pushStage<HDR>();
 
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 	//mPipeline->pushStage<TAA>();
@@ -128,10 +128,14 @@ void Framework::initPipeline()
 void Framework::initScene()
 {
 
-	int numdirs = 1;
+	int numdirs = 0;
+	int numpoints = 1;
 
 	set("time", { {"value", 3.14f}, {"min", "1.57"}, {"max", "4.71"}, {"interval", "0.001"}, {"type","set"} });
 	set("numdirs", { {"value", numdirs}, {"min", 0}, {"max", numdirs}, {"interval", 1}, {"type","set"} });
+	set("numpoints", { {"value", numpoints}, {"min", 0}, {"max", numdirs}, {"interval", 1}, {"type","set"} });
+
+	set("pointradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
 	set("dirradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
 	set("dist", { {"type","set"}, {"value",2},{"min","0"},{"max",10},{"interval", "0.1"} });
 
@@ -145,7 +149,7 @@ void Framework::initScene()
 		};
 		Parameters params;
 		params["geom"] = "plane";
-		params["size"] = "30";
+		params["size"] = "50";
 		auto model = mScene->createModel("plane", params, [this](const Parameters& p)
 		{
 			return Mesh::Ptr(new GeometryMesh(p, mRenderer));
@@ -171,7 +175,7 @@ void Framework::initScene()
 		params["geom"] = "cube";
 		params["radius"] = "10";
 		params["size"] = "1";
-		for (int i = 0; i < 10; ++i)
+		for (int i = 0; i < 3; ++i)
 		{
 			for (int j = 0; j < 10; ++j)
 			{
@@ -225,9 +229,10 @@ void Framework::initScene()
 
 
 	auto light = mScene->createOrGetLight("main");
-	light->setDirection({0,-1,0.4 });
+	//light->setDirection({0,-1,0.4 });
 	light->setCastingShadow(true);
-
+	light->setType(Scene::Light::LT_POINT);
+	light->getNode()->setPosition(0, 10, 0);
 
 	auto probe = mScene->createProbe("main");
 	probe->setProxyBox(vec);
@@ -237,14 +242,14 @@ void Framework::initScene()
 	probe->getNode()->setPosition({ -430,100,-100 });
 	probe->setType(Scene::Probe::PT_IBL);
 	//probe->setUsingProxy(true);
-	{
-		Parameters params;
-		params["geom"] = "sphere";
-		params["radius"] = "10";
-		auto sphere = Mesh::Ptr(new GeometryMesh(params, mRenderer));
-		sphere->getMesh(0).material->roughness = 0;
-		probe->setDebugObject(sphere);
-	}
+	//{
+	//	Parameters params;
+	//	params["geom"] = "sphere";
+	//	params["radius"] = "10";
+	//	auto sphere = Mesh::Ptr(new GeometryMesh(params, mRenderer));
+	//	sphere->getMesh(0).material->roughness = 0;
+	//	probe->setDebugObject(sphere);
+	//}
 
 }
 

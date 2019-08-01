@@ -1,7 +1,16 @@
 #include "utilities.hlsl"
-#include "shadowmap_utility.hlsl"
+
+
 Texture2D depthTex: register(t0);
-Texture2D shadowmapTex: register(t1);
+
+#if DIR
+Texture2D 
+#elif POINT
+TextureCube
+#else
+Texture2D
+#endif
+shadowmapTex: register(t1);
 Texture2D normalTex:register(t2);
 
 cbuffer ConstantBuffer: register(b0)
@@ -31,26 +40,10 @@ struct PS_INPUT
 	float2 Tex: TEXCOORD0;
 };
 
-
-
-float4 ps(PS_INPUT input) : SV_TARGET
+#if DIR
+float4 receive_dir(float4 worldPos, float3 N, float depthlinear)
 {
-	float3 N = normalTex.SampleLevel(sampPoint, input.Tex,0).rgb;
-	N = normalize(N);
-	float depth = depthTex.Sample(sampPoint, input.Tex).r;
-	float4 worldPos = 0;
-	worldPos.x = input.Tex.x * 2.0f - 1.0f;
-	worldPos.y = -(input.Tex.y * 2.0f - 1.0f);
-	worldPos.z = depth;
-	worldPos.w = 1.0f;
-	worldPos = mul(worldPos, invertProj);
-	worldPos /= worldPos.w;
-	float depthlinear = worldPos.z;
-	worldPos = mul(worldPos, invertView);
 
-	//worldPos = float4(worldPos - 0.005 * N, 1.0);
-
-	[unroll]
 	for (int i = 0; i < numcascades; ++i)
 	{
 		if (depthlinear > cascadeDepths[i].r)
@@ -92,7 +85,7 @@ float4 ps(PS_INPUT input) : SV_TARGET
 
 		float d1 = shadowmapTex.Sample(sampLinear, uv).r;
 		float d2 = shrinkpos.z;
-		float d =  (1 - translucency) * abs(d1 - d2) * cascadeDepths[i].r * thickness;
+		float d = (1 - translucency) * abs(d1 - d2) * cascadeDepths[i].r * thickness;
 		float dd = -d * d;
 		float3 profile = float3(0.233, 0.455, 0.649) * exp(dd / 0.0064) +
 			float3(0.1, 0.336, 0.344) * exp(dd / 0.0484) +
@@ -107,6 +100,60 @@ float4 ps(PS_INPUT input) : SV_TARGET
 	}
 #if TRANSMITTANCE
 	return float4(0, 0, 0, 1);
+#else
+	return 1;
+#endif
+}
+#elif POINT
+
+float4 receive_point(float4 worldPos, float3 N)
+{
+	float3 lightpos = lightdir;
+	float3 uv = worldPos.xyz - lightpos;
+	
+	float cmpdepth = length(uv) - depthbias * cascadeDepths[0].r;
+	//float percentlit = 0;
+	//for (int x = -2; x <= 2; ++x)
+	//{
+	//	for (int y = -2; y <= 2; ++y)
+	//	{
+	//		for (int z = -2; z <= 2; ++z)
+	//		{
+	//			percentlit += shadowmapTex.SampleCmpLevelZero(sampshadow, uv + float3(x,y,z) * scale, cmpdepth);
+	//		}
+	//	}
+	//}
+
+	uv = normalize(uv);
+	float depth = shadowmapTex.SampleLevel(sampLinear, uv, 0).r;
+	if (cmpdepth < depth)
+		return 1;
+	else
+		return 0;
+
+	//return percentlit * 0.008f;
+}
+#endif
+
+float4 ps(PS_INPUT input) : SV_TARGET
+{
+	float3 N = normalTex.SampleLevel(sampPoint, input.Tex,0).rgb;
+	N = normalize(N);
+	float depth = depthTex.Sample(sampPoint, input.Tex).r;
+	float4 worldPos = 0;
+	worldPos.x = input.Tex.x * 2.0f - 1.0f;
+	worldPos.y = -(input.Tex.y * 2.0f - 1.0f);
+	worldPos.z = depth;
+	worldPos.w = 1.0f;
+	worldPos = mul(worldPos, invertProj);
+	worldPos /= worldPos.w;
+	float depthlinear = worldPos.z;
+	worldPos = mul(worldPos, invertView);
+
+#if DIR
+	return receive_dir(worldPos, N, depthlinear);
+#elif POINT
+	return receive_point(worldPos, N);
 #else
 	return 1;
 #endif

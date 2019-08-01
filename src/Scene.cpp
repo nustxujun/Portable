@@ -440,7 +440,7 @@ Matrix Scene::Light::getViewMatrix(size_t face)
 		auto lighttoworld = MathUtilities::makeMatrixFromAxis(x, y, dir);
 		return lighttoworld.Transpose();
 	}
-	else if (mType = LT_POINT)
+	else if (mType == LT_POINT)
 	{
 		static const Matrix viewRots[6] = {
 			XMMatrixLookAtLH(Vector3::Zero,Vector3::UnitX, Vector3::UnitY),

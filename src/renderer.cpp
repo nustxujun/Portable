@@ -1591,25 +1591,63 @@ void Renderer::Texture2D::initTexture()
 			}
 		}
 
-		ID3D11DepthStencilView* dsv;
-		ID3D11ShaderResourceView* srv;
-		D3D11_DEPTH_STENCIL_VIEW_DESC descDSV;
-		ZeroMemory(&descDSV, sizeof(descDSV));
-		descDSV.Format = DSVfmt;
-		descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-		descDSV.Texture2D.MipSlice = 0;
-		checkResult(getDevice()->CreateDepthStencilView(mTexture, &descDSV, &dsv));
 
-		D3D11_SHADER_RESOURCE_VIEW_DESC srvd;
-		srvd.Format = SRVfmt;
-		srvd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-		srvd.Texture2D.MostDetailedMip = 0;
-		srvd.Texture2D.MipLevels = 1;
+		if (mDesc.ArraySize > 1)
+		{
+			for (UINT i = 0; i < mDesc.MipLevels; ++i)
+			{
+				for (UINT j = 0; j < mDesc.ArraySize; ++j)
+				{
+					ID3D11DepthStencilView* dsv;
+					D3D11_DEPTH_STENCIL_VIEW_DESC descDSV;
+					ZeroMemory(&descDSV, sizeof(descDSV));
+					descDSV.Format = DSVfmt;
+					descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
+					descDSV.Texture2DArray.MipSlice = i;
+					descDSV.Texture2DArray.FirstArraySlice = j;
+					descDSV.Texture2DArray.ArraySize = 1;
+					checkResult(getDevice()->CreateDepthStencilView(mTexture, &descDSV, &dsv));
 
-		checkResult(getDevice()->CreateShaderResourceView(mTexture, &srvd, &srv));
+					DepthStencil::addView(dsv);
+				}
+			}
 
-		ShaderResource::addView(srv);
-		DepthStencil::addView(dsv);
+			if (mDesc.MiscFlags == D3D11_RESOURCE_MISC_TEXTURECUBE)
+			{
+				D3D11_SHADER_RESOURCE_VIEW_DESC desc;
+				desc.Format = SRVfmt;
+				desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+				desc.TextureCube.MipLevels = mDesc.MipLevels;
+				desc.TextureCube.MostDetailedMip = 0;
+				ID3D11ShaderResourceView* srv;
+				checkResult(getDevice()->CreateShaderResourceView(mTexture, &desc, &srv));
+				ShaderResource::addView(srv);
+			}
+			else
+				abort();
+		}
+		else
+		{
+			ID3D11DepthStencilView* dsv;
+			ID3D11ShaderResourceView* srv;
+			D3D11_DEPTH_STENCIL_VIEW_DESC descDSV;
+			ZeroMemory(&descDSV, sizeof(descDSV));
+			descDSV.Format = DSVfmt;
+			descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+			descDSV.Texture2D.MipSlice = 0;
+			checkResult(getDevice()->CreateDepthStencilView(mTexture, &descDSV, &dsv));
+
+			D3D11_SHADER_RESOURCE_VIEW_DESC srvd;
+			srvd.Format = SRVfmt;
+			srvd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+			srvd.Texture2D.MostDetailedMip = 0;
+			srvd.Texture2D.MipLevels = 1;
+
+			checkResult(getDevice()->CreateShaderResourceView(mTexture, &srvd, &srv));
+
+			ShaderResource::addView(srv);
+			DepthStencil::addView(dsv);
+		}
 	}
 	else
 	{

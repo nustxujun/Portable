@@ -46,14 +46,15 @@ private:
 	void renderToShadowMapDir(const Matrix& lightview, const Scene::Light::Cascades& cascades, Renderer::Texture2D::Ptr tex);
 	void renderShadowDir(const Matrix& lightview, const Scene::Light::Cascades& cascades, const Vector3& dir, Renderer::Texture2D::Ptr depth, Renderer::RenderTarget::Ptr rt);
 
-	void renderToShadowMapPoint(const std::array<Matrix, 6>& lightview, const Matrix& proj, Renderer::Texture2D::Ptr tex);
-	void renderShadowPoint(const Vector3& lightpos, const Matrix& proj, Renderer::Texture2D::Ptr depth, Renderer::RenderTarget::Ptr rt);
+	void renderToShadowMapPoint(Scene::Light::Ptr light, Renderer::Texture2D::Ptr tex);
+	void renderShadowPoint(const Vector3& lightpos, Renderer::Texture2D::Ptr depth, Renderer::RenderTarget::Ptr rt);
 private:
 	int mNumLevels;
 	int mNumMaps;
 
 
 	std::map<Scene::Light::Ptr,Renderer::Texture2D::Ptr> mShadowMaps;
+	Renderer::Texture2D::Ptr mDefaultDS;
 	std::vector<Renderer::Texture2D::Ptr> mShadowTextures;
 	int mShadowMapSize = 2048;
 	Renderer::Buffer::Ptr mCastConstants;
@@ -62,12 +63,14 @@ private:
 
 	Renderer::Layout::Ptr mDepthLayout;
 	Renderer::Effect::Ptr mDepthEffect;
-	Renderer::PixelShader::Weak mReceiveShadowPS;
+	Renderer::PixelShader::Weak mReceiveShadowPS[3];
 	D3D11_DEPTH_STENCIL_DESC mDepthStencilDesc;
 	Renderer::Sampler::Ptr mShadowSampler;
 	Renderer::VertexShader::Weak mShadowVS;
 	Renderer::PixelShader::Weak mShadowPS;
-	Renderer::Rasterizer::Ptr mRasterizer;
+	Renderer::PixelShader::Weak mPointLightCast;
+	Renderer::Buffer::Ptr mPointCastPSConsts;
+	Renderer::Rasterizer::Ptr mRasterizer; 
 	Renderer::ShaderResource::Ptr mSceneDepth;
 
 	Quad mQuad;

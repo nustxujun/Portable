@@ -127,12 +127,14 @@ float3 travelLights(float roughness, float metallic,uint pointoffset, uint point
 			float4 lightpos = pointlights[index * 2]; // pos and range
 			float4 lightcolor = pointlights[index * 2 + 1]; // color and shadow index
 
+			uint shadowindex = lightcolor.w;
+			float4 shadow = shadowlist[shadowindex];
 
 			float3 L = normalize(lightpos.xyz - pos);
 
 			float dist = length(pos - lightpos.xyz);
 			float3 radiance = pointlight(dist, lightpos.w, lightcolor.rgb);
-			Lo += directBRDF(roughness, metallic, F0, albedo, N, L, V) * radiance ;
+			Lo += directBRDF(roughness, metallic, F0, albedo, N, L, V) * radiance * shadow.r;
 		}
 	}
 	{
@@ -240,13 +242,21 @@ float4 main(PS_INPUT input) : SV_TARGET
 	float3 V = normalize(campos - worldpos.xyz);
 #if POINT
 	float4 lightpos = pointlights[input.index * 2];
-	float3 lightcolor = pointlights[input.index * 2 + 1].rgb;
+	float4 lightcolor = pointlights[input.index * 2 + 1];
 
 	float3 L = normalize(lightpos.xyz - worldpos.xyz);
 	float distance = length(lightpos.xyz - worldpos.xyz);
 
-	float3 radiance = pointlight(distance, lightpos.w, lightcolor);
-	Lo += directBRDF(roughness * material.x, metallic * material.y, F0, albedo, N, L, V) * radiance;
+	float3 radiance = pointlight(distance, lightpos.w, lightcolor.rgb);
+	float4 shadowlist[NUM_SHADOWMAPS];
+	shadowlist[0] = 1.0f;
+	{
+		for (uint i = 1; i < NUM_SHADOWMAPS; ++i)
+		{
+			shadowlist[i] = shadows[i - 1].SampleLevel(sampPoint, texcoord, 0).r;
+		}
+	}
+	Lo += directBRDF(roughness * material.x, metallic * material.y, F0, albedo, N, L, V) * radiance * shadowlist[uint(lightcolor.w )];
 
 #elif SPOT
 	float4 lightpos = spotlights[input.index * 3];
