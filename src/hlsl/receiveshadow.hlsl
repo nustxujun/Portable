@@ -109,29 +109,23 @@ float4 receive_dir(float4 worldPos, float3 N, float depthlinear)
 float4 receive_point(float4 worldPos, float3 N)
 {
 	float3 lightpos = lightdir;
-	float3 uv = worldPos.xyz - lightpos;
+	float3 uv = normalize(worldPos.xyz - lightpos);
 	
-	float cmpdepth = length(uv) - depthbias * cascadeDepths[0].r;
-	//float percentlit = 0;
-	//for (int x = -2; x <= 2; ++x)
-	//{
-	//	for (int y = -2; y <= 2; ++y)
-	//	{
-	//		for (int z = -2; z <= 2; ++z)
-	//		{
-	//			percentlit += shadowmapTex.SampleCmpLevelZero(sampshadow, uv + float3(x,y,z) * scale, cmpdepth);
-	//		}
-	//	}
-	//}
+	float cmpdepth = length(worldPos.xyz - lightpos) - depthbias * cascadeDepths[0].r;
+	float percentlit = 0;
+	for (int x = -2; x <= 2; ++x)
+	{
+		for (int y = -2; y <= 2; ++y)
+		{
+			for (int z = -2; z <= 2; ++z)
+			{
+				percentlit += shadowmapTex.SampleCmpLevelZero(sampshadow, uv + float3(x,y,z) * scale, cmpdepth);
+			}
+		}
+	}
 
-	uv = normalize(uv);
-	float depth = shadowmapTex.SampleLevel(sampLinear, uv, 0).r;
-	if (cmpdepth < depth)
-		return 1;
-	else
-		return 0;
 
-	//return percentlit * 0.008f;
+	return percentlit * 0.008f;
 }
 #endif
 

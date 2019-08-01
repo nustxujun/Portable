@@ -214,7 +214,6 @@ void ShadowMap::renderToShadowMapPoint(Scene::Light::Ptr light, Renderer::Textur
 	CastConstants constant;
 
 	renderer->clearRenderTarget(tex, { cam->getFar(),0,0,0 });
-	renderer->clearDepth(mDefaultDS, 1.0f);
 
 	renderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	renderer->setDefaultBlendState();
@@ -249,6 +248,7 @@ void ShadowMap::renderToShadowMapPoint(Scene::Light::Ptr light, Renderer::Textur
 	renderer->setPSConstantBuffers({ mPointCastPSConsts });
 	for (int i = 0; i < 6; ++i)
 	{
+		renderer->clearDepth(mDefaultDS, 1.0f);
 		renderer->setRenderTarget(tex->Renderer::RenderTarget::getView(i), mDefaultDS);
 		//renderer->getContext()->OMSetRenderTargets(0, 0, tex->Renderer::DepthStencil::getView(i));
 
