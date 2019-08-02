@@ -9,10 +9,16 @@ VolumetricLighting::VolumetricLighting(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr 
 void VolumetricLighting::init()
 {
 	auto r = getRenderer();
-	auto blob = r->compileFile("hlsl/volumetriclight.hlsl", "main", "ps_5_0");
-	mPS = r->createPixelShader(blob->GetBufferPointer(), blob->GetBufferSize());
+	
 
-
+	{
+		std::vector<std::string> def = { "POINT","DIR" };
+		for (int i = 0; i < 2; ++i)
+		{
+			std::vector<D3D10_SHADER_MACRO> m = { {def[i].c_str(), "1" }, {NULL,NULL} };
+			mPS[i] = r->createPixelShader("hlsl/volumetriclight.hlsl", "main", m.data());
+		}
+	}
 	mConstants = r->createBuffer(sizeof(Constants), D3D11_BIND_CONSTANT_BUFFER);
 	mLinearClamp = r->createSampler("linear_clamp", D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
 	mSampleCmp = r->createSampler("shadow_sampler",
@@ -27,6 +33,19 @@ void VolumetricLighting::init()
 	set("vl-density", { {"type","set"}, {"value",1},{"min","0"},{"max",1},{"interval", "0.01"} });
 
 	mDownsample = ImageProcessing::create<SamplingBox>(r);
+
+	D3D11_BLEND_DESC desc = {0};
+	desc.RenderTarget[0] = {
+	FALSE,
+	D3D11_BLEND_ONE,
+	D3D11_BLEND_SRC_ALPHA,
+	D3D11_BLEND_OP_ADD,
+	D3D11_BLEND_ONE,
+	D3D11_BLEND_ONE,
+	D3D11_BLEND_OP_ADD,
+	D3D11_COLOR_WRITE_ENABLE_ALL
+	};
+	mBlend = r->createBlendState("volumetric_light", desc);
 }
 
 VolumetricLighting::~VolumetricLighting()
@@ -35,7 +54,7 @@ VolumetricLighting::~VolumetricLighting()
 
 void VolumetricLighting::render(Renderer::Texture2D::Ptr rt) 
 {
-	auto tmp = mDownsample->process(rt, 0.5f);
+	auto tmp = mDownsample->process(rt, 1.0f);
 
 
 	auto quad = getQuad();
@@ -48,7 +67,6 @@ void VolumetricLighting::render(Renderer::Texture2D::Ptr rt)
 	//quad->setBlendColorAdd();
 	quad->setRenderTarget(tmp->get());
 	quad->setConstant(mConstants);
-	quad->setPixelShader(mPS);
 	Constants c;
 	auto view = cam->getViewMatrix();
 	c.invertViewProj = (view * cam->getProjectionMatrix()).Invert().Transpose();
@@ -61,31 +79,48 @@ void VolumetricLighting::render(Renderer::Texture2D::Ptr rt)
 
 	scene->visitLights([quad, &c, this](Scene::Light::Ptr l)
 	{
-		if (l->getType() != Scene::Light::LT_DIR)
-			return;
+		auto type = l->getType();
+		quad->setPixelShader(mPS[type]);
+		auto shadowmap = getShaderResource(Common::format(&(*l), "_shadowmap"));
+		quad->setTextures({ getShaderResource("depth") ,  shadowmap});
 
-		quad->setTextures({ getShaderResource("depth") , getShaderResource(Common::format(&(*l),"_shadowmap"))});
-
-		c.lightView = l->getViewMatrix().Transpose();
-		auto cascades = l->fitToScene(getCamera());
-		float* f = (float*)&c.cascadeDepths;
-		for (int i = 0; i < cascades.size(); ++i)
+		switch (type)
 		{
-			c.lightProjs[i] = cascades[i].proj.Transpose();
-			*(f++) = cascades[i].range.y;
+		case Scene::Light::LT_DIR:
+			{
+				c.lightView = l->getViewMatrix().Transpose();
+				auto cascades = l->fitToScene(getCamera()); 
+					float* f = (float*)&c.cascadeDepths;
+				for (int i = 0; i < cascades.size(); ++i)
+				{
+					c.lightProjs[i] = cascades[i].proj.Transpose();
+					*(f++) = cascades[i].range.y;
+				}
+				c.numcascades = cascades.size();
+
+				c.lightdir = l->getDirection();
+
+			}
+			break;
+		case Scene::Light::LT_POINT:
+			{
+				c.numcascades = l->getShadowMapSize();
+				c.lightdir = l->getNode()->getRealPosition();
+				c.cascadeDepths[0].x = getCamera()->getFar();
+			}
+			break;
 		}
-		c.numcascades = cascades.size();
-		
+
+
 		c.lightcolor = l->getColor();
 		c.lightcolor *= getValue<float>("dirradiance");
-		c.lightdir = l->getDirection();
 		mConstants->blit(c);
 
 		quad->draw();
 	});
 
-
-	quad->setBlendColorAdd();
+	//quad->setBlendColorAdd();
+	quad->setBlend(mBlend);
 	quad->setRenderTarget(rt);
 	quad->setDefaultViewport();
 	quad->setDefaultPixelShader();
@@ -94,42 +129,42 @@ void VolumetricLighting::render(Renderer::Texture2D::Ptr rt)
 }
 void VolumetricLighting::renderBlur(Renderer::Texture2D::Ptr rt)
 {
-	auto w = getRenderer()->getWidth();
-	auto h = getRenderer()->getHeight();
-	auto cam = getCamera();
-	auto view = cam->getViewMatrix();
-	auto proj = cam->getProjectionMatrix();
-	Vector3 lightdir = -getScene()->createOrGetLight("main")->getDirection();
-	Vector4 ld = { lightdir.x, lightdir.y, lightdir.z, 0 };
+	//auto w = getRenderer()->getWidth();
+	//auto h = getRenderer()->getHeight();
+	//auto cam = getCamera();
+	//auto view = cam->getViewMatrix();
+	//auto proj = cam->getProjectionMatrix();
+	//Vector3 lightdir = -getScene()->createOrGetLight("main")->getDirection();
+	//Vector4 ld = { lightdir.x, lightdir.y, lightdir.z, 0 };
 
-	ld = Vector4::Transform(Vector4::Transform(ld, view), proj);
-
-
-
-	Vector4 size = { (float)w,(float)h , ld.x, ld.y};
-	mConstants.lock()->blit(&size, sizeof(size));
+	//ld = Vector4::Transform(Vector4::Transform(ld, view), proj);
 
 
-	//mBlur->getRenderTarget().lock()->clear({ 1,1,1,1 });
-	getRenderer()->clearRenderTarget(mBlur, { 1,1,1,1 });
 
-	mQuad.setSamplers({ mLinearClamp });
-	mQuad.setDefaultViewport();
-	mQuad.setDefaultBlend(false);
-	mQuad.setConstant(mConstants);
+	//Vector4 size = { (float)w,(float)h , ld.x, ld.y};
+	//mConstants.lock()->blit(&size, sizeof(size));
 
-	mQuad.setPixelShader(mColorFilter);
-	mQuad.setTextures({ rt });
-	mQuad.setRenderTarget(mBlur);
-	mQuad.draw();
 
-	mQuad.setBlendColorAdd();
+	////mBlur->getRenderTarget().lock()->clear({ 1,1,1,1 });
+	//getRenderer()->clearRenderTarget(mBlur, { 1,1,1,1 });
 
-	mQuad.setPixelShader(mPS);
-	mQuad.setTextures({ mBlur });
-	mQuad.setRenderTarget(rt);
+	//mQuad.setSamplers({ mLinearClamp });
+	//mQuad.setDefaultViewport();
+	//mQuad.setDefaultBlend(false);
+	//mQuad.setConstant(mConstants);
 
-	mQuad.draw();
+	//mQuad.setPixelShader(mColorFilter);
+	//mQuad.setTextures({ rt });
+	//mQuad.setRenderTarget(mBlur);
+	//mQuad.draw();
 
-	getRenderer()->removeShaderResourceViews();
+	//mQuad.setBlendColorAdd();
+
+	//mQuad.setPixelShader(mPS);
+	//mQuad.setTextures({ mBlur });
+	//mQuad.setRenderTarget(rt);
+
+	//mQuad.draw();
+
+	//getRenderer()->removeShaderResourceViews();
 }

@@ -361,6 +361,8 @@ void ShadowMap::render(Renderer::Texture2D::Ptr rt)
 			break;
 		case Scene::Light::LT_POINT:
 			{
+				l->setShadowMapParameters(mShadowMapSize);
+
 				renderToShadowMapPoint(l, sm->second);
 				renderShadowPoint(l->getNode()->getRealPosition(), sm->second, mShadowTextures[i]);
 			}

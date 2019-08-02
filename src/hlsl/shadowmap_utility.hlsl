@@ -1,4 +1,4 @@
-struct ShadowMapParams
+struct DirShadowMapParams
 {
 	matrix lightview;
 	matrix lightProjs[8];
@@ -13,7 +13,7 @@ struct ShadowMapParams
 };
 
 
-float getShadow(ShadowMapParams params, out int index)
+float getDirShadow(DirShadowMapParams params)
 {
 	int numcascades = params.numcascades;
 	float depthbias = params.depthbias;
@@ -49,9 +49,46 @@ float getShadow(ShadowMapParams params, out int index)
 				percentlit += shadowmapTex.SampleCmpLevelZero(samp, uv, cmpdepth, int2(x, y));
 			}
 		}
-		index = i;
 		return  percentlit * 0.04f ;
 	}
 
 	return 1;
+}
+
+struct PointShadowMapParams
+{
+	float3 worldpos;
+	float farZ;
+	float3 lightpos;
+	float depthbias;
+	float scale;
+	TextureCube shadowmap;
+	SamplerComparisonState samp;
+};
+
+float getPointShadow(PointShadowMapParams params)
+{
+	float3 worldpos = params.worldpos;
+	float farZ = params.farZ;
+	float3 lightpos = params.lightpos;
+	float depthbias = params.depthbias;
+	TextureCube shadowmapTex = params.shadowmap;
+	SamplerComparisonState samp = params.samp;
+	float scale = params.scale;
+
+	float3 uv = normalize(worldpos.xyz - lightpos);
+
+	float cmpdepth = length(worldpos.xyz - lightpos) - depthbias * farZ;
+	float percentlit = 0;
+	for (int x = -2; x <= 2; ++x)
+	{
+		for (int y = -2; y <= 2; ++y)
+		{
+			for (int z = -2; z <= 2; ++z)
+			{
+				percentlit += shadowmapTex.SampleCmpLevelZero(samp, uv + float3(x, y, z) * scale, cmpdepth);
+			}
+		}
+	}
+	return percentlit * 0.008f;
 }

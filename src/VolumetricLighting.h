@@ -30,7 +30,7 @@ public:
 private:
 	void renderBlur(Renderer::Texture2D::Ptr rt);
 private:
-	Renderer::PixelShader::Weak mPS;
+	Renderer::PixelShader::Weak mPS[3];
 	Renderer::PixelShader::Weak mColorFilter;
 
 	Renderer::Texture2D::Ptr mBlur;
@@ -39,5 +39,6 @@ private:
 	Renderer::Sampler::Ptr mLinearClamp;
 	Renderer::Sampler::Ptr mSampleCmp ;
 	ImageProcessing::Ptr mDownsample;
+	Renderer::BlendState::Weak mBlend;
 	
 };

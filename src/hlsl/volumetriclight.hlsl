@@ -2,7 +2,13 @@
 #include "shadowmap_utility.hlsl"
 
 Texture2D depthTex: register(t0);
-Texture2D shadowmap:register(t1);
+
+#if DIR
+Texture2D
+#elif POINT
+TextureCube
+#endif
+shadowmap:register(t1);
 
 
 SamplerState samp : register(s0);
@@ -53,20 +59,18 @@ float4 raymarch(float3 start, float3 end)
 {
 	float4 color = float4(0,0,0,1);
 	float3 dir = normalize(end - start);
-	float cosAngle = dot(lightdir, -dir);
 	float len = length(end - start);
 	float rate = len / maxlength * density;
 	float step = len / (float)(numsamples + 1 );
 
-	ShadowMapParams smp;
+#if DIR
+	float cosAngle = dot(lightdir, -dir);
+	float mie = MieScattering(cosAngle);
+
+	DirShadowMapParams smp;
 	smp.lightview = lightView;
-	//smp.lightProjs = lightProjs;
-	{
-		for (int i = 0; i < numcascades; ++i)
-		{
-			smp.lightProjs[i] = lightProjs[i];
-		}
-	}
+	smp.lightProjs = lightProjs;
+
 	{
 		smp.cascadedepths[0] = cascadeDepths[0].r;
 		smp.cascadedepths[1] = cascadeDepths[0].g;
@@ -86,16 +90,39 @@ float4 raymarch(float3 start, float3 end)
 	// using the last cascade
 	smp.startcascade = numcascades - 1;
 
+#elif POINT
+	float cosAngle = dot(lightdir, -dir);
+
+
+	PointShadowMapParams smp ;
+	smp.depthbias = 0.001f;
+	smp.lightpos = lightdir;
+	smp.farZ = cascadeDepths[0].r;
+	smp.shadowmap = shadowmap;
+	smp.samp = smpcmp;
+	smp.scale = 1.0f / (float)numcascades;
+#endif
+
+
 	for (int i = 1; i <= numsamples; ++i)
 	{
 		float3 cur = start + dir * step * i;
-		float atten = MieScattering(cosAngle);
+
+
 		
 		smp.worldpos = cur;
-		smp.depth_viewspace = mul(float4(cur,1), view).z;
+#if DIR
+		float atten = mie;
 
-		int index = 0;
-		atten *= getShadow(smp, index);
+		smp.depth_viewspace = mul(float4(cur,1), view).z;
+		atten *= getDirShadow(smp);
+#elif POINT
+		float cosAngle = dot(normalize(cur - lightdir.xyz), -dir);
+		float atten = MieScattering(cosAngle);
+
+
+		atten *= getPointShadow(smp);
+#endif
 		color = scatter(color.rgb, color.a, atten, rate);
 
 	}

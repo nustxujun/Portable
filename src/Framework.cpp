@@ -111,7 +111,7 @@ void Framework::initPipeline()
 	//mPipeline->pushStage<Voxelize>(256);
 	//mPipeline->pushStage<AO>(3.0f);
 	mPipeline->pushStage<SkyBox>("media/black.png", false);
-	//mPipeline->pushStage<VolumetricLighting>();
+	mPipeline->pushStage<VolumetricLighting>();
 	//mPipeline->pushStage<MotionBlur>();
 	//mPipeline->pushStage<HDR>();
 
@@ -128,8 +128,8 @@ void Framework::initPipeline()
 void Framework::initScene()
 {
 
-	int numdirs = 0;
-	int numpoints = 1;
+	int numdirs = 1;
+	int numpoints =0;
 
 	set("time", { {"value", 3.14f}, {"min", "1.57"}, {"max", "4.71"}, {"interval", "0.001"}, {"type","set"} });
 	set("numdirs", { {"value", numdirs}, {"min", 0}, {"max", numdirs}, {"interval", 1}, {"type","set"} });
@@ -148,7 +148,7 @@ void Framework::initScene()
 				"media/rustediron/rustediron2_metallic.png",
 		};
 		Parameters params;
-		params["geom"] = "plane";
+		params["geom"] = "room";
 		params["size"] = "50";
 		auto model = mScene->createModel("plane", params, [this](const Parameters& p)
 		{
@@ -156,6 +156,8 @@ void Framework::initScene()
 		});
 		model->setCastShadow(true);
 		model->attach(root);
+		model->getMesh()->getMesh(0).material->diffuse = { 0,0,0 };
+		model->getMesh()->getMesh(0).material->metallic = 1;
 		//Material::Ptr mat = Material::create();
 		//for (int i = 0; i < textures.size(); ++i)
 		//	if (!textures[i].empty())
@@ -229,10 +231,10 @@ void Framework::initScene()
 
 
 	auto light = mScene->createOrGetLight("main");
-	//light->setDirection({0,-1,0.4 });
+	light->setDirection({0,-1,0.4 });
 	light->setCastingShadow(true);
-	light->setType(Scene::Light::LT_POINT);
-	light->getNode()->setPosition(0, 10, 0);
+	//light->setType(Scene::Light::LT_POINT);
+	//light->getNode()->setPosition(0, 10, 0);
 
 	auto probe = mScene->createProbe("main");
 	probe->setProxyBox(vec);
