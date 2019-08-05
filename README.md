@@ -18,6 +18,7 @@ a collections of rendering techniques based on d3d11 for study
 - [x] Irradiance volumes 
 - [x] TAA
 - [x] Separable subsurface scattering
+- [x] Volumetric light
 
 
 PBR 
