@@ -28,9 +28,9 @@ void VolumetricLighting::init()
 		D3D11_TEXTURE_ADDRESS_BORDER,
 		D3D11_COMPARISON_LESS_EQUAL,
 		0, 0);
-	set("vl-numsamples", { {"type","set"}, {"value",32},{"min","0"},{"max",1024},{"interval", "1"} });
-	set("vl-g", { {"type","set"}, {"value",0.5},{"min","0"},{"max",1},{"interval", "0.01"} });
-	set("vl-density", { {"type","set"}, {"value",0.002},{"min","0"},{"max","0.1"},{"interval", "0.0001"} });
+	set("vl-numsamples", { {"type","set"}, {"value",64},{"min","0"},{"max",1024},{"interval", "1"} });
+	set("vl-jitter", { {"type","set"}, {"value",1},{"min","0"},{"max",1},{"interval", "0.01"} });
+	set("vl-density", { {"type","set"}, {"value",0.02},{"min","0"},{"max","0.1"},{"interval", "0.0001"} });
 
 	mDownsample = ImageProcessing::create<SamplingBox>(r);
 	mGauss = ImageProcessing::create<Gaussian>(r);
@@ -76,7 +76,7 @@ void VolumetricLighting::render(Renderer::Texture2D::Ptr rt)
 	c.view = view.Transpose();
 	c.campos = cam->getNode()->getRealPosition();
 	c.numsamples = getValue<int>("vl-numsamples");
-	c.G = getValue<float>("vl-g");
+	c.jitter = getValue<float>("vl-jitter");
 	c.maxlength = cam->getFar();
 	c.density = getValue<float>("vl-density");
 	c.screenSize = {(float) rt->getDesc().Width,(float)rt->getDesc().Height };
@@ -88,11 +88,14 @@ void VolumetricLighting::render(Renderer::Texture2D::Ptr rt)
 		quad->setPixelShader(mPS[type]);
 		auto shadowmap = getShaderResource(Common::format(&(*l), "_shadowmap"));
 		quad->setTextures({ getShaderResource("depth") ,  shadowmap, mNoise});
+		c.lightcolor = l->getColor();
 
 		switch (type)
 		{
 		case Scene::Light::LT_DIR:
 			{
+				c.lightcolor *= getValue<float>("dirradiance");
+
 				c.lightView = l->getViewMatrix().Transpose();
 				auto cascades = l->fitToScene(getCamera()); 
 					float* f = (float*)&c.cascadeDepths;
@@ -109,6 +112,8 @@ void VolumetricLighting::render(Renderer::Texture2D::Ptr rt)
 			break;
 		case Scene::Light::LT_POINT:
 			{
+				c.lightcolor *= getValue<float>("pointradiance");
+
 				c.numcascades = l->getShadowMapSize();
 				c.lightdir = l->getNode()->getRealPosition();
 				c.cascadeDepths[0].x = getCamera()->getFar();
@@ -117,8 +122,6 @@ void VolumetricLighting::render(Renderer::Texture2D::Ptr rt)
 		}
 
 
-		c.lightcolor = l->getColor();
-		c.lightcolor *= getValue<float>("dirradiance");
 		mConstants->blit(c);
 
 		quad->draw();

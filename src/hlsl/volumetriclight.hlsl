@@ -29,7 +29,7 @@ cbuffer ConstantBuffer: register(b0)
 	float3 campos;
 	int numsamples;
 	float3 lightcolor;
-	float G;
+	float jittervalue;
 	float3 lightdir;
 	float maxlength;
 	float density;
@@ -42,23 +42,6 @@ struct PS_INPUT
 	float4 Pos : SV_POSITION;
 	float2 Tex: TEXCOORD0;
 };
-
-float MieScattering(float cosAngle)
-{
-	float GG = G * G;
-	return (1  / (4 * PI)) *((1 - GG) / pow(1 + GG - 2 * G * cosAngle, 1.5));
-}
-
-float4 scatter(float3 accColor, float accTrans, float atten, float density)
-{
-	density = max(density, 0.0001f);
-	float transmittance = exp(-density / numsamples);
-
-	float3 lightintegral = atten * (1 - transmittance) / density;
-	accColor += lightintegral * accTrans;
-	accTrans *= transmittance;
-	return float4(accColor, accTrans);
-}
 
 
 float volumetricShadow(float3 pos)
@@ -112,7 +95,7 @@ float3 evaluateLight(float3 pos)
 #elif POINT
 	float3 L = normalize(lightdir.xyz - pos);
 #endif
-	return lightcolor * 1.0 / dot(L, L);
+	return lightcolor   * 1.0 / dot(L, L);
 }
 
 
@@ -163,7 +146,7 @@ float4 main(PS_INPUT input) : SV_TARGET
 
 	int2 noiseuv = uint2((uv)* screenSize) % uint2(noiseSize);
 	float2 Xi = noiseTex.Load(int3(noiseuv, 0)).rg;
-	Xi *= G;
+	Xi *= jittervalue;
 
 
 	float4 color = raymarch(campos, worldpos, (Xi.x + Xi.y) * 0.5f);

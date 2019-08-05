@@ -113,7 +113,7 @@ void Framework::initPipeline()
 	mPipeline->pushStage<SkyBox>("media/black.png", false);
 	mPipeline->pushStage<VolumetricLighting>();
 	//mPipeline->pushStage<MotionBlur>();
-	mPipeline->pushStage<HDR>();
+	//mPipeline->pushStage<HDR>();
 
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 	mPipeline->pushStage<TAA>();

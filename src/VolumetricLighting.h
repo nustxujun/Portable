@@ -16,7 +16,7 @@ class VolumetricLighting:public Pipeline::Stage
 		Vector3 campos;
 		int numsamples;
 		Vector3 lightcolor;
-		float G;
+		float jitter;
 		Vector3 lightdir;
 		float maxlength;
 		float density;
