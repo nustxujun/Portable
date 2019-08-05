@@ -20,6 +20,8 @@ class VolumetricLighting:public Pipeline::Stage
 		Vector3 lightdir;
 		float maxlength;
 		float density;
+		Vector2 noiseSize;
+		Vector2 screenSize;
 	};
 public:
 	VolumetricLighting(Renderer::Ptr r, Scene::Ptr s,Quad::Ptr q, Setting::Ptr set, Pipeline* p);
@@ -39,6 +41,7 @@ private:
 	Renderer::Sampler::Ptr mLinearClamp;
 	Renderer::Sampler::Ptr mSampleCmp ;
 	ImageProcessing::Ptr mDownsample;
+	ImageProcessing::Ptr mGauss;
 	Renderer::BlendState::Weak mBlend;
-	
+	Renderer::Texture2D::Ptr mNoise;
 };

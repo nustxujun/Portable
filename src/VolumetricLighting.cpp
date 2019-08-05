@@ -28,15 +28,16 @@ void VolumetricLighting::init()
 		D3D11_TEXTURE_ADDRESS_BORDER,
 		D3D11_COMPARISON_LESS_EQUAL,
 		0, 0);
-	set("vl-numsamples", { {"type","set"}, {"value",2},{"min","0"},{"max",1024},{"interval", "1"} });
+	set("vl-numsamples", { {"type","set"}, {"value",32},{"min","0"},{"max",1024},{"interval", "1"} });
 	set("vl-g", { {"type","set"}, {"value",0.5},{"min","0"},{"max",1},{"interval", "0.01"} });
-	set("vl-density", { {"type","set"}, {"value",1},{"min","0"},{"max",1},{"interval", "0.01"} });
+	set("vl-density", { {"type","set"}, {"value",0.002},{"min","0"},{"max","0.1"},{"interval", "0.0001"} });
 
 	mDownsample = ImageProcessing::create<SamplingBox>(r);
+	mGauss = ImageProcessing::create<Gaussian>(r);
 
 	D3D11_BLEND_DESC desc = {0};
 	desc.RenderTarget[0] = {
-	FALSE,
+	TRUE,
 	D3D11_BLEND_ONE,
 	D3D11_BLEND_SRC_ALPHA,
 	D3D11_BLEND_OP_ADD,
@@ -46,6 +47,8 @@ void VolumetricLighting::init()
 	D3D11_COLOR_WRITE_ENABLE_ALL
 	};
 	mBlend = r->createBlendState("volumetric_light", desc);
+
+	mNoise = r->createTexture("media/BlueNoise.tga", 1);
 }
 
 VolumetricLighting::~VolumetricLighting()
@@ -54,7 +57,7 @@ VolumetricLighting::~VolumetricLighting()
 
 void VolumetricLighting::render(Renderer::Texture2D::Ptr rt) 
 {
-	auto tmp = mDownsample->process(rt, 1.0f);
+	auto tmp = mDownsample->process(rt, 0.5f);
 
 
 	auto quad = getQuad();
@@ -76,13 +79,15 @@ void VolumetricLighting::render(Renderer::Texture2D::Ptr rt)
 	c.G = getValue<float>("vl-g");
 	c.maxlength = cam->getFar();
 	c.density = getValue<float>("vl-density");
+	c.screenSize = {(float) rt->getDesc().Width,(float)rt->getDesc().Height };
+	c.noiseSize = { (float)mNoise->getDesc().Width,(float)mNoise->getDesc().Height };
 
 	scene->visitLights([quad, &c, this](Scene::Light::Ptr l)
 	{
 		auto type = l->getType();
 		quad->setPixelShader(mPS[type]);
 		auto shadowmap = getShaderResource(Common::format(&(*l), "_shadowmap"));
-		quad->setTextures({ getShaderResource("depth") ,  shadowmap});
+		quad->setTextures({ getShaderResource("depth") ,  shadowmap, mNoise});
 
 		switch (type)
 		{
@@ -119,12 +124,14 @@ void VolumetricLighting::render(Renderer::Texture2D::Ptr rt)
 		quad->draw();
 	});
 
-	//quad->setBlendColorAdd();
+
+	auto ret = mGauss->process(tmp->get());
+
 	quad->setBlend(mBlend);
 	quad->setRenderTarget(rt);
 	quad->setDefaultViewport();
 	quad->setDefaultPixelShader();
-	quad->setTextures({ tmp->get() });
+	quad->setTextures({ ret->get() });
 	quad->draw();
 }
 void VolumetricLighting::renderBlur(Renderer::Texture2D::Ptr rt)

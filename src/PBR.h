@@ -62,4 +62,5 @@ private:
 	Renderer::Buffer::Ptr mLightVolumeConstants;
 
 	Vector3 mCluster;
+	int mNumLights[3] = {0};
 };

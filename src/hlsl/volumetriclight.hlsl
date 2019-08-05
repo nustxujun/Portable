@@ -10,6 +10,9 @@ TextureCube
 #endif
 shadowmap:register(t1);
 
+Texture2D noiseTex: register(t2);
+
+
 
 SamplerState samp : register(s0);
 SamplerComparisonState smpcmp:register(s1);
@@ -30,6 +33,8 @@ cbuffer ConstantBuffer: register(b0)
 	float3 lightdir;
 	float maxlength;
 	float density;
+	float2 noiseSize;
+	float2 screenSize;
 }
 
 struct PS_INPUT
@@ -100,52 +105,54 @@ float volumetricShadow(float3 pos)
 #endif
 }
 
-
-float4 raymarch(float3 start, float3 end)
+float3 evaluateLight(float3 pos)
 {
-	float4 color = float4(0,0,0,1);
+#if DIR
+	float3 L = -lightdir.xyz;
+#elif POINT
+	float3 L = normalize(lightdir.xyz - pos);
+#endif
+	return lightcolor * 1.0 / dot(L, L);
+}
+
+
+float4 raymarch(float3 start, float3 end, float jitter)
+{
 	float3 dir = normalize(end - start);
 	float len = length(end - start);
-	float rate = len / maxlength * density;
 	float step = maxlength / (float)(numsamples + 1 );
 
-#if DIR
-	float cosAngle = dot(lightdir, -dir);
-	float mie = MieScattering(cosAngle);
+	float sigmaS = density;
+	float sigmaE = max(0.000001f, sigmaS);
 
-#elif POINT
+	float d = step * (1 + jitter);
+	float dd = 0;
 
+	float3 scatteredLight = 0;
+	float transmittance = 1.0;
+	const float phaseFunction = (1.0f / (4.0f * 3.14159265358f));
 
-#endif
-
-	for (int i = 1; i <= numsamples; ++i)
+	for (int i = 0; i < numsamples; ++i)
 	{
-		float3 cur = start + (dir * step *  i);
+		float3 p = start + dir * d;
 
-		if (length(cur - start) > len)
+		float3 S = evaluateLight(p) * sigmaS * phaseFunction * volumetricShadow(p);
+		float3 Sint = (S - S * exp(-sigmaE * dd)) / sigmaE;
+
+		scatteredLight += transmittance * Sint;
+		transmittance *= exp(-sigmaE * dd);
+
+		if (d >= len)
 			break;
-		
-#if DIR
-		float atten = mie;
-		atten *= volumetricShadow(cur);
-#elif POINT
-		float cosAngle = dot(normalize(cur - lightdir.xyz), -dir);
-		float atten = MieScattering(cosAngle);
 
 
-		atten *= volumetricShadow(cur);
-#endif
-		color = scatter(color.rgb, color.a, atten, rate);
-
-
+		dd = step;
+		d += dd;
 	}
 
-	color.rgb *= lightcolor;
-	color.a = saturate(color.a);
 
 
-
-	return color;
+	return float4(scatteredLight, transmittance);
 }
 
 float4 main(PS_INPUT input) : SV_TARGET
@@ -154,8 +161,12 @@ float4 main(PS_INPUT input) : SV_TARGET
 	float depth = depthTex.SampleLevel(samp, uv, 0).r;
 	float3 worldpos = getWorldPos(uv, depth, invertViewProj);
 
-	float4 color = raymarch(campos, worldpos);
+	int2 noiseuv = uint2((uv)* screenSize) % uint2(noiseSize);
+	float2 Xi = noiseTex.Load(int3(noiseuv, 0)).rg;
+	Xi *= G;
 
+
+	float4 color = raymarch(campos, worldpos, (Xi.x + Xi.y) * 0.5f);
 	return color;
 }
 

@@ -171,6 +171,9 @@ void PBR::updateLights()
 			shadowindices[&(*l)] = index++;
 	});
 
+	for (int i = 0; i < 3; ++i)
+		mNumLights[i] = lights[i].size();
+
 	std::vector<Renderer::Buffer::Ptr> lightbuffers = 
 	{
 		getBuffer("pointlights"),
@@ -270,7 +273,7 @@ void PBR::renderNormal(Renderer::Texture2D::Ptr rt)
 	constants.nearZ = cam->getNear();
 	constants.farZ = cam->getFar();
 	constants.clustersize = mCluster;
-	constants.numdirs = getValue<int>("numdirs");
+	constants.numdirs = mNumLights[Scene::Light::LT_DIR];
 	constants.ambient = getValue<float>("ambient");
 	constants.campos = cam->getNode()->getRealPosition();
 
@@ -385,7 +388,7 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 	constants.height = vp.Height;
 	constants.campos = cam->getNode()->getRealPosition();
 	constants.ambient = getValue<float>("ambient");
-	constants.numdirs = getValue<int>("numdirs");
+	constants.numdirs = mNumLights[Scene::Light::LT_DIR];
 	
 	auto aabb = getScene()->getRoot()->getWorldAABB();
 
@@ -393,7 +396,7 @@ void PBR::renderLightVolumes(Renderer::Texture2D::Ptr rt)
 	renderer->setPSConstantBuffers({ mConstants });
 
 	// point
-	int pointcount= getValue<int>("numpoints");
+	int pointcount= mNumLights[Scene::Light::LT_POINT];
 	if (pointcount > 0)
 	{
 		auto srv = getShaderResource("pointlights")->getView();
