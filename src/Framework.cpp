@@ -113,7 +113,7 @@ void Framework::initPipeline()
 	mPipeline->pushStage<SkyBox>("media/black.png", false);
 	mPipeline->pushStage<VolumetricLighting>();
 	//mPipeline->pushStage<MotionBlur>();
-	//mPipeline->pushStage<HDR>();
+	mPipeline->pushStage<HDR>();
 
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 	mPipeline->pushStage<TAA>();
@@ -128,8 +128,8 @@ void Framework::initPipeline()
 void Framework::initScene()
 {
 
-	int numdirs = 0;
-	int numpoints =1;
+	int numdirs = 1;
+	int numpoints =0;
 
 	set("time", { {"value", 3.14f}, {"min", "1.57"}, {"max", "4.71"}, {"interval", "0.001"}, {"type","set"} });
 	set("numdirs", { {"value", numdirs}, {"min", 0}, {"max", numdirs}, {"interval", 1}, {"type","set"} });
@@ -221,8 +221,10 @@ void Framework::initScene()
 	auto cam = mScene->createOrGetCamera("main");
 	DirectX::XMFLOAT3 eye(aabb.second);
 	DirectX::XMFLOAT3 at(aabb.first);
-	cam->lookat(eye, at);
+	//cam->lookat(eye, at);
 	//cam->lookat({ 10,10,0 }, { 10,0,0 });
+	cam->getNode()->setPosition((aabb.first + aabb.second) * 0.5f);
+	cam->setDirection({ 0,0,1 });
 	cam->setViewport(0, 0, mRenderer->getWidth(), mRenderer->getHeight());
 	cam->setNearFar(vec.Length() * 0.01f, vec.Length() + 1);
 	cam->setFOVy(0.785398185);
@@ -231,8 +233,8 @@ void Framework::initScene()
 	auto light = mScene->createOrGetLight("main");
 	light->setDirection({0,-1,0.4 });
 	light->setCastingShadow(true);
-	light->setType(Scene::Light::LT_POINT);
-	light->getNode()->setPosition((aabb.first + aabb.second) * 0.5f);
+	//light->setType(Scene::Light::LT_POINT);
+	//light->getNode()->setPosition((aabb.first + aabb.second) * 0.5f);
 
 	auto probe = mScene->createProbe("main");
 	probe->setProxyBox(vec);

@@ -14,24 +14,24 @@ const static float weight[5] = { 0.2270270270, 0.1945945946, 0.1216216216, 0.054
 float4 main(PS_INPUT input) : SV_TARGET
 {
 	float2 coords = input.Tex;
-	float3 result = frameTex.Sample(smp, coords).rgb * weight[0];
+	float4 result = frameTex.Sample(smp, coords) * weight[0];
 
 #if (HORIZONTAL)
 	{
 		for (int i = 1; i < 5; ++i)
 		{
-			result += frameTex.Sample(smp, coords, int2(i, 0)).rgb * weight[i];
-			result += frameTex.Sample(smp, coords, int2(-i, 0)).rgb * weight[i];
+			result += frameTex.Sample(smp, coords, int2(i, 0)) * weight[i];
+			result += frameTex.Sample(smp, coords, int2(-i, 0)) * weight[i];
 		}
 	}
 #else
 	{
 		for (int i = 1; i < 5; ++i)
 		{
-			result += frameTex.Sample(smp, coords, int2(0, i)).rgb * weight[i];
-			result += frameTex.Sample(smp, coords, int2(0, -i)).rgb * weight[i];
+			result += frameTex.Sample(smp, coords, int2(0, i)) * weight[i];
+			result += frameTex.Sample(smp, coords, int2(0, -i)) * weight[i];
 		}
 	}
 #endif
-	return float4(result, 1);
+	return result;
 }
