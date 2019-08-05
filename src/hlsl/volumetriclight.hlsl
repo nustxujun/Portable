@@ -55,17 +55,11 @@ float4 scatter(float3 accColor, float accTrans, float atten, float density)
 	return float4(accColor, accTrans);
 }
 
-float4 raymarch(float3 start, float3 end)
-{
-	float4 color = float4(0,0,0,1);
-	float3 dir = normalize(end - start);
-	float len = length(end - start);
-	float rate = len / maxlength * density;
-	float step = len / (float)(numsamples + 1 );
 
+float volumetricShadow(float3 pos)
+{
 #if DIR
-	float cosAngle = dot(lightdir, -dir);
-	float mie = MieScattering(cosAngle);
+
 
 	DirShadowMapParams smp;
 	smp.lightview = lightView;
@@ -89,46 +83,67 @@ float4 raymarch(float3 start, float3 end)
 	// it will cross the mip border which i cannot reslove now
 	// using the last cascade
 	smp.startcascade = numcascades - 1;
+	smp.worldpos = pos;
+	smp.depth_viewspace = mul(float4(pos, 1), view).z;
 
+	return getDirShadow(smp);
 #elif POINT
-	float cosAngle = dot(lightdir, -dir);
-
-
-	PointShadowMapParams smp ;
+	PointShadowMapParams smp;
 	smp.depthbias = 0.001f;
 	smp.lightpos = lightdir;
 	smp.farZ = cascadeDepths[0].r;
 	smp.shadowmap = shadowmap;
 	smp.samp = smpcmp;
 	smp.scale = 1.0f / (float)numcascades;
+	smp.worldpos = pos;
+	return getPointShadow(smp);
 #endif
+}
 
+
+float4 raymarch(float3 start, float3 end)
+{
+	float4 color = float4(0,0,0,1);
+	float3 dir = normalize(end - start);
+	float len = length(end - start);
+	float rate = len / maxlength * density;
+	float step = maxlength / (float)(numsamples + 1 );
+
+#if DIR
+	float cosAngle = dot(lightdir, -dir);
+	float mie = MieScattering(cosAngle);
+
+#elif POINT
+
+
+#endif
 
 	for (int i = 1; i <= numsamples; ++i)
 	{
-		float3 cur = start + dir * step * i;
+		float3 cur = start + (dir * step *  i);
 
-
+		if (length(cur - start) > len)
+			break;
 		
-		smp.worldpos = cur;
 #if DIR
 		float atten = mie;
-
-		smp.depth_viewspace = mul(float4(cur,1), view).z;
-		atten *= getDirShadow(smp);
+		atten *= volumetricShadow(cur);
 #elif POINT
 		float cosAngle = dot(normalize(cur - lightdir.xyz), -dir);
 		float atten = MieScattering(cosAngle);
 
 
-		atten *= getPointShadow(smp);
+		atten *= volumetricShadow(cur);
 #endif
 		color = scatter(color.rgb, color.a, atten, rate);
+
 
 	}
 
 	color.rgb *= lightcolor;
 	color.a = saturate(color.a);
+
+
 
 	return color;
 }

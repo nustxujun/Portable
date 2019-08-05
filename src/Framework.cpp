@@ -148,7 +148,7 @@ void Framework::initScene()
 				"media/rustediron/rustediron2_metallic.png",
 		};
 		Parameters params;
-		params["geom"] = "room";
+		params["geom"] = "plane";
 		params["size"] = "50";
 		auto model = mScene->createModel("plane", params, [this](const Parameters& p)
 		{
