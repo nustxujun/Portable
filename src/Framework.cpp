@@ -108,7 +108,7 @@ void Framework::initPipeline()
 	mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
 	//mPipeline->pushStage<EnvironmentMapping>(EnvironmentMapping::T_ONCE, std::string("media/Alexs_Apt_2k.hdr"));
 	//mPipeline->pushStage<SSR>();
-	mPipeline->pushStage<Voxelize>(256);
+	//mPipeline->pushStage<Voxelize>(256);
 	//mPipeline->pushStage<AO>(3.0f);
 	mPipeline->pushStage<SkyBox>("media/black.png", false);
 	mPipeline->pushStage<VolumetricLighting>();

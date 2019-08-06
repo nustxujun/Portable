@@ -21,7 +21,7 @@ struct PS_INPUT
 };
 
 
-PS_INPUT main(VS_INPUT input)
+PS_INPUT vs(VS_INPUT input)
 {
 	PS_INPUT output = (PS_INPUT)0;
 	output.Pos = float4(input.Pos.xyz, 1.0f);
@@ -31,4 +31,33 @@ PS_INPUT main(VS_INPUT input)
 	output.Pos = mul(output.Pos, Projection);
 
 	return output;
+}
+
+cbuffer ConstantBuffer: register(b1)
+{
+	float C;
+}
+
+float4 exp(PS_INPUT input):SV_TARGET
+{
+	return exp(10 * -input.DepthLinear);
+}
+
+
+technique11 DirectionalLight
+{
+	pass
+	{
+		SetVertexShader(CompileShader(vs_5_0, vs()));
+		SetPixelShader(NULL);
+	}
+}
+
+technique11 DirectionalLightExp
+{
+	pass
+	{
+		SetVertexShader(CompileShader(vs_5_0, vs()));
+		SetPixelShader(CompileShader(ps_5_0, exp()));
+	}
 }

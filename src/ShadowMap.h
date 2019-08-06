@@ -49,6 +49,7 @@ private:
 	void renderToShadowMapPoint(Scene::Light::Ptr light, Renderer::Texture2D::Ptr tex);
 	void renderShadowPoint(const Vector3& lightpos, Renderer::Texture2D::Ptr depth, Renderer::RenderTarget::Ptr rt);
 private:
+	bool mExponential = true;
 	int mNumLevels;
 	int mNumMaps;
 
@@ -60,9 +61,8 @@ private:
 	Renderer::Buffer::Ptr mCastConstants;
 	Renderer::Buffer::Ptr mReceiveConstants;
 
-
+	Renderer::Effect::Ptr mShadowMapEffect;
 	Renderer::Layout::Ptr mDepthLayout;
-	Renderer::Effect::Ptr mDepthEffect;
 	Renderer::PixelShader::Weak mReceiveShadowPS[3];
 	D3D11_DEPTH_STENCIL_DESC mDepthStencilDesc;
 	Renderer::Sampler::Ptr mShadowSampler;

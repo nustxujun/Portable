@@ -28,9 +28,9 @@ void VolumetricLighting::init()
 		D3D11_TEXTURE_ADDRESS_BORDER,
 		D3D11_COMPARISON_LESS_EQUAL,
 		0, 0);
-	set("vl-numsamples", { {"type","set"}, {"value",16},{"min","0"},{"max",1024},{"interval", "1"} });
+	set("vl-numsamples", { {"type","set"}, {"value",64},{"min","0"},{"max",1024},{"interval", "1"} });
 	set("vl-jitter", { {"type","set"}, {"value",1},{"min","0"},{"max",1},{"interval", "0.01"} });
-	set("vl-density", { {"type","set"}, {"value",1},{"min","0"},{"max","0.01"},{"interval", "0.00001"} });
+	set("vl-density", { {"type","set"}, {"value",0.001},{"min","0"},{"max","0.01"},{"interval", "0.00001"} });
 
 	mDownsample = ImageProcessing::create<SamplingBox>(r);
 	mGauss = ImageProcessing::create<Gaussian>(r);
@@ -128,8 +128,8 @@ void VolumetricLighting::render(Renderer::Texture2D::Ptr rt)
 	});
 
 
-	//auto ret = mGauss->process(tmp->get());
-	auto ret = std::move(tmp);
+	auto ret = mGauss->process(tmp->get());
+	//auto ret = std::move(tmp);
 
 	quad->setBlend(mBlend);
 	quad->setRenderTarget(rt);
