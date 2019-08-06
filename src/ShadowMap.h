@@ -56,6 +56,8 @@ private:
 
 	std::map<Scene::Light::Ptr,Renderer::Texture2D::Ptr> mShadowMaps;
 	Renderer::Texture2D::Ptr mDefaultDS;
+	Renderer::Texture2D::Ptr mDefaultCascadeDS;
+
 	std::vector<Renderer::Texture2D::Ptr> mShadowTextures;
 	int mShadowMapSize = 2048;
 	Renderer::Buffer::Ptr mCastConstants;

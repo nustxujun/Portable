@@ -4,6 +4,9 @@ cbuffer ConstantBuffer: register(b0)
 	matrix World;
 	matrix View;
 	matrix Projection;
+	float depthscale;
+	float near;
+	float C;
 }
 
 
@@ -33,14 +36,11 @@ PS_INPUT vs(VS_INPUT input)
 	return output;
 }
 
-cbuffer ConstantBuffer: register(b1)
-{
-	float C;
-}
 
 float4 exp(PS_INPUT input):SV_TARGET
 {
-	return exp(10 * -input.DepthLinear);
+	float depth = (input.DepthLinear - near) * depthscale;
+	return exp(10 * - depth);
 }
 
 

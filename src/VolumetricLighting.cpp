@@ -102,7 +102,7 @@ void VolumetricLighting::render(Renderer::Texture2D::Ptr rt)
 				for (int i = 0; i < cascades.size(); ++i)
 				{
 					c.lightProjs[i] = cascades[i].proj.Transpose();
-					*(f++) = cascades[i].range.y;
+					*(f++) = cascades[i].cascade.y;
 				}
 				c.numcascades = cascades.size();
 

@@ -555,7 +555,8 @@ Scene::Light::Cascades Scene::Light::fitToScene(Camera::Ptr cam)
 
 		
 		ret[i].proj = DirectX::XMMatrixOrthographicOffCenterLH(min.x, max.x, min.y, max.y, scenemin.z, scenemax.z);
-		ret[i].range = { n, f };
+		ret[i].cascade = { n, f };
+		ret[i].range = { scenemin.z, scenemax.z };
 	}
 	return ret;
 }

@@ -36,7 +36,7 @@ void ShadowMap::init(int mapsize, int numlevels, const std::vector<Renderer::Tex
 	auto r = getRenderer();
 	
 	mDefaultDS = r->createDepthStencil(mShadowMapSize, mShadowMapSize, DXGI_FORMAT_D32_FLOAT);
-	
+	mDefaultCascadeDS = r->createDepthStencil(mShadowMapSize * mNumLevels, mShadowMapSize, DXGI_FORMAT_D32_FLOAT);
 	mShadowMapEffect = r->createEffect("hlsl/shadowmap.fx");
 	{
 		auto tran = Common::format((int)transmittance);
@@ -108,14 +108,22 @@ void ShadowMap::init(int mapsize, int numlevels, const std::vector<Renderer::Tex
 
 void ShadowMap::renderToShadowMapDir(const Matrix& lightview, const Scene::Light::Cascades& cascades, Renderer::Texture2D::Ptr tex)
 {
+	auto effect = mShadowMapEffect.lock();
 
 	if (mExponential)
 	{
-		getRenderer()->clearDepth(mDefaultDS, 1.0f);
-		getRenderer()->setRenderTarget(tex, mDefaultDS);
+		effect->setTech("DirectionalLightExp");
+		auto last = cascades.back();
+		effect->getVariable("depthscale")->AsScalar()->SetFloat(1.0f / (last.range.y - last.range.x));
+		effect->getVariable("near")->AsScalar()->SetFloat(last.range.x);
+
+		getRenderer()->clearDepth(mDefaultCascadeDS, 1.0f);
+		getRenderer()->setRenderTarget(tex, mDefaultCascadeDS);
+
 	}
 	else
 	{
+		effect->setTech("DirectionalLight");
 		getRenderer()->clearDepth(tex, 1.0f);
 		getRenderer()->setRenderTarget({}, tex);
 	}
@@ -132,7 +140,6 @@ void ShadowMap::renderToShadowMapDir(const Matrix& lightview, const Scene::Light
 	getRenderer()->setLayout(mDepthLayout.lock()->bind(mShadowVS));
 	getRenderer()->setRasterizer(mRasterizer);
 
-	auto effect = mShadowMapEffect.lock();
 
 	effect->getVariable("View")->AsMatrix()->SetMatrix((const float*)&lightview);
 	for (int i = 0; i < mNumLevels; ++i)
@@ -172,7 +179,7 @@ void ShadowMap::renderShadowDir(const Matrix& lightview, const Scene::Light::Cas
 	for (int j = 0; j < mNumLevels; ++j)
 	{
 		constants.lightProjs[j] = cascades[j].proj.Transpose();
-		constants.cascadeDepths[j].x = cascades[j].range.y;
+		constants.cascadeDepths[j].x = cascades[j].cascade.y;
 	}
 	constants.lightView = lightview.Transpose();
 

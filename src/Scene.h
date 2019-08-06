@@ -186,6 +186,7 @@ public:
 		struct Cascade
 		{
 			Matrix proj;
+			Vector2 cascade;
 			Vector2 range;
 		};
 
