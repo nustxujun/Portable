@@ -489,7 +489,7 @@ void MultipleLights::initCDRPipeline()
 	//std::vector<std::string> files = { "media/uffizi_cross.dds" };
 	mPipeline->pushStage<SkyBox>(hdrenvfile, false);
 
-	//mPipeline->pushStage<HDR>();
+	mPipeline->pushStage<HDR>();
 
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 	Quad::Ptr quad = std::make_shared<Quad>(mRenderer);

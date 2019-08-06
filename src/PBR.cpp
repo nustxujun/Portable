@@ -190,9 +190,7 @@ void PBR::updateLights()
 		data += sizeof(value);
 	};
 
-	float range = 1;
-	if (has("lightRange"))
-		range = getValue<float>("lightRange");
+
 	for (int type = 0; type < 3; ++type)
 	{
 		auto buffer = lightbuffers[type]->getBuffer();
@@ -204,12 +202,16 @@ void PBR::updateLights()
 		{
 			auto light = lights[type][i];
 			auto shadowindex = shadowindices[&(*light)];
+
+			float range = light->getRange();
+			if (has("lightRange"))
+				range = getValue<float>("lightRange");
 			switch (type)
 			{
 			case Scene::Light::LT_POINT:
 				{
 					auto pos = light->getNode()->getRealPosition();
-					Vector4 vpos = { pos.x, pos.y, pos.z,light->getRange() * range };
+					Vector4 vpos = { pos.x, pos.y, pos.z, range };
 					copy(data, vpos);
 					auto color = light->getColor();
 					if (has("pointradiance"))
@@ -232,7 +234,7 @@ void PBR::updateLights()
 			case Scene::Light::LT_SPOT:
 				{
 					auto pos = light->getNode()->getRealPosition();
-					Vector4 vpos = { pos.x, pos.y, pos.z,light->getRange() *range };
+					Vector4 vpos = { pos.x, pos.y, pos.z,range };
 					copy(data, vpos);
 
 					auto dir = light->getDirection();
