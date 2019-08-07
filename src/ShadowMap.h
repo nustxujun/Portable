@@ -4,6 +4,7 @@
 #include "Scene.h"
 #include "Quad.h"
 #include "Pipeline.h"
+#include "ImageProcessing.h"
 
 class ShadowMap: public Pipeline::Stage
 {
@@ -47,7 +48,7 @@ private:
 	void renderShadowDir(const Matrix& lightview, const Scene::Light::Cascades& cascades, const Vector3& dir, Renderer::Texture2D::Ptr depth, Renderer::RenderTarget::Ptr rt);
 
 	void renderToShadowMapPoint(Scene::Light::Ptr light, Renderer::Texture2D::Ptr tex);
-	void renderShadowPoint(const Vector3& lightpos, Renderer::Texture2D::Ptr depth, Renderer::RenderTarget::Ptr rt);
+	void renderShadowPoint(Scene::Light::Ptr light, Renderer::Texture2D::Ptr depth, Renderer::RenderTarget::Ptr rt);
 private:
 	bool mExponential = true;
 	int mNumLevels;
@@ -60,7 +61,6 @@ private:
 
 	std::vector<Renderer::Texture2D::Ptr> mShadowTextures;
 	int mShadowMapSize = 2048;
-	Renderer::Buffer::Ptr mCastConstants;
 	Renderer::Buffer::Ptr mReceiveConstants;
 
 	Renderer::Effect::Ptr mShadowMapEffect;
@@ -70,8 +70,6 @@ private:
 	Renderer::Sampler::Ptr mShadowSampler;
 	Renderer::VertexShader::Weak mShadowVS;
 	Renderer::PixelShader::Weak mShadowPS;
-	Renderer::PixelShader::Weak mPointLightCast;
-	Renderer::Buffer::Ptr mPointCastPSConsts;
 	Renderer::Rasterizer::Ptr mRasterizer; 
 	Renderer::ShaderResource::Ptr mSceneDepth;
 
@@ -79,4 +77,5 @@ private:
 
 	Renderer::Sampler::Ptr mLinear;
 	Renderer::Sampler::Ptr mPoint;
+	ImageProcessing::Ptr mGauss;
 };

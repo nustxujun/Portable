@@ -4,6 +4,7 @@ cbuffer ConstantBuffer: register(b0)
 	matrix World;
 	matrix View;
 	matrix Projection;
+	float4 campos;
 	float depthscale;
 	float near;
 	float C;
@@ -37,12 +38,24 @@ PS_INPUT vs(VS_INPUT input)
 }
 
 
-float4 exp(PS_INPUT input):SV_TARGET
+float4 direxp(PS_INPUT input):SV_TARGET
 {
 	float depth = (input.DepthLinear - near) * depthscale;
-	return exp(10 * - depth);
+	return exp(C * depth);
 }
 
+
+float4 pointps(PS_INPUT input):SV_TARGET
+{
+	return length(campos.xyz - input.WorldPos.xyz);
+}
+
+float4 pointexp(PS_INPUT input) : SV_TARGET
+{
+	float depth =  length(campos.xyz - input.WorldPos.xyz) * depthscale;
+	return exp(C * depth);
+//return depth;
+}
 
 technique11 DirectionalLight
 {
@@ -58,6 +71,24 @@ technique11 DirectionalLightExp
 	pass
 	{
 		SetVertexShader(CompileShader(vs_5_0, vs()));
-		SetPixelShader(CompileShader(ps_5_0, exp()));
+		SetPixelShader(CompileShader(ps_5_0, direxp()));
+	}
+}
+
+technique11 PointLight
+{
+	pass
+	{
+		SetVertexShader(CompileShader(vs_5_0, vs()));
+		SetPixelShader(CompileShader(ps_5_0, pointps()));
+	}
+}
+
+technique11 PointLightExp
+{
+	pass
+	{
+		SetVertexShader(CompileShader(vs_5_0, vs()));
+		SetPixelShader(CompileShader(ps_5_0, pointexp()));
 	}
 }

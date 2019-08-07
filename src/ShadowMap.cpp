@@ -15,9 +15,12 @@ ShadowMap::~ShadowMap()
 
 void ShadowMap::init(int mapsize, int numlevels, const std::vector<Renderer::Texture2D::Ptr>& rts, bool transmittance)
 {
+	mExponential = true;
+
 	this->set("shadowcolor", { {"type","set"}, {"value",0.00f},{"min","0"},{"max",1.0f},{"interval", "0.001"} });
 	this->set("depthbias", { {"type","set"}, {"value",0.001f},{"min","0"},{"max","0.01"},{"interval", "0.0001"} });
 	this->set("lambda", { {"type","set"}, {"value",0.5f},{"min","0"},{"max","1"},{"interval", "0.01"} });
+	this->set("C", { {"type","set"}, {"value",80},{"min","0"},{"max","100"},{"interval", "1"} });
 
 	if (transmittance)
 	{
@@ -34,7 +37,8 @@ void ShadowMap::init(int mapsize, int numlevels, const std::vector<Renderer::Tex
 
 
 	auto r = getRenderer();
-	
+	mGauss = ImageProcessing::create<Gaussian>(r);
+
 	mDefaultDS = r->createDepthStencil(mShadowMapSize, mShadowMapSize, DXGI_FORMAT_D32_FLOAT);
 	mDefaultCascadeDS = r->createDepthStencil(mShadowMapSize * mNumLevels, mShadowMapSize, DXGI_FORMAT_D32_FLOAT);
 	mShadowMapEffect = r->createEffect("hlsl/shadowmap.fx");
@@ -55,8 +59,6 @@ void ShadowMap::init(int mapsize, int numlevels, const std::vector<Renderer::Tex
 
 		mShadowVS = r->createVertexShader("hlsl/simple_vs.hlsl", "main", macros);
 	}
-	mPointLightCast = r->createPixelShader("hlsl/pointlightdepth.hlsl");
-	mPointCastPSConsts = r->createConstantBuffer(sizeof(Vector4));
 
 	//blob = r->compileFile("hlsl/castshadow.hlsl", "ps", "ps_5_0", macros);
 	//mShadowPS = r->createPixelShader(blob->GetBufferPointer(), blob->GetBufferSize());
@@ -73,7 +75,6 @@ void ShadowMap::init(int mapsize, int numlevels, const std::vector<Renderer::Tex
 
 	mDepthLayout = getRenderer()->createLayout(depthlayout, ARRAYSIZE(depthlayout));
 
-	mCastConstants = r->createBuffer(sizeof(CastConstants), D3D11_BIND_CONSTANT_BUFFER);
 
 
 
@@ -93,7 +94,7 @@ void ShadowMap::init(int mapsize, int numlevels, const std::vector<Renderer::Tex
 	rasterDesc.SlopeScaledDepthBias = 0.0f;
 	mRasterizer = r->createOrGetRasterizer(rasterDesc);
 
-	mLinear = r->createSampler("liear_wrap", D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
+	mLinear = r->createSampler("liear_wrap", D3D11_FILTER_ANISOTROPIC, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
 	mPoint = r->createSampler("point_wrap", D3D11_FILTER_MIN_MAG_MIP_POINT, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP);
 
 	mShadowSampler = r->createSampler("shadow_sampler",
@@ -109,36 +110,38 @@ void ShadowMap::init(int mapsize, int numlevels, const std::vector<Renderer::Tex
 void ShadowMap::renderToShadowMapDir(const Matrix& lightview, const Scene::Light::Cascades& cascades, Renderer::Texture2D::Ptr tex)
 {
 	auto effect = mShadowMapEffect.lock();
-
+	auto renderer = getRenderer();
 	if (mExponential)
 	{
 		effect->setTech("DirectionalLightExp");
 		auto last = cascades.back();
 		effect->getVariable("depthscale")->AsScalar()->SetFloat(1.0f / (last.range.y - last.range.x));
 		effect->getVariable("near")->AsScalar()->SetFloat(last.range.x);
+		effect->getVariable("C")->AsScalar()->SetFloat(getValue<float>("C"));
 
-		getRenderer()->clearDepth(mDefaultCascadeDS, 1.0f);
-		getRenderer()->setRenderTarget(tex, mDefaultCascadeDS);
+		renderer->clearRenderTarget(tex, { FLT_MAX,FLT_MAX,FLT_MAX,FLT_MAX });
+		renderer->clearDepth(mDefaultCascadeDS, 1.0f);
+		renderer->setRenderTarget(tex, mDefaultCascadeDS);
 
 	}
 	else
 	{
 		effect->setTech("DirectionalLight");
-		getRenderer()->clearDepth(tex, 1.0f);
-		getRenderer()->setRenderTarget({}, tex);
+		renderer->clearDepth(tex, 1.0f);
+		renderer->setRenderTarget({}, tex);
 	}
 
 	using namespace DirectX;
 	using namespace DirectX::SimpleMath;
 
 
-	getRenderer()->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	getRenderer()->setDefaultBlendState();
-	getRenderer()->setDefaultDepthStencilState();
-	getRenderer()->setSampler(mPoint);
+	renderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	renderer->setDefaultBlendState();
+	renderer->setDefaultDepthStencilState();
+	renderer->setSampler(mPoint);
 
-	getRenderer()->setLayout(mDepthLayout.lock()->bind(mShadowVS));
-	getRenderer()->setRasterizer(mRasterizer);
+	renderer->setLayout(mDepthLayout.lock()->bind(mShadowVS));
+	renderer->setRasterizer(mRasterizer);
 
 
 	effect->getVariable("View")->AsMatrix()->SetMatrix((const float*)&lightview);
@@ -154,23 +157,25 @@ void ShadowMap::renderToShadowMapDir(const Matrix& lightview, const Scene::Light
 		getRenderer()->setViewport(vp);
 
 		effect->getVariable("Projection")->AsMatrix()->SetMatrix((const float*)&cascades[i].proj);
-		effect->render(getRenderer(), [&effect, this](ID3DX11EffectPass* pass)
-		{
-			getScene()->visitRenderables([&effect, this](const Renderable& r)
-			{
-				effect->getVariable("World")->AsMatrix()->SetMatrix((const float*)&r.tranformation);
-	
-					getRenderer()->setIndexBuffer(r.indices, DXGI_FORMAT_R32_UINT, 0);
-					getRenderer()->setVertexBuffer(r.vertices, r.layout.lock()->getSize(), 0);
-					getRenderer()->getContext()->DrawIndexed(r.numIndices, 0, 0);
 
-			}, [](Scene::Entity::Ptr e) {return e->isCastShadow(); });
-		});
+		getScene()->visitRenderables([&effect, this](const Renderable& r)
+		{
+			effect->getVariable("World")->AsMatrix()->SetMatrix((const float*)&r.tranformation);
+			effect->render(getRenderer(), [&effect, this,&r](ID3DX11EffectPass* pass)
+			{
+				getRenderer()->setIndexBuffer(r.indices, DXGI_FORMAT_R32_UINT, 0);
+				getRenderer()->setVertexBuffer(r.vertices, r.layout.lock()->getSize(), 0);
+				getRenderer()->getContext()->DrawIndexed(r.numIndices, 0, 0);
+			});
+
+		}, [](Scene::Entity::Ptr e) {return e->isCastShadow(); });
 
 	}
 
 
 	getRenderer()->removeRenderTargets();
+
+	mGauss->process(tex)->get()->swap(tex);
 }
 
 void ShadowMap::renderShadowDir(const Matrix& lightview, const Scene::Light::Cascades& cascades, const Vector3& dir, Renderer::Texture2D::Ptr depth, Renderer::RenderTarget::Ptr rt)
@@ -180,6 +185,9 @@ void ShadowMap::renderShadowDir(const Matrix& lightview, const Scene::Light::Cas
 	{
 		constants.lightProjs[j] = cascades[j].proj.Transpose();
 		constants.cascadeDepths[j].x = cascades[j].cascade.y;
+		constants.cascadeDepths[j].y = cascades[j].range.x;
+		constants.cascadeDepths[j].z = 1.0f / (cascades[j].range.y - cascades[j].range.x);
+		constants.cascadeDepths[j].w = getValue<float>("C");
 	}
 	constants.lightView = lightview.Transpose();
 
@@ -194,6 +202,7 @@ void ShadowMap::renderShadowDir(const Matrix& lightview, const Scene::Light::Cas
 	constants.translucency = getValue<float>("translucency");
 	constants.translucency_bias = getValue<float>("translucency_bias");
 	constants.thickness = getValue<float>("translucency_thickness");
+
 
 	mReceiveConstants.lock()->blit(&constants, sizeof(constants));
 
@@ -211,26 +220,34 @@ void ShadowMap::renderShadowDir(const Matrix& lightview, const Scene::Light::Cas
 
 void ShadowMap::renderToShadowMapPoint(Scene::Light::Ptr light, Renderer::Texture2D::Ptr tex)
 {
-	auto cam = getCamera();
-	Matrix proj = DirectX::XMMatrixPerspectiveFovLH(3.14159265358f * 0.5f, 1, cam->getNear(), cam->getFar());
-
-	//mShadowMaps[index]->getDepthStencil().lock()->clearDepth(1.0f);
 
 	using namespace DirectX;
 	using namespace DirectX::SimpleMath;
 
 	auto renderer = getRenderer();
-	CastConstants constant;
+	auto cam = getCamera();
+	auto farZ = light->getRange();
+	if (has("lightRange"))
+		farZ = getValue<float>("lightRange");
 
-	renderer->clearRenderTarget(tex, { cam->getFar(),0,0,0 });
+	Matrix proj = DirectX::XMMatrixPerspectiveFovLH(3.14159265358f * 0.5f, 1, farZ * 0.01f, farZ);
+
+	renderer->clearRenderTarget(tex, { farZ,0,0,0 });
+
+
+	auto effect = mShadowMapEffect.lock();
+
+	effect->setTech("PointLightExp");
+
+	effect->getVariable("Projection")->AsMatrix()->SetMatrix((const float*)&proj);
+	effect->getVariable("campos")->AsVector()->SetFloatVector((const float*)& light->getNode()->getRealPosition());
+	effect->getVariable("depthscale")->AsScalar()->SetFloat(1.0f / farZ);
+	effect->getVariable("C")->AsScalar()->SetFloat(getValue<float>("C"));
+
 
 	renderer->setPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	renderer->setDefaultBlendState();
 	renderer->setDefaultDepthStencilState();
-	renderer->setSampler(mPoint);
-	renderer->setVertexShader(mShadowVS);
-	//renderer->setPixelShader(mShadowPS);
-	renderer->setPixelShader(mPointLightCast);
 
 	renderer->setLayout(mDepthLayout.lock()->bind(mShadowVS));
 	renderer->setRasterizer(mRasterizer);
@@ -243,35 +260,23 @@ void ShadowMap::renderToShadowMapPoint(Scene::Light::Ptr light, Renderer::Textur
 	vp.MinDepth = 0.0f;
 	vp.MaxDepth = 1.0f;
 	renderer->setViewport(vp);
-	constant.proj = proj.Transpose();
 
-	struct
-	{
-		Vector3 pos;
-		float farZ;
-	} psConsts = {
-		light->getNode()->getRealPosition(),
-		cam->getFar()
-	};
-	mPointCastPSConsts->blit(psConsts);
-	renderer->setPSConstantBuffers({ mPointCastPSConsts });
+
 	for (int i = 0; i < 6; ++i)
 	{
 		renderer->clearDepth(mDefaultDS, 1.0f);
 		renderer->setRenderTarget(tex->Renderer::RenderTarget::getView(i), mDefaultDS);
-		//renderer->getContext()->OMSetRenderTargets(0, 0, tex->Renderer::DepthStencil::getView(i));
 
 		auto view = light->getViewMatrix(i);
-		constant.view = view.Transpose();
-		getScene()->visitRenderables([&constant, this,renderer](const Renderable& r)
+		effect->getVariable("View")->AsMatrix()->SetMatrix((const float*)&view);
+		getScene()->visitRenderables([this,renderer, effect](const Renderable& r)
 		{
-			constant.world = r.tranformation.Transpose();
-			mCastConstants.lock()->blit(&constant, sizeof(constant));
-			renderer->setVSConstantBuffers({ mCastConstants });
-
-			renderer->setIndexBuffer(r.indices, DXGI_FORMAT_R32_UINT, 0);
-			renderer->setVertexBuffer(r.vertices, r.layout.lock()->getSize(), 0);
-			renderer->getContext()->DrawIndexed(r.numIndices, 0, 0);
+			effect->getVariable("World")->AsMatrix()->SetMatrix((const float*)&r.tranformation);
+			effect->render(renderer, [renderer, r](ID3DX11EffectPass* pass) {
+				renderer->setIndexBuffer(r.indices, DXGI_FORMAT_R32_UINT, 0);
+				renderer->setVertexBuffer(r.vertices, r.layout.lock()->getSize(), 0);
+				renderer->getContext()->DrawIndexed(r.numIndices, 0, 0);
+			});
 		}, [](Scene::Entity::Ptr e) {return e->isCastShadow(); });
 
 	}
@@ -280,7 +285,7 @@ void ShadowMap::renderToShadowMapPoint(Scene::Light::Ptr light, Renderer::Textur
 	renderer->removeRenderTargets();
 }
 
-void ShadowMap::renderShadowPoint(const Vector3& lightpos ,Renderer::Texture2D::Ptr depth, Renderer::RenderTarget::Ptr rt)
+void ShadowMap::renderShadowPoint(Scene::Light::Ptr light, Renderer::Texture2D::Ptr depth, Renderer::RenderTarget::Ptr rt)
 {
 	ReceiveConstants constants;
 
@@ -289,11 +294,17 @@ void ShadowMap::renderShadowPoint(const Vector3& lightpos ,Renderer::Texture2D::
 	constants.invertProj = cam->getProjectionMatrix().Invert().Transpose();
 	constants.shadowcolor = getValue<float>("shadowcolor");
 	constants.depthbias = getValue<float>("depthbias");
-	constants.lightdir = lightpos;
+	constants.lightdir = light->getNode()->getRealPosition();;
 	constants.translucency = getValue<float>("translucency");
 	constants.translucency_bias = getValue<float>("translucency_bias");
 	constants.thickness = getValue<float>("translucency_thickness");
-	constants.cascadeDepths[0].x = cam->getFar();
+
+	auto farZ = light->getRange();
+	if (has("lightRange"))
+		farZ = getValue<float>("lightRange");
+	constants.cascadeDepths[0].x = 1.0f / farZ;
+	constants.cascadeDepths[0].y = getValue<float>("C");
+
 	constants.scale = 1.0f/ (float)mShadowMapSize;
 	mReceiveConstants.lock()->blit(&constants, sizeof(constants));
 
@@ -376,7 +387,7 @@ void ShadowMap::render(Renderer::Texture2D::Ptr rt)
 				l->setShadowMapParameters(mShadowMapSize);
 
 				renderToShadowMapPoint(l, sm->second);
-				renderShadowPoint(l->getNode()->getRealPosition(), sm->second, mShadowTextures[i]);
+				renderShadowPoint(l, sm->second, mShadowTextures[i]);
 			}
 			break;
 		}

@@ -28,6 +28,8 @@ cbuffer ConstantBuffer: register(b0)
 	float translucency;
 	float thickness;
 	float translucency_bias;
+	float near;
+	float depthscale;
 }
 SamplerState sampLinear: register(s0);
 SamplerState sampPoint: register(s1);
@@ -51,6 +53,7 @@ float4 receive_dir(float4 worldPos, float3 N, float depthlinear)
 
 
 		float4 pos = mul(worldPos, lightView);
+		float depthinLightSpace = pos.z ;
 		pos = mul(pos, lightProjs[i]);
 		pos /= pos.w;
 
@@ -60,19 +63,21 @@ float4 receive_dir(float4 worldPos, float3 N, float depthlinear)
 		pos.y = (1 - pos.y) * 0.5;
 
 		float2 uv = (pos.xy + float2(i, 0)) * float2(scale, 1);
-		//float sampledepth = shadowmapTex.Sample(sampLinear, uv).r;
-		//if ( sampledepth < 1.0f && sampledepth + depthbias < pos.z)
-		//	return shadowcolor;
-		//else
-		//	return 1;
+
+
+		depthinLightSpace = (depthinLightSpace - cascadeDepths[i].y) * cascadeDepths[i].z - depthbias;
+		float sampledepth = shadowmapTex.Sample(sampLinear, uv).r;
+		float receiver = exp(cascadeDepths[i].w * -depthinLightSpace);
+		return saturate(sampledepth * receiver);
+
 		float percentlit = 0.0f;
-		for (int x = -2; x <= 2; ++x)
-		{
-			for (int y = -2; y <= 2; ++y)
-			{
-				percentlit += shadowmapTex.SampleCmpLevelZero(sampshadow, uv, cmpdepth, int2(x, y));
-			}
-		}
+		//for (int x = -2; x <= 2; ++x)
+		//{
+		//	for (int y = -2; y <= 2; ++y)
+		//	{
+		//		percentlit += shadowmapTex.SampleCmpLevelZero(sampshadow, uv, cmpdepth, int2(x, y));
+		//	}
+		//}
 #if TRANSMITTANCE
 		float4 shrinkpos = float4(worldPos.xyz - N * translucency_bias, 1.0);
 		shrinkpos = mul(shrinkpos, lightView);
@@ -111,21 +116,26 @@ float4 receive_point(float4 worldPos, float3 N)
 	float3 lightpos = lightdir;
 	float3 uv = normalize(worldPos.xyz - lightpos);
 	
-	float cmpdepth = length(worldPos.xyz - lightpos) - depthbias * cascadeDepths[0].r;
-	float percentlit = 0;
-	for (int x = -2; x <= 2; ++x)
-	{
-		for (int y = -2; y <= 2; ++y)
-		{
-			for (int z = -2; z <= 2; ++z)
-			{
-				percentlit += shadowmapTex.SampleCmpLevelZero(sampshadow, uv + float3(x,y,z) * scale, cmpdepth);
-			}
-		}
-	}
+	float depthinLightSpace = length(worldPos.xyz - lightpos) * cascadeDepths[0].x - depthbias;
+
+	float sampledepth = shadowmapTex.SampleLevel(sampLinear, uv, 0).r;
+	float receiver = exp(cascadeDepths[0].y * -depthinLightSpace);
+	return saturate(sampledepth * receiver);
+
+	//float percentlit = 0;
+	//for (int x = -2; x <= 2; ++x)
+	//{
+	//	for (int y = -2; y <= 2; ++y)
+	//	{
+	//		for (int z = -2; z <= 2; ++z)
+	//		{
+	//			percentlit += shadowmapTex.SampleCmpLevelZero(sampshadow, uv + float3(x,y,z) * scale, cmpdepth);
+	//		}
+	//	}
+	//}
 
 
-	return percentlit * 0.008f;
+	//return percentlit * 0.008f;
 }
 #endif
 
