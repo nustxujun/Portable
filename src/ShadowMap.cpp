@@ -195,7 +195,7 @@ void ShadowMap::renderShadowDir(const Matrix& lightview, const Scene::Light::Cas
 	constants.invertView = cam->getViewMatrix().Invert().Transpose();
 	constants.invertProj =  cam->getProjectionMatrix().Invert().Transpose();
 	constants.numcascades = mNumLevels;
-	constants.scale = 1.0f / mNumLevels;
+	constants.scale = 1.0f / (float)mShadowMapSize;
 	constants.shadowcolor = getValue<float>("shadowcolor");
 	constants.depthbias = getValue<float>("depthbias");
 	constants.lightdir = dir;
