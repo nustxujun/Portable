@@ -41,7 +41,7 @@ PS_INPUT vs(VS_INPUT input)
 float4 direxp(PS_INPUT input):SV_TARGET
 {
 	float depth = (input.DepthLinear - near) * depthscale;
-	return exp(C * depth);
+	return float4(exp(C * depth), depth, 0, 0);
 }
 
 

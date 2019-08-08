@@ -12,6 +12,8 @@ Texture2D
 #endif
 shadowmapTex: register(t1);
 Texture2D normalTex:register(t2);
+Texture2D noiseTex: register(t3);
+
 
 cbuffer ConstantBuffer: register(b0)
 {
@@ -22,6 +24,9 @@ cbuffer ConstantBuffer: register(b0)
 	float4 cascadeDepths[8];
 	float3 lightdir;
 	int numcascades;
+	float2 noiseSize;
+	float2 screenSize;
+
 	float scale;
 	float shadowcolor;
 	float depthbias;
@@ -110,23 +115,73 @@ static const float2 PoissonOffsets[64] = {
 };
 
 const static float invNumSamples = 1.0f / 64.0f;
+const static float lightwidth = 0.01;
 
-float findblocker(float2 uv, float depth)
+#if DIR
+float4 sampleTex( SamplerState samp, float2 uv )
+{
+	return shadowmapTex.SampleLevel(samp, uv, 0);
+}
+
+float2 rotate(float2 pos, float2 rot)
+{
+	return float2(pos.x * rot.x - pos.y * rot.y, pos.y *rot.x + pos.x * rot.y);
+}
+
+float2 findblocker(float2 uv, float depthlinear,float searchwidth, float2 jitter)
+{
+	float block = sampleTex(sampPoint, uv).g;
+	float sampled = 0;
+	float count = 0;
+	for (int i = 0; i < 64; ++i)
+	{
+		float2 offset = PoissonOffsets[i]  * searchwidth;
+		offset = rotate(offset, jitter);
+
+		float z = sampleTex(sampPoint, uv + offset ).g ;
+		if (z < (depthlinear - depthbias))
+		{
+			count += 1;
+			sampled += z;
+		}
+	}
+
+	if (count > 0)
+		return float2(sampled / count, count);
+	else
+		return 0;
+}
+
+
+
+float filter(float2 uv, float penumbra, float receiver, float2 jitter)
 {
 	float sampled = 0;
 	for (int i = 0; i < 64; ++i)
 	{
-		float2 offset = PoissonOffsets[i] * depth;
-#if DIR
-		sampled += shadowmapTex.SampleLevel(sampPoint, uv + offset, 0).r * invNumSamples;
-#endif
-	}
+		float2 offset = PoissonOffsets[i] * penumbra;
+		offset = rotate(offset, jitter);
 
-	return sampled;
+		sampled += sampleTex(sampPoint, uv + offset).r * receiver;
+	}
+	return saturate(sampled * invNumSamples);
+
+
+	//int len = 5;
+	//float inv = 1.0f / pow(len * 2 + 1, 2);
+	//float sampled = 0;
+	//for (int x = -len; x <= len; ++x)
+	//{
+	//	for (int y = -len; y < len; ++y)
+	//	{
+	//		sampled += shadowmapTex.SampleLevel(sampLinear, uv + float2(x,y) * scale * penumbra * 1000, 0).r;
+	//	}
+	//}
+	//return saturate(sampled * inv * receiver);
 }
 
-#if DIR
-float4 receive_dir(float4 worldPos, float3 N, float depthlinear)
+
+float4 receive_dir(float4 worldPos, float3 N, float depthlinear, float2 jitter)
 {
 
 	for (int i = 0; i < numcascades; ++i)
@@ -149,11 +204,18 @@ float4 receive_dir(float4 worldPos, float3 N, float depthlinear)
 		float2 uv = (pos.xy + float2(i, 0)) * float2(inv, 1);
 
 
-		depthinLightSpace = (depthinLightSpace - cascadeDepths[i].y) * cascadeDepths[i].z - depthbias;
-		//float sampledepth = shadowmapTex.Sample(sampLinear, uv).r;
-		float sampledepth = findblocker(uv, depthinLightSpace);
+		depthinLightSpace = (depthinLightSpace - cascadeDepths[i].y) * cascadeDepths[i].z;
+
+		float searchwidth = lightwidth * pow(depthinLightSpace, 4);//saturate(depthinLightSpace - 0.5) / depthinLightSpace;
+
+		float sampledepth = shadowmapTex.Sample(sampLinear, uv).r;
+		float2 blocker = findblocker(uv, depthinLightSpace, searchwidth,jitter);
+		if (blocker.y < 1)
+			return 1;
+		float penumbra = (depthinLightSpace - blocker.x) / blocker.x * lightwidth;
 		float receiver = exp(cascadeDepths[i].w * -depthinLightSpace);
-		return saturate(sampledepth * receiver);
+		return filter(uv, penumbra, receiver, jitter);
+		return saturate(shadowmapTex.Sample(sampLinear, uv).r * receiver);
 
 		float percentlit = 0.0f;
 		//for (int x = -2; x <= 2; ++x)
@@ -201,7 +263,7 @@ float4 receive_point(float4 worldPos, float3 N)
 	float3 lightpos = lightdir;
 	float3 uv = normalize(worldPos.xyz - lightpos);
 	
-	float depthinLightSpace = length(worldPos.xyz - lightpos) * cascadeDepths[0].x - depthbias;
+	float depthinLightSpace = length(worldPos.xyz - lightpos) * cascadeDepths[0].x ;
 
 	float sampledepth = shadowmapTex.SampleLevel(sampLinear, uv, 0).r;
 	float receiver = exp(cascadeDepths[0].y * -depthinLightSpace);
@@ -239,8 +301,11 @@ float4 ps(PS_INPUT input) : SV_TARGET
 	float depthlinear = worldPos.z;
 	worldPos = mul(worldPos, invertView);
 
+	int2 noiseuv = uint2((input.Tex)* screenSize) % uint2(noiseSize);
+	float2 Xi = noiseTex.Load(int3(noiseuv, 0)).rg;
+	float angle = (Xi.x + Xi.y) * 3.1415926;
 #if DIR
-	return receive_dir(worldPos, N, depthlinear);
+	return receive_dir(worldPos, N, depthlinear, float2(cos(angle), sin(angle)));
 #elif POINT
 	return receive_point(worldPos, N);
 #else

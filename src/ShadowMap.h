@@ -29,6 +29,9 @@ class ShadowMap: public Pipeline::Stage
 		Vector4 cascadeDepths[8];
 		Vector3 lightdir;
 		int numcascades;
+		Vector2 screensize;
+		Vector2 noisesize;
+
 		float scale;
 		float shadowcolor;
 		float depthbias;
@@ -45,7 +48,7 @@ public:
 	void render(Renderer::Texture2D::Ptr rt) ;
 private:
 	void renderToShadowMapDir(const Matrix& lightview, const Scene::Light::Cascades& cascades, Renderer::Texture2D::Ptr tex);
-	void renderShadowDir(const Matrix& lightview, const Scene::Light::Cascades& cascades, const Vector3& dir, Renderer::Texture2D::Ptr depth, Renderer::RenderTarget::Ptr rt);
+	void renderShadowDir(const Matrix& lightview, const Scene::Light::Cascades& cascades, const Vector3& dir, Renderer::Texture2D::Ptr depth, Renderer::Texture2D::Ptr rt);
 
 	void renderToShadowMapPoint(Scene::Light::Ptr light, Renderer::Texture2D::Ptr tex);
 	void renderShadowPoint(Scene::Light::Ptr light, Renderer::Texture2D::Ptr depth, Renderer::RenderTarget::Ptr rt);
@@ -72,6 +75,7 @@ private:
 	Renderer::PixelShader::Weak mShadowPS;
 	Renderer::Rasterizer::Ptr mRasterizer; 
 	Renderer::ShaderResource::Ptr mSceneDepth;
+	Renderer::Texture2D::Ptr mNoise;
 
 	Quad mQuad;
 

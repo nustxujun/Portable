@@ -104,6 +104,9 @@ void ShadowMap::init(int mapsize, int numlevels, const std::vector<Renderer::Tex
 		D3D11_TEXTURE_ADDRESS_BORDER,
 		D3D11_COMPARISON_LESS_EQUAL,
 		0,0);
+
+	mNoise = r->createTexture("media/BlueNoise.tga", 1);
+
 }
 
 
@@ -119,7 +122,8 @@ void ShadowMap::renderToShadowMapDir(const Matrix& lightview, const Scene::Light
 		effect->getVariable("near")->AsScalar()->SetFloat(last.range.x);
 		effect->getVariable("C")->AsScalar()->SetFloat(getValue<float>("C"));
 
-		renderer->clearRenderTarget(tex, { FLT_MAX,FLT_MAX,FLT_MAX,FLT_MAX });
+		float bg = std::exp(getValue<float>("C") );
+		renderer->clearRenderTarget(tex, { bg,bg,bg,bg });
 		renderer->clearDepth(mDefaultCascadeDS, 1.0f);
 		renderer->setRenderTarget(tex, mDefaultCascadeDS);
 
@@ -178,7 +182,7 @@ void ShadowMap::renderToShadowMapDir(const Matrix& lightview, const Scene::Light
 	mGauss->process(tex)->get()->swap(tex);
 }
 
-void ShadowMap::renderShadowDir(const Matrix& lightview, const Scene::Light::Cascades& cascades, const Vector3& dir, Renderer::Texture2D::Ptr depth, Renderer::RenderTarget::Ptr rt)
+void ShadowMap::renderShadowDir(const Matrix& lightview, const Scene::Light::Cascades& cascades, const Vector3& dir, Renderer::Texture2D::Ptr depth, Renderer::Texture2D::Ptr rt)
 {
 	ReceiveConstants constants;
 	for (int j = 0; j < mNumLevels; ++j)
@@ -202,6 +206,8 @@ void ShadowMap::renderShadowDir(const Matrix& lightview, const Scene::Light::Cas
 	constants.translucency = getValue<float>("translucency");
 	constants.translucency_bias = getValue<float>("translucency_bias");
 	constants.thickness = getValue<float>("translucency_thickness");
+	constants.noisesize= { (float)mNoise->getDesc().Width ,(float)mNoise->getDesc().Height };
+	constants.screensize = { (float)rt->getDesc().Width ,(float)rt->getDesc().Height };
 
 
 	mReceiveConstants.lock()->blit(&constants, sizeof(constants));
@@ -211,7 +217,7 @@ void ShadowMap::renderShadowDir(const Matrix& lightview, const Scene::Light::Cas
 	mQuad.setSamplers({ mLinear, mPoint,mShadowSampler });
 	mQuad.setDefaultBlend(false);
 
-	mQuad.setTextures({ getShaderResource("depth"), depth , getShaderResource("normal")});
+	mQuad.setTextures({ getShaderResource("depth"), depth , getShaderResource("normal"), mNoise });
 	mQuad.setPixelShader(mReceiveShadowPS[Scene::Light::LT_DIR]);
 	mQuad.setDefaultViewport();
 	mQuad.draw();
@@ -358,7 +364,7 @@ void ShadowMap::render(Renderer::Texture2D::Ptr rt)
 			case Scene::Light::LT_DIR:
 				{
 					if (mExponential)
-						sm = mShadowMaps.insert({ l,getRenderer()->createRenderTarget(mShadowMapSize * mNumLevels, mShadowMapSize, DXGI_FORMAT_R32_FLOAT) }).first;
+						sm = mShadowMaps.insert({ l,getRenderer()->createRenderTarget(mShadowMapSize * mNumLevels, mShadowMapSize, DXGI_FORMAT_R32G32_FLOAT) }).first;
 					else
 						sm = mShadowMaps.insert({ l, getRenderer()->createDepthStencil(mShadowMapSize * mNumLevels, mShadowMapSize, DXGI_FORMAT_R32_TYPELESS, true) }).first;
 					addShaderResource(Common::format(&(*l), "_shadowmap"), sm->second);

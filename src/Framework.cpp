@@ -113,7 +113,7 @@ void Framework::initPipeline()
 	mPipeline->pushStage<SkyBox>("media/black.png", false);
 	//mPipeline->pushStage<VolumetricLighting>();
 	//mPipeline->pushStage<MotionBlur>();
-	mPipeline->pushStage<HDR>();
+	//mPipeline->pushStage<HDR>();
 
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 	mPipeline->pushStage<TAA>();
@@ -177,7 +177,7 @@ void Framework::initScene()
 		params["size"] = "1";
 		for (int i = 0; i < 10; ++i)
 		{
-			for (int j = 0; j < 10; ++j)
+			for (int j = 0; j < 1; ++j)
 			{
 				auto model = mScene->createModel(Common::format("cube", i, j), params, [this](const Parameters& p)
 				{
@@ -231,7 +231,7 @@ void Framework::initScene()
 
 
 	auto light = mScene->createOrGetLight("main");
-	light->setDirection({-1,-1,1 });
+	light->setDirection({1,-1,1 });
 	light->setCastingShadow(true);
 	//light->setType(Scene::Light::LT_POINT);
 	//light->getNode()->setPosition((aabb.first + aabb.second) * 0.5f);
@@ -265,7 +265,7 @@ void Framework::framemove()
 			auto model = mScene->getModel(Common::format("cube", i,j));
 			if (model)
 			{
-				model->getNode()->setPosition({ j * 2.0f, i * d + 0.5f, 0 });
+				model->getNode()->setPosition({ j * 1.0f, i * 1 + 0.5f, 0 });
 			}
 		}
 	}
