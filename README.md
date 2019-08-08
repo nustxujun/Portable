@@ -9,6 +9,7 @@ a collections of rendering techniques based on d3d11 for study
 - [x] Tile based deferred lighting
 - [x] Clustered based deferred lighting
 - [x] Cascaded Shadow Mapping
+- [x] Exponential Shadow Mapping
 - [x] Parallax corrected cubemap(proxy geometry, distance texture)
 - [x] Screen space reflections
 - [x] Screen space ambient occlusion
@@ -39,11 +40,11 @@ Irradiance Volumes
 
 ![](https://github.com/nustxujun/Portable/blob/master/img/sh_iv.png)
 
-Cascaded exponential shadow map
+CSM + ESM
 
 ![](https://github.com/nustxujun/Portable/blob/master/img/cesm.png)
 
-Exponential soft shadow map
+ESM + PCSS
 
 ![](https://github.com/nustxujun/Portable/blob/master/img/essm.png)
 
