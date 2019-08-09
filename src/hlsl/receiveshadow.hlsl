@@ -200,41 +200,41 @@ float4 receive_dir(float4 worldPos, float3 N, float depthlinear)
 
 float2 findblocker(float2 uv, float depthlinear, float searchwidth, float2 jitter)
 {
-	float block = sampleTex(sampPoint, uv).g;
-	float sampled = 0;
-	float count = 0;
-	for (int i = 0; i < 64; ++i)
-	{
-		float2 offset = PoissonOffsets[i] * searchwidth;
-		offset = rotate(offset, jitter);
+	//float block = sampleTex(sampPoint, uv).g;
+	//float sampled = 0;
+	//float count = 0;
+	//for (int i = 0; i < 64; ++i)
+	//{
+	//	float2 offset = PoissonOffsets[i] * searchwidth;
+	//	offset = rotate(offset, jitter);
 
-		float z = sampleTex(sampPoint, uv + offset).g;
-		if (z < (depthlinear - depthbias))
-		{
-			count += 1;
-			sampled += z;
-		}
-	}
+	//	float z = sampleTex(sampPoint, uv + offset).g;
+	//	if (z < (depthlinear - depthbias))
+	//	{
+	//		count += 1;
+	//		sampled += z;
+	//	}
+	//}
 
-	if (count > 0)
-		return float2(sampled / count, count);
-	else
-		return 0;
+	//if (count > 0)
+	//	return float2(sampled / count, count);
+	//else
+	//	return 0;
 }
 
 
 
 float filter(float2 uv, float penumbra, float receiver, float2 jitter)
 {
-	float sampled = 0;
-	for (int i = 0; i < 64; ++i)
-	{
-		float2 offset = PoissonOffsets[i] * penumbra;
-		offset = rotate(offset, jitter);
+	//float sampled = 0;
+	//for (int i = 0; i < 64; ++i)
+	//{
+	//	float2 offset = PoissonOffsets[i] * penumbra;
+	//	offset = rotate(offset, jitter);
 
-		sampled += sampleTex(sampPoint, uv + offset).r * receiver;
-	}
-	return saturate(sampled * invNumSamples);
+	//	sampled += sampleTex(sampPoint, uv + offset).r * receiver;
+	//}
+	//return saturate(sampled * invNumSamples);
 
 
 	//int len = 5;
@@ -254,13 +254,64 @@ float filter(float2 uv, float penumbra, float receiver, float2 jitter)
 float4 receive_point(float4 worldPos, float3 N)
 {
 	float3 lightpos = lightdir;
-	float3 uv = normalize(worldPos.xyz - lightpos);
-	
-	float depthinLightSpace = length(worldPos.xyz - lightpos) * cascadeDepths[0].x ;
+	float3 uv = worldPos.xyz - lightpos;
 
-	float sampledepth = shadowmapTex.SampleLevel(sampLinear, uv, 0).r;
-	float receiver = exp(cascadeDepths[0].y * -depthinLightSpace);
-	return saturate(sampledepth * receiver);
+	float3 randdir = frac(uv);
+	uv = normalize(uv);
+
+	float3 tangent = normalize(cross(uv, randdir));
+	float3 bitangent = normalize(cross(uv, tangent));
+
+	const float radius = 0.005;
+
+	float cmpdepth = length(worldPos.xyz - lightpos)  ;
+
+	float dist = 0;
+	float count = 0;
+	for (int i = 0; i < 64; ++i)
+	{
+		float3 offset = tangent * PoissonOffsets[i].x + bitangent * PoissonOffsets[i].y;
+		offset *= radius;
+	
+		float d = shadowmapTex.SampleLevel(sampPoint, uv + offset, 0);
+		if (cmpdepth > d)
+		{
+			dist += d;
+			count += 1;
+		}
+		//percentlit += shadowmapTex.SampleCmpLevelZero(sampshadow, uv + offset, cmpdepth);
+	}
+
+	//return percentlit / 64;
+
+	//return shadowmapTex.SampleCmpLevelZero(sampshadow, uv , cmpdepth);
+
+	if (count == 0)
+		return 1;
+	else if (count == 64.0f)
+		return 0;
+
+	dist /= count;
+	float pcfradius = (cmpdepth - dist) / dist * lightwidth;
+	pcfradius = 0;
+
+	float percentlit = 0;
+	for (int i = 0; i < 64; ++i)
+	{
+		float3 offset = tangent * PoissonOffsets[i].x + bitangent * PoissonOffsets[i].y;
+		offset *= pcfradius;
+
+		//dist += shadowmapTex.SampleLevel(sampPoint, uv + offset, 0);
+		percentlit += shadowmapTex.SampleCmpLevelZero(sampshadow, uv + offset, dist);
+	}
+
+	return percentlit / 64;
+
+	//float depthinLightSpace = length(worldPos.xyz - lightpos) * cascadeDepths[0].x ;
+
+	//float sampledepth = shadowmapTex.SampleLevel(sampLinear, uv, 0).r;
+	//float receiver = exp(cascadeDepths[0].y * -depthinLightSpace);
+	//return saturate(sampledepth * receiver);
 
 	//float percentlit = 0;
 	//for (int x = -2; x <= 2; ++x)
@@ -302,7 +353,7 @@ float4 ps(PS_INPUT input) : SV_TARGET
 	float2 Xi = noiseTex.Load(int3(noiseuv, 0)).rg;
 	float angle = (Xi.x + Xi.y) * 3.1415926;
 
-	return receive_point(worldPos, N, float2(cos(angle), sin(angle)));
+	return receive_point(worldPos, N);
 #else
 	return 1;
 #endif

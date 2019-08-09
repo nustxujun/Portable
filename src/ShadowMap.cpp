@@ -243,7 +243,7 @@ void ShadowMap::renderToShadowMapPoint(Scene::Light::Ptr light, Renderer::Textur
 
 	auto effect = mShadowMapEffect.lock();
 
-	effect->setTech("PointLightExp");
+	effect->setTech("PointLight");
 
 	effect->getVariable("Projection")->AsMatrix()->SetMatrix((const float*)&proj);
 	effect->getVariable("campos")->AsVector()->SetFloatVector((const float*)& light->getNode()->getRealPosition());
