@@ -69,6 +69,9 @@ Volumetric light
 
 ![](https://github.com/nustxujun/Portable/blob/master/img/vl2.png)
 
+Camera motion blur 
+![](https://github.com/nustxujun/Portable/blob/master/img/cmb.png)
+
 
 
 [更多](https://github.com/nustxujun/Portable/wiki)
