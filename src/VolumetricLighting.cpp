@@ -98,11 +98,14 @@ void VolumetricLighting::render(Renderer::Texture2D::Ptr rt)
 
 				c.lightView = l->getViewMatrix().Transpose();
 				auto cascades = l->fitToScene(getCamera()); 
-					float* f = (float*)&c.cascadeDepths;
 				for (int i = 0; i < cascades.size(); ++i)
 				{
 					c.lightProjs[i] = cascades[i].proj.Transpose();
-					*(f++) = cascades[i].cascade.y;
+					c.cascadeParams[i] = { 
+						cascades[i].cascade.y, 
+						cascades[i].range.x, 
+						1.0f / (cascades[i].range.y - cascades[i].range.x), 
+						getValue<float>("C") };
 				}
 				c.numcascades = cascades.size();
 
@@ -116,7 +119,7 @@ void VolumetricLighting::render(Renderer::Texture2D::Ptr rt)
 
 				c.numcascades = l->getShadowMapSize();
 				c.lightdir = l->getNode()->getRealPosition();
-				c.cascadeDepths[0].x = getCamera()->getFar();
+				c.cascadeParams[0].x = getCamera()->getFar();
 			}
 			break;
 		}

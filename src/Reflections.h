@@ -30,6 +30,9 @@ public:
 		set("numdirs", { {"value", numdirs}, {"min", 0}, {"max", numdirs}, {"interval", 1}, {"type","set"} });
 		set("dirradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
 
+		set("pointradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
+
+
 		auto root = mScene->getRoot();
 		{
 			std::vector<std::string> textures = {
@@ -71,7 +74,7 @@ public:
 			model->attach(root);
 			Material::Ptr mat = Material::create();
 			mat->roughness = 1;
-			mat->metallic = 1;
+			mat->metallic = 0;
 			mat->reflection = 0;
 			mat->diffuse = { 0,1, 0};
 			model->setMaterial(mat);
@@ -179,7 +182,9 @@ public:
 
 		auto light = mScene->createOrGetLight("main");
 		light->setDirection({ 0,-1,0 });
+		light->setType(Scene::Light::LT_POINT);
 		light->setCastingShadow(true);
+		light->getNode()->setPosition((aabb.first + aabb.second));
 
 
 		int numprobes = 2;

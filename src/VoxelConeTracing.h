@@ -18,7 +18,7 @@
 #include "TAA.h"
 #include "MotionVector.h"
 #include "Voxelize.h"
-
+#include "VolumetricLighting.h"
 
 #include <random>
 
@@ -170,8 +170,9 @@ public:
 		mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
 		//mPipeline->pushStage<AO>();
 		mPipeline->pushStage<Voxelize>(256);
-		
+		//mPipeline->pushStage<VolumetricLighting>();
 		mPipeline->pushStage<SkyBox>("media/white.png", false);
+	
 		mPipeline->pushStage<HDR>();
 
 		mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");

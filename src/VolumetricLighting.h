@@ -10,7 +10,7 @@ class VolumetricLighting:public Pipeline::Stage
 		Matrix view;
 		Matrix lightView;
 		Matrix lightProjs[8];
-		Vector4 cascadeDepths[2];
+		Vector4 cascadeParams[8];
 		int numcascades;
 
 		Vector3 campos;

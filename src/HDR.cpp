@@ -161,17 +161,17 @@ void HDR::renderBloom(Renderer::Texture2D::Ptr rt)
 		return;
 	mBloomRT;
 	mDownsample->setScale(getValue<float>("samplescale"), getValue<float>("samplescale"));
-	mBloomRT = mDownsample->process(mBloomRT->get(), 0.5);
 
 	for (int i = 0; i < getValue<int>("blurcount"); ++i)
 	{
+		mBloomRT = mDownsample->process(mBloomRT->get(), 0.5);
 		mBloomRT = mGaussian->process(mBloomRT->get());
 	}
-	mBloomRT = mDownsample->process(mBloomRT->get(), 2);
 
-	//for (int i = 0; i < getValue<int>("blurcount"); ++i)
-	//{
-	//}
+	for (int i = 0; i < getValue<int>("blurcount"); ++i)
+	{
+		mBloomRT = mDownsample->process(mBloomRT->get(), 2);
+	}
 	auto quad = getQuad();
 
 

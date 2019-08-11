@@ -12,11 +12,11 @@
 
 MeshBuilder::Data MeshBuilder::build(const std::string & filename)
 {
-	std::regex obj("^.+\\.obj$");
-	if (std::regex_match(filename, obj))
-		return buildByTinyobj(filename);
-	else
-		return buildByAssimp(filename);
+	//std::regex obj("^.+\\.obj$");
+	//if (std::regex_match(filename, obj))
+	//	return buildByTinyobj(filename);
+	//else
+	return buildByAssimp(filename);
 
 
 }

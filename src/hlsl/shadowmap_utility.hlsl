@@ -8,8 +8,9 @@ struct DirShadowMapParams
 	float depthbias;
 	float depth_viewspace;
 	Texture2D shadowmap;
-	SamplerComparisonState samp;
-	float cascadedepths[8];
+	SamplerState samp;
+	float4 cascadeParams[8]; // x: far, y: near, z: 1/ (far - near), w: C
+
 };
 
 
@@ -20,36 +21,30 @@ float getDirShadow(DirShadowMapParams params)
 	float3 worldpos = params.worldpos;
 	matrix lightView = params.lightview;
 	Texture2D shadowmapTex = params.shadowmap;
-	SamplerComparisonState samp = params.samp;
+	SamplerState samp = params.samp;
 	float z = params.depth_viewspace;
 	float scale = 1.0f / (float)numcascades;
 	int startcascade = params.startcascade;
 
 	for (int i = startcascade; i < numcascades; ++i)
 	{
-		if (z > params.cascadedepths[i])
+		if (z > params.cascadeParams[i].x)
 			continue;
 
 		float4 pos = mul(float4(worldpos,1), lightView);
+		float depthinLightSpace = pos.z;
+
 		pos = mul(pos, params.lightProjs[i]);
 		pos /= pos.w;
 
-
-		float cmpdepth = pos.z - depthbias;
 
 		pos.x = (pos.x + 1) * 0.5;
 		pos.y = (1 - pos.y) * 0.5;
 
 		float2 uv = (pos.xy + float2(i, 0)) * float2(scale, 1);
-		float percentlit = 0.0f;
-		for (int x = -2; x <= 2; ++x)
-		{
-			for (int y = -2; y <= 2; ++y)
-			{
-				percentlit += shadowmapTex.SampleCmpLevelZero(samp, uv, cmpdepth, int2(x, y));
-			}
-		}
-		return  percentlit * 0.04f ;
+		depthinLightSpace = (depthinLightSpace - params.cascadeParams[i].y) * params.cascadeParams[i].z;
+		float receiver = exp(params.cascadeParams[i].w * -depthinLightSpace);
+		return saturate(shadowmapTex.SampleLevel(samp, uv, 0).r * receiver);
 	}
 
 	return 1;

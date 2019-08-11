@@ -168,7 +168,7 @@ public:
 	private:
 		std::vector<char> mCompiledShader;
 		ID3DX11Effect* mEffect;
-		std::string mSelectedTech;
+		ID3DX11EffectTechnique* mSelectedTech;
 		std::unordered_map<std::string, ID3DX11EffectTechnique*> mTechs;
 	};
 

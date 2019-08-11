@@ -23,7 +23,7 @@ cbuffer ConstantBuffer: register(b0)
 	matrix view;
 	matrix lightView;
 	matrix lightProjs[8];
-	float4 cascadeDepths[2];
+	float4 cascadeParams[8]; // x: far, y: minZ, z: 1/ (maxZ - minZ), w: C
 	int numcascades;
 
 	float3 campos;
@@ -53,21 +53,12 @@ float volumetricShadow(float3 pos)
 	smp.lightview = lightView;
 	smp.lightProjs = lightProjs;
 
-	{
-		smp.cascadedepths[0] = cascadeDepths[0].r;
-		smp.cascadedepths[1] = cascadeDepths[0].g;
-		smp.cascadedepths[2] = cascadeDepths[0].b;
-		smp.cascadedepths[3] = cascadeDepths[0].a;
+	smp.cascadeParams = cascadeParams;
 
-		smp.cascadedepths[4] = cascadeDepths[1].r;
-		smp.cascadedepths[5] = cascadeDepths[1].g;
-		smp.cascadedepths[6] = cascadeDepths[1].b;
-		smp.cascadedepths[7] = cascadeDepths[1].a;
-	}
 	smp.numcascades = numcascades;
 	smp.depthbias = 0.001f;
 	smp.shadowmap = shadowmap;
-	smp.samp = smpcmp;
+	smp.samp = samp;
 	// it will cross the mip border which i cannot reslove now
 	// using the last cascade
 	smp.startcascade = numcascades - 1;
@@ -79,7 +70,7 @@ float volumetricShadow(float3 pos)
 	PointShadowMapParams smp;
 	smp.depthbias = 0.001f;
 	smp.lightpos = lightdir;
-	smp.farZ = cascadeDepths[0].r;
+	smp.farZ = cascadeParams[0].r;
 	smp.shadowmap = shadowmap;
 	smp.samp = smpcmp;
 	smp.scale = 1.0f / (float)numcascades;

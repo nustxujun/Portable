@@ -104,16 +104,16 @@ void Framework::initPipeline()
 	mPipeline->pushStage<GBuffer>(true);
 	mPipeline->pushStage<MotionVector>();
 
-	mPipeline->pushStage<ShadowMap>(1024,1, shadowmaps);
+	mPipeline->pushStage<ShadowMap>(4096,1, shadowmaps);
 	mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
 	//mPipeline->pushStage<EnvironmentMapping>(EnvironmentMapping::T_ONCE, std::string("media/Alexs_Apt_2k.hdr"));
 	//mPipeline->pushStage<SSR>();
 	//mPipeline->pushStage<Voxelize>(256);
 	//mPipeline->pushStage<AO>(3.0f);
 	mPipeline->pushStage<SkyBox>("media/black.png", false);
-	//mPipeline->pushStage<VolumetricLighting>();
-	//mPipeline->pushStage<MotionBlur>();
-	//mPipeline->pushStage<HDR>();
+	mPipeline->pushStage<VolumetricLighting>();
+	mPipeline->pushStage<MotionBlur>();
+	mPipeline->pushStage<HDR>();
 
 	mPipeline->pushStage<PostProcessing>("hlsl/gamma_correction.hlsl");
 	mPipeline->pushStage<TAA>();
@@ -138,6 +138,9 @@ void Framework::initScene()
 	set("pointradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
 	set("dirradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
 	set("dist", { {"type","set"}, {"value",2},{"min","0"},{"max",10},{"interval", "0.1"} });
+
+
+	set("lightRange", { {"value", 100}, {"min", 1}, {"max", 1000}, {"interval", 1}, {"type","set"} });
 
 	auto root = mScene->getRoot();
 	//{
@@ -231,11 +234,11 @@ void Framework::initScene()
 
 
 	auto light = mScene->createOrGetLight("main");
-	light->setDirection({-0.5,-1,0.2 });
+	light->setDirection({0,-1,0.34 });
 	light->setCastingShadow(true);
 	light->setType(Scene::Light::LT_POINT);
-	light->getNode()->setPosition((aabb.first + aabb.second) * 0.5f);
-
+	light->getNode()->setPosition((aabb.first + aabb.second) * 0.5f+ Vector3(10,5,0)) ;
+	 
 	auto probe = mScene->createProbe("main");
 	probe->setProxyBox(vec);
 	probe->getNode()->setPosition((aabb.second + aabb.first) * 0.5f);

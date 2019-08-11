@@ -168,7 +168,7 @@ public:
 
 		mPipeline->pushStage<GBuffer>(true);
 		mPipeline->pushStage<MotionVector>();
-		mPipeline->pushStage<ShadowMap>(4096, 1, shadowmaps,true);
+		mPipeline->pushStage<ShadowMap>(4096, 1, shadowmaps,false);
 		mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
 		//mPipeline->pushStage< IrradianceVolumes>(Vector3(10, 10, 10), "media/black.png");
 		//mPipeline->pushStage<Voxelize>(256);

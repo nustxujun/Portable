@@ -22,7 +22,7 @@ using namespace nlohmann;
 #define EXPORT
 #endif
 
-using FRAMEWORK = Framework;
+using FRAMEWORK = SubsurfaceScattering;
 
 
 using Ptr = std::shared_ptr<FRAMEWORK>;

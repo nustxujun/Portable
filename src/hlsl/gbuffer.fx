@@ -274,7 +274,7 @@ ps(GBufferVertexShaderOutput input)
 	float height_pv = bumpTex.Sample(sampLinear, coord, int2(0, 1)).r;
 	float height_mv = bumpTex.Sample(sampLinear, coord, int2(0, -1)).r;
 	float du = height_mu - height_pu;
-	float dv = height_mv - height_pv;
+	float dv =  - height_mv + height_pv;
 	float3 normal = normalize(lerp(float3(0,0,1), float3(du, dv, 0), bumpiness));
 	float3x3 TBN = float3x3(input.Tangent, input.Bitangent, input.Normal);
 	output.Normal.xyz = mul(normal, TBN);

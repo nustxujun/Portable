@@ -12,7 +12,7 @@
 #include "stb_image.h"
 
 #define USE_PROFILE
-#define RELEASE_WITH_DEBUGINFO
+//#define RELEASE_WITH_DEBUGINFO
 
 void Renderer::checkResult(HRESULT hr)
 {
@@ -1249,6 +1249,8 @@ Renderer::Effect::Effect(Renderer* renderer,const void* compiledshader, size_t s
 			name = desc.Name;
 		mTechs.emplace(name, tech);
 	}
+
+	mSelectedTech = mTechs.begin()->second;
 }
 
 Renderer::Effect::~Effect()
@@ -1262,17 +1264,10 @@ void Renderer::Effect::render(Renderer::Ptr renderer, std::function<void(ID3DX11
 	{
 		return abort();
 	}
-	auto endi = mTechs.end();
-	auto best = mTechs.find(mSelectedTech);
-	if (best == endi)
-		best = mTechs.begin();
 
-	if (best == endi)
-		return;
-
-	auto tech = best->second;
+	auto tech = mSelectedTech;
 	D3DX11_TECHNIQUE_DESC desc;
-	best->second->GetDesc(&desc);
+	tech->GetDesc(&desc);
 
 	auto context = renderer->getContext();
 	for (size_t i = 0; i < desc.Passes; ++i)
@@ -1285,7 +1280,10 @@ void Renderer::Effect::render(Renderer::Ptr renderer, std::function<void(ID3DX11
 
 void Renderer::Effect::setTech(const std::string & name)
 {
-	mSelectedTech = name;
+	auto ret = mTechs.find(name);
+	if (ret == mTechs.end())
+		error(Common::format("cannnot find tech: ", name));
+	mSelectedTech = ret->second;
 }
 
 ID3DX11EffectTechnique * Renderer::Effect::getTech(const std::string & name)

@@ -115,7 +115,7 @@ static const float2 PoissonOffsets[64] = {
 };
 
 const static float invNumSamples = 1.0f / 64.0f;
-const static float lightwidth = 0.01;
+const static float lightwidth = 0.02;
 
 #if DIR
 
@@ -135,7 +135,6 @@ float4 receive_dir(float4 worldPos, float3 N, float depthlinear)
 		pos = mul(pos, lightProjs[i]);
 		pos /= pos.w;
 
-		float cmpdepth = pos.z - depthbias;
 
 		pos.x = (pos.x + 1) * 0.5;
 		pos.y = (1 - pos.y) * 0.5;
@@ -198,82 +197,35 @@ float4 receive_dir(float4 worldPos, float3 N, float depthlinear)
 }
 #elif POINT
 
-float2 findblocker(float2 uv, float depthlinear, float searchwidth, float2 jitter)
-{
-	//float block = sampleTex(sampPoint, uv).g;
-	//float sampled = 0;
-	//float count = 0;
-	//for (int i = 0; i < 64; ++i)
-	//{
-	//	float2 offset = PoissonOffsets[i] * searchwidth;
-	//	offset = rotate(offset, jitter);
-
-	//	float z = sampleTex(sampPoint, uv + offset).g;
-	//	if (z < (depthlinear - depthbias))
-	//	{
-	//		count += 1;
-	//		sampled += z;
-	//	}
-	//}
-
-	//if (count > 0)
-	//	return float2(sampled / count, count);
-	//else
-	//	return 0;
-}
 
 
-
-float filter(float2 uv, float penumbra, float receiver, float2 jitter)
-{
-	//float sampled = 0;
-	//for (int i = 0; i < 64; ++i)
-	//{
-	//	float2 offset = PoissonOffsets[i] * penumbra;
-	//	offset = rotate(offset, jitter);
-
-	//	sampled += sampleTex(sampPoint, uv + offset).r * receiver;
-	//}
-	//return saturate(sampled * invNumSamples);
-
-
-	//int len = 5;
-	//float inv = 1.0f / pow(len * 2 + 1, 2);
-	//float sampled = 0;
-	//for (int x = -len; x <= len; ++x)
-	//{
-	//	for (int y = -len; y < len; ++y)
-	//	{
-	//		sampled += shadowmapTex.SampleLevel(sampLinear, uv + float2(x,y) * scale * penumbra * 1000, 0).r;
-	//	}
-	//}
-	//return saturate(sampled * inv * receiver);
-}
-
-
-float4 receive_point(float4 worldPos, float3 N)
+float4 receive_point(float4 worldPos, float3 N, float jitter)
 {
 	float3 lightpos = lightdir;
 	float3 uv = worldPos.xyz - lightpos;
 
-	float3 randdir = frac(uv);
+	//float3 randdir = frac(uv);
+	float3 randdir = float3(cos(jitter), sin(jitter), 0);
 	uv = normalize(uv);
 
 	float3 tangent = normalize(cross(uv, randdir));
 	float3 bitangent = normalize(cross(uv, tangent));
 
-	const float radius = 0.005;
+	const float radius = 0.4;
 
-	float cmpdepth = length(worldPos.xyz - lightpos)  ;
+	float cmpdepth = length(worldPos.xyz - lightpos) -1 ;
 
 	float dist = 0;
 	float count = 0;
-	for (int i = 0; i < 64; ++i)
+	const int num_sample = 64;
+	float percentlit = 0;
+
+	for (int i = 0; i < num_sample; ++i)
 	{
 		float3 offset = tangent * PoissonOffsets[i].x + bitangent * PoissonOffsets[i].y;
 		offset *= radius;
 	
-		float d = shadowmapTex.SampleLevel(sampPoint, uv + offset, 0);
+		float d = shadowmapTex.SampleLevel(sampPoint, uv + offset, 0).r;
 		if (cmpdepth > d)
 		{
 			dist += d;
@@ -282,30 +234,45 @@ float4 receive_point(float4 worldPos, float3 N)
 		//percentlit += shadowmapTex.SampleCmpLevelZero(sampshadow, uv + offset, cmpdepth);
 	}
 
-	//return percentlit / 64;
+	//return percentlit / (float)num_sample;
 
 	//return shadowmapTex.SampleCmpLevelZero(sampshadow, uv , cmpdepth);
-
+	//return 1 - count / (float)num_sample;
 	if (count == 0)
 		return 1;
-	else if (count == 64.0f)
+	else if (count == num_sample)
 		return 0;
 
 	dist /= count;
-	float pcfradius = (cmpdepth - dist) / dist * lightwidth;
-	pcfradius = 0;
+	float pcfradius = (cmpdepth - dist) / dist * lightwidth ;
+	//pcfradius = 0.001;
 
-	float percentlit = 0;
-	for (int i = 0; i < 64; ++i)
+	for (int i = 0; i < num_sample; ++i)
 	{
 		float3 offset = tangent * PoissonOffsets[i].x + bitangent * PoissonOffsets[i].y;
 		offset *= pcfradius;
 
-		//dist += shadowmapTex.SampleLevel(sampPoint, uv + offset, 0);
-		percentlit += shadowmapTex.SampleCmpLevelZero(sampshadow, uv + offset, dist);
+		float depth = shadowmapTex.SampleLevel(sampPoint, uv + offset, 0);
+		//if (depth> cmpdepth)
+
+		percentlit += shadowmapTex.SampleCmpLevelZero(sampshadow, uv + offset, cmpdepth);
 	}
 
-	return percentlit / 64;
+	return percentlit / (float)num_sample;
+
+	//const float len = 2;
+	//for (int x = -len; x <= len; ++x)
+	//{
+	//	for (int y = -len; y <= len; ++y)
+	//	{
+	//		for (int z = -len; z <= len; ++z)
+	//		{
+	//			percentlit += shadowmapTex.SampleCmpLevelZero(sampshadow, uv + float3(x,y,z) * pcfradius, cmpdepth);
+	//		}
+	//	}
+	//}
+	//return percentlit / (pow(len * 2 + 1, 3));
+
 
 	//float depthinLightSpace = length(worldPos.xyz - lightpos) * cascadeDepths[0].x ;
 
@@ -313,17 +280,7 @@ float4 receive_point(float4 worldPos, float3 N)
 	//float receiver = exp(cascadeDepths[0].y * -depthinLightSpace);
 	//return saturate(sampledepth * receiver);
 
-	//float percentlit = 0;
-	//for (int x = -2; x <= 2; ++x)
-	//{
-	//	for (int y = -2; y <= 2; ++y)
-	//	{
-	//		for (int z = -2; z <= 2; ++z)
-	//		{
-	//			percentlit += shadowmapTex.SampleCmpLevelZero(sampshadow, uv + float3(x,y,z) * scale, cmpdepth);
-	//		}
-	//	}
-	//}
+
 
 
 	//return percentlit * 0.008f;
@@ -353,7 +310,7 @@ float4 ps(PS_INPUT input) : SV_TARGET
 	float2 Xi = noiseTex.Load(int3(noiseuv, 0)).rg;
 	float angle = (Xi.x + Xi.y) * 3.1415926;
 
-	return receive_point(worldPos, N);
+	return receive_point(worldPos, N, angle);
 #else
 	return 1;
 #endif
