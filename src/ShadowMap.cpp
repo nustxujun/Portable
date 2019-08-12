@@ -308,8 +308,8 @@ void ShadowMap::renderShadowPoint(Scene::Light::Ptr light, Renderer::Texture2D::
 	auto farZ = light->getRange();
 	if (has("lightRange"))
 		farZ = getValue<float>("lightRange");
-	constants.cascadeDepths[0].x = 1.0f / farZ;
-	constants.cascadeDepths[0].y = getValue<float>("C");
+	constants.cascadeDepths[0].x = farZ * 0.01f;
+	//constants.cascadeDepths[0].y = getValue<float>("C");
 
 	constants.scale = 1.0f/ (float)mShadowMapSize;
 	mReceiveConstants.lock()->blit(&constants, sizeof(constants));

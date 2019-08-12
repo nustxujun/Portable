@@ -12,7 +12,7 @@
 #include "stb_image.h"
 
 #define USE_PROFILE
-//#define RELEASE_WITH_DEBUGINFO
+#define RELEASE_WITH_DEBUGINFO
 
 void Renderer::checkResult(HRESULT hr)
 {

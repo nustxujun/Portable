@@ -104,14 +104,14 @@ void Framework::initPipeline()
 	mPipeline->pushStage<GBuffer>(true);
 	mPipeline->pushStage<MotionVector>();
 
-	mPipeline->pushStage<ShadowMap>(4096,1, shadowmaps);
+	mPipeline->pushStage<ShadowMap>(1024,1, shadowmaps);
 	mPipeline->pushStage<PBR>(Vector3(), shadowmaps);
 	//mPipeline->pushStage<EnvironmentMapping>(EnvironmentMapping::T_ONCE, std::string("media/Alexs_Apt_2k.hdr"));
 	//mPipeline->pushStage<SSR>();
 	//mPipeline->pushStage<Voxelize>(256);
 	//mPipeline->pushStage<AO>(3.0f);
 	mPipeline->pushStage<SkyBox>("media/black.png", false);
-	mPipeline->pushStage<VolumetricLighting>();
+	//mPipeline->pushStage<VolumetricLighting>();
 	mPipeline->pushStage<MotionBlur>();
 	mPipeline->pushStage<HDR>();
 
@@ -140,7 +140,7 @@ void Framework::initScene()
 	set("dist", { {"type","set"}, {"value",2},{"min","0"},{"max",10},{"interval", "0.1"} });
 
 
-	set("lightRange", { {"value", 100}, {"min", 1}, {"max", 1000}, {"interval", 1}, {"type","set"} });
+	set("lightRange", { {"value", 1000}, {"min", 0}, {"max", 3000}, {"interval", 1}, {"type","set"} });
 
 	auto root = mScene->getRoot();
 	//{

@@ -115,7 +115,7 @@ static const float2 PoissonOffsets[64] = {
 };
 
 const static float invNumSamples = 1.0f / 64.0f;
-const static float lightwidth = 0.02;
+const static float lightwidth = 0.01;
 
 #if DIR
 
@@ -211,10 +211,12 @@ float4 receive_point(float4 worldPos, float3 N, float jitter)
 	float3 tangent = normalize(cross(uv, randdir));
 	float3 bitangent = normalize(cross(uv, tangent));
 
-	const float radius = 0.4;
+	//const float radius = 0.4;
 
 	float cmpdepth = length(worldPos.xyz - lightpos) -1 ;
-
+	float d = abs(worldPos.xyz - lightpos).z;
+	float searchradius = lightwidth * (d - cascadeDepths[0].x) / d;
+	//searchradius = 1;
 	float dist = 0;
 	float count = 0;
 	const int num_sample = 64;
@@ -223,7 +225,7 @@ float4 receive_point(float4 worldPos, float3 N, float jitter)
 	for (int i = 0; i < num_sample; ++i)
 	{
 		float3 offset = tangent * PoissonOffsets[i].x + bitangent * PoissonOffsets[i].y;
-		offset *= radius;
+		offset *= searchradius;
 	
 		float d = shadowmapTex.SampleLevel(sampPoint, uv + offset, 0).r;
 		if (cmpdepth > d)
