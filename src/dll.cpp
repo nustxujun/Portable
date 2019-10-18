@@ -13,6 +13,7 @@
 #include "SHSample.h"
 #include "VoxelConeTracing.h"
 #include "SubsurfaceScattering.h"
+#include "ImGuiOverlay.h"
 
 using namespace nlohmann;
 
@@ -22,7 +23,7 @@ using namespace nlohmann;
 #define EXPORT
 #endif
 
-using FRAMEWORK = Framework;
+using FRAMEWORK = PBRMaterial;
 
 
 using Ptr = std::shared_ptr<FRAMEWORK>;
@@ -108,178 +109,51 @@ HWND createWindow(int width, int height)
 	return hWnd;
 }
 
-class ElectronOverlay :public Overlay, public Setting::Modifier
+class Watcher : public Setting::Modifier
 {
 public:
-	using Ptr = std::shared_ptr<ElectronOverlay>;
-	int state = 0;
-	std::vector<char> overlaydata;
-	Renderer::Texture2D::Ptr mTarget;
-	Quad::Ptr mQuad;
-	HWND window;
-	bool visible = true;
-	Renderer::Font::Ptr mFont;
-	std::unordered_map<std::string, std::string> mContents;
-
-	void init(int width, int height)
-	{
-		overlaydata.resize(width * height * 4);
-		D3D11_TEXTURE2D_DESC desc = {0};
-		desc.Width = width;
-		desc.Height = height;
-		desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-		desc.Usage = D3D11_USAGE_DYNAMIC;
-		desc.MipLevels = 1;
-		desc.SampleDesc.Count = 1;
-		desc.SampleDesc.Quality = 0;
-		desc.ArraySize = 1;
-		desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-		desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-
-		mTarget = mRenderer->createTexture(desc);
-		mQuad = Quad::Ptr(new Quad(mRenderer));
-		mFont = mRenderer->createOrGetFont(L"default.sf");
-	}
-
-	bool isKeyUp(const Input::Keyboard& k, DirectX::Keyboard::Keys key)
-	{
-		static Input::Keyboard lastState = k;
-		if (lastState.IsKeyDown(key) && k.IsKeyUp(key))
-		{
-			lastState = k;
-			return true;
-		}
-
-		lastState = k;
-		return false;
-	}
-
-	bool handleEvent(const Input::Mouse& m, const Input::Keyboard& k)
-	{
-		if (isKeyUp(k, DirectX::Keyboard::Tab))
-			visible = !visible;
-
-		auto desc = mTarget.lock()->getDesc();
-		
-		if (m.x >= 0 && m.x <= desc.Width &&
-			m.y >= 0 && m.y <= desc.Height && visible)
-		{
-			static Input::Mouse lastState = m;
-			if (lastState.leftButton != m.leftButton)
-			{
-				json e;
-				e["mouse"]["x"] = m.x;
-				e["mouse"]["y"] = m.y;
-				e["mouse"]["modifiers"] = { "left" };
-				e["mouse"]["type"] = m.leftButton?"mouseDown": "mouseUp";
-				callElectron(e);
-			}
-
-			if (lastState.rightButton != m.rightButton)
-			{
-				json e;
-				e["mouse"]["x"] = m.x;
-				e["mouse"]["y"] = m.y;
-				e["mouse"]["modifiers"] = { "left" };
-				e["mouse"]["type"] = m.rightButton ? "mouseDown" : "mouseUp";
-				callElectron(e);
-			}
-
-			if (lastState.x != m.x || lastState.y != m.y)
-			{
-				json e;
-				e["mouse"]["x"] = m.x;
-				e["mouse"]["y"] = m.y;
-				e["mouse"]["type"] = "mouseMove";
-				callElectron(e);
-			}
-
-
-			lastState = m;
-			return true;
-		}
-		else
-		{
-			json e;
-			e["mouse"]["x"] = m.x;
-			e["mouse"]["y"] = m.y;
-			e["mouse"]["modifiers"] = { "left","right" };
-			e["mouse"]["type"] = "mouseUp";
-			callElectron(e);
-
-			return false;
-		}
-	}
-	void render()
-	{
-		if (!visible)
-			return;
-		refresh();
-		mQuad->setDefaultBlend(true);
-		mQuad->setDefaultPixelShader();
-		mQuad->setDefaultSampler();
-
-		auto desc = mTarget.lock()->getDesc();
-
-		D3D11_VIEWPORT vp;
-		vp.Width = desc.Width;
-		vp.Height = desc.Height;
-		vp.TopLeftX = 0.0f;
-		vp.TopLeftY = 0.0f;
-		vp.MinDepth = 0.0f;
-		vp.MaxDepth = 1.0f;
-		mQuad->setViewport(vp);
-		mQuad->setTextures({ mTarget });
-		mQuad->setRenderTarget(mRenderer->getBackbuffer());
-		mQuad->draw();
-
-#ifndef _WINDLL
-		mFont.lock()->setRenderTarget(mRenderer->getBackbuffer());
-		float height = 0;
-		for (auto& i : mContents)
-		{
-			mFont.lock()->drawText(Common::format(i.first, " : ",i.second), { 10.0f, height });
-			height += 20;
-		}
-#endif
-	}
-
-	void refresh()
-	{
-		if (state == 1)
-		{
-			state = 0;
-			mTarget.lock()->blit(overlaydata.data(), overlaydata.size());
-		}
-	}
-
 	void onChanged(const std::string& key, const nlohmann::json::value_type& value)
 	{
+		static ImguiWindow* panel = (ImguiWindow*)ImguiObject::root()->createChild<ImguiWindow>("panel");
+		panel->setSize(300, 400);
 		json j = value;
 
 		if (j["type"] == "set" || j["type"] == "stage")
 			j["key"] = key;
-		callElectron(j);
-#ifndef _WINDLL
+
 		if (j["type"] == "stage")
-			mContents[key] = j["cost"];
-#endif
-	}
-
-	void receive(const char* s, size_t size)
-	{
-		std::string str(s, size);
-		json j = json::parse(str);
-
-		std::string type = j["type"];
-		if (type == "set")
 		{
-			setValue(j["key"], j["value"]);
+			static std::map<std::string, ImguiObject*> stages;
+			if (stages.find(key) == stages.end())
+			{
+				stages[key] = panel->createChild<ImguiText>();
+			}
+			std::string cost = j["cost"];
+
+			((ImguiText*)stages[key])->text = key + ": " + cost + "ms";
+		}
+		if (j["type"] == "set")
+		{
+			static std::map<std::string, ImguiSlider*> sliders;
+			float v = j["value"];
+			if (sliders.find(key) == sliders.end())
+			{
+				float vmin = j["min"];
+				float vmax = j["max"];
+				sliders[key] = panel->createChild<ImguiSlider>(key.c_str(), v, vmin, vmax,
+					[this, key](ImguiSlider* slider)
+					{
+						this->setValue(key, slider->value);
+					});
+			}
+			sliders[key]->value = v;
 		}
 	}
+
+
 };
 
-ElectronOverlay::Ptr overlay;
+ImguiOverlay::Ptr overlay;
 
 extern "C"
 {
@@ -298,12 +172,12 @@ extern "C"
 				registerWindow();
 				auto win = createWindow(width, height);
 				framework = Ptr(new FRAMEWORK(win));
-				overlay = ElectronOverlay::Ptr(new ElectronOverlay());
-				overlay->setSetting(framework->getSetting());
-				overlay->window = win;
+	
+
+				Watcher watcher;
+				watcher.setSetting(framework->getSetting());
 				framework->init();
-				framework->setOverlay(overlay);
-				overlay->init(overlayWidth, overlayHeight);
+
 				MSG msg = {};
 				while (WM_QUIT != msg.message && WM_CLOSE != msg.message
 #ifdef _WINDLL
@@ -318,7 +192,6 @@ extern "C"
 					}
 					else
 					{
-						overlay->refresh();
 						framework->update();
 
 					}
@@ -332,15 +205,12 @@ extern "C"
 
 
 			framework = nullptr;
-			overlay = nullptr;
 		}));
 	}
 
 	EXPORT void paint(char* data, size_t size)
 	{
-		if (!overlay) return;
-		memcpy(overlay->overlaydata.data(), data, std::min(size, overlay->overlaydata.size()));
-		overlay->state = 1;
+
 	}
 
 	EXPORT void setCallback(Callback cb)
@@ -350,7 +220,6 @@ extern "C"
 
 	EXPORT void handleEvent(char* data, size_t size)
 	{
-		overlay->receive(data, size);
 	}
 
 	EXPORT void close()
@@ -366,7 +235,7 @@ extern "C"
 int main()
 {
 	try {
-		init(1600, 1000, 1, 1, 0);
+		init(1600, 900, 1, 1, 0);
 		loop->join();
 	}
 	catch (std::exception& e)

@@ -12,16 +12,16 @@ AO::AO(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setting::Ptr st, Pipeline* p)
 
 void AO::init(float radius)
 {
-	this->set("AOradius", { {"type","set"}, {"value",radius},{"min","1"},{"max","50"},{"interval", "1"} });
-	this->set("AOintensity", { {"type","set"}, {"value",4},{"min","0"},{"max","10"},{"interval", "0.1"} });
+	this->set("AOradius", { {"type","set"}, {"value",radius},{"min",1},{"max",50},{"interval", "1"} });
+	this->set("AOintensity", { {"type","set"}, {"value",4},{"min",0},{"max",10},{"interval", "0.1"} });
 
 	auto r = getRenderer();
 	auto blob = r->compileFile("hlsl/ssao.hlsl", "main", "ps_5_0");
 	mPS = r->createPixelShader(blob->GetBufferPointer(), blob->GetBufferSize());
 
 
-	mKernel = r->createBuffer(sizeof(Kernel), D3D11_BIND_CONSTANT_BUFFER);
-	mMatrix = r->createBuffer(sizeof(ConstantMatrix), D3D11_BIND_CONSTANT_BUFFER);
+	mKernel = r->createConstantBuffer(sizeof(Kernel));
+	mMatrix = r->createConstantBuffer(sizeof(ConstantMatrix));
 
 	std::uniform_real_distribution<float> rand1(-1.0, 1.0);
 	std::uniform_real_distribution<float> rand2(0.0, 1.0);

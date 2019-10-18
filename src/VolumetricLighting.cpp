@@ -19,7 +19,7 @@ void VolumetricLighting::init()
 			mPS[i] = r->createPixelShader("hlsl/volumetriclight.hlsl", "main", m.data());
 		}
 	}
-	mConstants = r->createBuffer(sizeof(Constants), D3D11_BIND_CONSTANT_BUFFER);
+	mConstants = r->createConstantBuffer(sizeof(Constants));
 	mLinearClamp = r->createSampler("linear_clamp", D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP);
 	mSampleCmp = r->createSampler("shadow_sampler",
 		D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT,
@@ -28,9 +28,9 @@ void VolumetricLighting::init()
 		D3D11_TEXTURE_ADDRESS_BORDER,
 		D3D11_COMPARISON_LESS_EQUAL,
 		0, 0);
-	set("vl-numsamples", { {"type","set"}, {"value",64},{"min","0"},{"max",1024},{"interval", "1"} });
-	set("vl-jitter", { {"type","set"}, {"value",1},{"min","0"},{"max",1},{"interval", "0.01"} });
-	set("vl-density", { {"type","set"}, {"value",0.001},{"min","0"},{"max","0.01"},{"interval", "0.00001"} });
+	set("vl-numsamples", { {"type","set"}, {"value",64},{"min",0},{"max",1024},{"interval", "1"} });
+	set("vl-jitter", { {"type","set"}, {"value",1},{"min",0},{"max",1},{"interval", "0.01"} });
+	set("vl-density", { {"type","set"}, {"value",0.001},{"min",0},{"max","0.01"},{"interval", "0.00001"} });
 
 	mDownsample = ImageProcessing::create<SamplingBox>(r);
 	mGauss = ImageProcessing::create<Gaussian>(r);

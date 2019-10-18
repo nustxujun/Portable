@@ -32,12 +32,12 @@ public:
 		int numdirs = 1;
 		int numpoints = 0;
 
-		set("time", { {"value", 3.14f}, {"min", "1.57"}, {"max", "4.71"}, {"interval", "0.001"}, {"type","set"} });
+		set("time", { {"value", 3.14f}, {"min", 1.57}, {"max", 4.71}, {"interval", "0.001"}, {"type","set"} });
 		set("numdirs", { {"value", numdirs}, {"min", 0}, {"max", numdirs}, {"interval", 1}, {"type","set"} });
-		set("dirradiance", { {"type","set"}, {"value",10},{"min","0.1"},{"max",100},{"interval", "0.1"} });
+		set("dirradiance", { {"type","set"}, {"value",10},{"min",0.1},{"max",100},{"interval", "0.1"} });
 		set("lightRange", { {"value", 1000}, {"min", 1}, {"max", 1000}, {"interval", 1}, {"type","set"} });
 		set("numpoints", { {"value", numpoints}, {"min", 0}, {"max", 1}, {"interval", 1}, {"type","set"} });
-		set("pointradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
+		set("pointradiance", { {"type","set"}, {"value",1},{"min",0.1},{"max",100},{"interval", "0.1"} });
 
 		auto root = mScene->getRoot();
 		//{

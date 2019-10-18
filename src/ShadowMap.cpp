@@ -17,16 +17,16 @@ void ShadowMap::init(int mapsize, int numlevels, const std::vector<Renderer::Tex
 {
 	mExponential = true;
 
-	this->set("shadowcolor", { {"type","set"}, {"value",0.00f},{"min","0"},{"max",1.0f},{"interval", "0.001"} });
-	this->set("depthbias", { {"type","set"}, {"value",0.001f},{"min","0"},{"max","0.01"},{"interval", "0.0001"} });
-	this->set("lambda", { {"type","set"}, {"value",0.5f},{"min","0"},{"max","1"},{"interval", "0.01"} });
-	this->set("C", { {"type","set"}, {"value",80},{"min","0"},{"max","100"},{"interval", "1"} });
+	this->set("shadowcolor", { {"type","set"}, {"value",0.00f},{"min",0},{"max",1.0f},{"interval", "0.001"} });
+	this->set("depthbias", { {"type","set"}, {"value",0.001f},{"min",0},{"max",0.01},{"interval", "0.0001"} });
+	this->set("lambda", { {"type","set"}, {"value",0.5f},{"min",0},{"max",1},{"interval", "0.01"} });
+	this->set("C", { {"type","set"}, {"value",80},{"min",0},{"max",100},{"interval", "1"} });
 
 	if (transmittance)
 	{
-		this->set("translucency", { {"type","set"}, {"value",0.85f},{"min","0"},{"max","1"},{"interval", "0.01"} });
-		this->set("translucency_thickness", { {"type","set"}, {"value",100},{"min","0"},{"max","1000"},{"interval", "1"} });
-		this->set("translucency_bias", { {"type","set"}, {"value",0.003},{"min","0"},{"max","0.01"},{"interval", "0.0001"} });
+		this->set("translucency", { {"type","set"}, {"value",0.85f},{"min",0},{"max",1},{"interval", "0.01"} });
+		this->set("translucency_thickness", { {"type","set"}, {"value",100},{"min",0},{"max",1000},{"interval", "1"} });
+		this->set("translucency_bias", { {"type","set"}, {"value",0.003},{"min",0},{"max",0.01},{"interval", "0.0001"} });
 
 	}
 
@@ -78,7 +78,7 @@ void ShadowMap::init(int mapsize, int numlevels, const std::vector<Renderer::Tex
 
 
 
-	mReceiveConstants = r->createBuffer(sizeof(ReceiveConstants), D3D11_BIND_CONSTANT_BUFFER);
+	mReceiveConstants = r->createConstantBuffer(sizeof(ReceiveConstants));
 
 
 	D3D11_RASTERIZER_DESC rasterDesc;

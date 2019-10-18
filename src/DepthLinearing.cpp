@@ -6,7 +6,7 @@ DepthLinearing::DepthLinearing(Renderer::Ptr r, Scene::Ptr s, Quad::Ptr q, Setti
 	mName = "linear depth";
 	mPS = r->createPixelShader("hlsl/depthlinearing.hlsl", "main");
 
-	mConstants = r->createBuffer(sizeof(Matrix), D3D11_BIND_CONSTANT_BUFFER);
+	mConstants = r->createConstantBuffer(sizeof(Matrix));
 
 	mDepth = getShaderResource("depth");
 	mDepthLinear = getRenderTarget("depthlinear");

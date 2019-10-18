@@ -112,10 +112,10 @@ void GBuffer::init(bool cleardepth, std::function<bool(Scene::Entity::Ptr)> cond
 {
 	mName = "gbuffer";
 	mClearDepth = cleardepth;
-	set("heightscale", { {"type","set"}, {"value",0.05f},{"min","0"},{"max",2},{"interval", "0.01"} });
-	set("minSampleCount", { {"type","set"}, {"value",8},{"min","1"},{"max",1000},{"interval", "1"} });
-	set("maxSampleCount", { {"type","set"}, {"value",100},{"min","1"},{"max",1000},{"interval", "1"} });
-	set("bumpiness", { {"type","set"}, {"value",0.8},{"min","0"},{"max",1},{"interval", "0.01"} });
+	set("heightscale", { {"type","set"}, {"value",0.05f},{"min",0},{"max",2},{"interval", "0.01"} });
+	set("minSampleCount", { {"type","set"}, {"value",8},{"min",1},{"max",1000},{"interval", "1"} });
+	set("maxSampleCount", { {"type","set"}, {"value",100},{"min",1},{"max",1000},{"interval", "1"} });
+	set("bumpiness", { {"type","set"}, {"value",0.8},{"min",0},{"max",1},{"interval", "0.01"} });
 
 	auto cam = getCamera();
 	auto vp = cam->getViewport();

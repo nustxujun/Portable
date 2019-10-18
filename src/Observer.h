@@ -57,10 +57,10 @@ public :
 
 		auto cam = mScene->createOrGetCamera("main");
 		cam->setViewport(0, 0, mRenderer->getWidth(), mRenderer->getHeight());
-		cam->setFOVy(0.785398185);
+		cam->setFOVy(0.785398185f);
 
 		auto light = mScene->createOrGetLight("main");
-		light->setDirection({ 0.5,-1,0.5 });
+		light->setDirection({ 0.5f,-1,0.5f });
 		light->setColor({10,0,0});
 		light->setType(Scene::Light::LT_POINT);
 		light->attach(mScene->getRoot());
@@ -127,7 +127,7 @@ public :
 			Vector3 vec = aabb.second - aabb.first;
 			auto center = (aabb.second + aabb.first) * 0.5f;
 			auto maxlen = (aabb.second - aabb.first).Length();
-			cam->setNearFar(0.1, maxlen * 4);
+			cam->setNearFar(0.1f, maxlen * 4);
 			float com_step = std::max(std::max(vec.x, vec.y), vec.z) * 0.001f;
 
 			

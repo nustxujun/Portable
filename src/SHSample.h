@@ -257,9 +257,9 @@ public:
 		auto model = mScene->getModel("sphere");
 		if (model)
 		{
-			float time = GetTickCount() * 0.001;
-			float sin = std::sin(time) * 0.5;
-			float cos = std::cos(time) * 0.5;
+			float time = GetTickCount() * 0.001f;
+			float sin = std::sin(time) * 0.5f;
+			float cos = std::cos(time) * 0.5f;
 			model->getNode()->setPosition(cos , cos + 1, sin );
 		}
 	}

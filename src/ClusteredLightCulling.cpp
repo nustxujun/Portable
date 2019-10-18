@@ -8,7 +8,7 @@ void ClusteredLightCulling::init(const Vector3& slices, const Vector3& clustersi
 	mName = "clustered light culling";
 	mComputer = GPUComputer::Ptr(new GPUComputer(getRenderer()));
 	mCS = getRenderer()->createComputeShader("hlsl/clusteredlightculling.hlsl","main");
-	mConstants = getRenderer()->createBuffer(sizeof(Constants), D3D11_BIND_CONSTANT_BUFFER, 0, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+	mConstants = getRenderer()->createConstantBuffer(sizeof(Constants));
 	mCurIndex = getRenderer()->createRWBuffer(4, 4, DXGI_FORMAT_R32_UINT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS);
 
 }

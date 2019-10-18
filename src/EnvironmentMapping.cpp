@@ -80,7 +80,7 @@ Renderer::TemporaryRT::Ptr EnvironmentMapping::calDistance(Renderer::Texture2D::
 void EnvironmentMapping::init(const std::string& cubemap )
 {
 	init();
-	set("envIntensity", { {"type","set"}, {"value",1},{"min","0"},{"max",2.0f},{"interval", "0.01"} });
+	set("envIntensity", { {"type","set"}, {"value",1},{"min",0},{"max",2.0f},{"interval", "0.01"} });
 
 	mIrradianceProcessor = ImageProcessing::create<IrradianceCubemap>(getRenderer(), false);
 	mPrefilteredProcessor = ImageProcessing::create<PrefilterCubemap>(getRenderer(), false);
@@ -107,8 +107,8 @@ void EnvironmentMapping::init(Type type, const std::string& cubemap, int resolut
 {
 	mType = type;
 	init();
-	set("envIntensity", { {"type","set"}, {"value",1},{"min","0"},{"max",2.0f},{"interval", "0.01"} });
-	set("boxProjection", { {"type","set"}, {"value",1},{"min","0"},{"max",1},{"interval", "1"} });
+	set("envIntensity", { {"type","set"}, {"value",1},{"min",0},{"max",2.0f},{"interval", "0.01"} });
+	set("boxProjection", { {"type","set"}, {"value",1},{"min",0},{"max",1},{"interval", "1"} });
 
 
 

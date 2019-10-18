@@ -48,7 +48,7 @@ Renderer::TemporaryRT::Ptr ImageProcessing::createOrGet(const D3D11_TEXTURE2D_DE
 void SamplingBox::init()
 {
 	mPS = mRenderer->createPixelShader("hlsl/filter.hlsl", "sampleBox");
-	mConstants = mRenderer->createBuffer(sizeof(DirectX::SimpleMath::Vector4), D3D11_BIND_CONSTANT_BUFFER);
+	mConstants = mRenderer->createConstantBuffer(sizeof(DirectX::SimpleMath::Vector4));
 }
 
 Renderer::TemporaryRT::Ptr SamplingBox::process(Renderer::Texture2D::Ptr tex, float scaling)

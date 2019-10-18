@@ -26,11 +26,11 @@ public:
 	{
 		int numdirs = 1;
 
-		set("time", { {"value", 3.14f}, {"min", "1.57"}, {"max", "4.71"}, {"interval", "0.001"}, {"type","set"} });
+		set("time", { {"value", 3.14f}, {"min", 1.57}, {"max", 4.71}, {"interval", "0.001"}, {"type","set"} });
 		set("numdirs", { {"value", numdirs}, {"min", 0}, {"max", numdirs}, {"interval", 1}, {"type","set"} });
-		set("dirradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
+		set("dirradiance", { {"type","set"}, {"value",1},{"min",0.1},{"max",100},{"interval", "0.1"} });
 
-		set("pointradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
+		set("pointradiance", { {"type","set"}, {"value",1},{"min",0.1},{"max",100},{"interval", "0.1"} });
 
 
 		auto root = mScene->getRoot();
@@ -177,7 +177,7 @@ public:
 		//cam->setDirection({ 0, -1, 0 });
 		cam->setViewport(0, 0, mRenderer->getWidth(), mRenderer->getHeight());
 		cam->setNearFar(1, vec.Length() + 1);
-		cam->setFOVy(0.785398185);
+		cam->setFOVy(0.785398185f);
 
 
 		auto light = mScene->createOrGetLight("main");

@@ -5,7 +5,7 @@
 #include "Pipeline.h"
 #include "Input.h"
 #include "Setting.h"
-#include "Overlay.h"
+#include "ImguiOverlay.h"
 
 class Framework: public Setting::Modifier
 {
@@ -17,12 +17,12 @@ public:
 
 	Setting::Ptr getSetting()const { return mPipeline->getSetting(); }
 
-	void setOverlay(Overlay::Ptr overlay);
 	float getFPS()const { return mFPS; }
 protected:
 	virtual void initPipeline();
 	virtual void initScene();
 	virtual void initInput();
+	virtual void initUI();
 	virtual void framemove() ;
 
 	virtual void onChanged(const std::string& key, const nlohmann::json::value_type& value) {};
@@ -34,7 +34,7 @@ protected:
 	std::shared_ptr<Input> mInput;
 	Renderer::Ptr mRenderer;
 	Scene::Ptr mScene;
-	Overlay::Ptr mOverlay;
+	ImguiOverlay::Ptr mOverlay;
 	Renderer::Profile::Ptr mOverlayProfile;
 	
 

@@ -865,6 +865,19 @@ Renderer::Buffer::Ptr Renderer::createConstantBuffer(int size, void* data , size
 	return createBuffer(size, D3D11_BIND_CONSTANT_BUFFER, data? &initdata:nullptr, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 }
 
+void Renderer::destroyBuffer(Buffer::Ptr buffer)
+{
+	for (auto i = 0; i < mBuffers.size();++i)
+	{
+		auto& b = mBuffers[i];
+		if (b == buffer.lock())
+		{
+			mBuffers.erase(mBuffers.begin() + i);
+			break;
+		}
+	}
+}
+
 
 Renderer::SharedCompiledData Renderer::compileFile(const std::string& filename, const std::string& entryPoint, const std::string& shaderModel, const D3D10_SHADER_MACRO* macro)
 {
@@ -1199,7 +1212,7 @@ void Renderer::Buffer::write(const void * data, size_t size)
 	auto f4count = size / 16;
 	auto left = size % 16;
 
-	if (f4count != 0 && left != 0)
+	if ((mDesc.BindFlags & D3D11_BIND_CONSTANT_BUFFER) && f4count != 0 && left != 0)
 		error("do not cross the float4(single register) boundary");
 
 	auto curSize = mCache.size();
@@ -1210,7 +1223,7 @@ void Renderer::Buffer::write(const void * data, size_t size)
 	auto nextf4count = (curSize + size) / 16;
 	auto nextf4left = (curSize + size) % 16;
 
-	if (curf4count != nextf4count && nextf4left != 0)
+	if ((mDesc.BindFlags & D3D11_BIND_CONSTANT_BUFFER) && curf4count != nextf4count && nextf4left != 0)
 		error("do not cross the float4(single register) boundary");
 
 	const char* beg = (const char*)data;

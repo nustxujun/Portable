@@ -13,7 +13,7 @@ DepthBounding::DepthBounding(
 	auto blob = r->compileFile("hlsl/depthbounding.hlsl", "main", "cs_5_0");
 	mCS = r->createComputeShader(blob->GetBufferPointer(), blob->GetBufferSize());
 
-	mConstants = r->createBuffer(sizeof(Matrix), D3D11_BIND_CONSTANT_BUFFER);
+	mConstants = r->createConstantBuffer(sizeof(Matrix));
 	mDepthMinMax = getUnorderedAccess("depthbounds");
 	mDepth = getShaderResource("depth");
 

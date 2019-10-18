@@ -19,6 +19,6 @@ private:
 	Renderer::UnorderedAccess::Ptr mDepthMinMax;
 	Renderer::ShaderResource::Ptr mDepth;
 	Renderer::Buffer::Ptr mConstants;
-	int mWidth;
-	int mHeight;
+	int mWidth = 0;
+	int mHeight = 0;
 };

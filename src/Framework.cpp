@@ -29,6 +29,9 @@ Framework::Framework(HWND win):mWindow(win)
 	setSetting(mPipeline->getSetting());
 	mInput = std::make_shared<Input>();
 	mOverlayProfile = mRenderer->createProfile();
+	mOverlay = ImguiOverlay::Ptr(new ImguiOverlay(mRenderer, mInput));
+	mOverlay->init(win,rect.right, rect.bottom);
+
 }
 
 Framework::~Framework()
@@ -42,6 +45,9 @@ void Framework::init()
 	initInput();
 
 	initPipeline();
+
+	initUI();
+
 }
 
 void Framework::update()
@@ -66,14 +72,6 @@ void Framework::update()
 //{
 
 //}
-
-
-void Framework::setOverlay(Overlay::Ptr overlay)
-{
-	mOverlay = overlay;
-	overlay->setInput(mInput);
-	overlay->setRenderer(mRenderer);
-}
 
 void Framework::initPipeline()
 {
@@ -127,17 +125,16 @@ void Framework::initPipeline()
 
 void Framework::initScene()
 {
-
 	int numdirs = 1;
 	int numpoints =0;
 
-	set("time", { {"value", 3.14f}, {"min", "1.57"}, {"max", "4.71"}, {"interval", "0.001"}, {"type","set"} });
+	set("time", { {"value", 3.14f}, {"min", 1.57}, {"max", 4.71}, {"interval", "0.001"}, {"type","set"} });
 	set("numdirs", { {"value", numdirs}, {"min", 0}, {"max", numdirs}, {"interval", 1}, {"type","set"} });
 	set("numpoints", { {"value", numpoints}, {"min", 0}, {"max", numdirs}, {"interval", 1}, {"type","set"} });
 
-	set("pointradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
-	set("dirradiance", { {"type","set"}, {"value",1},{"min","0.1"},{"max",100},{"interval", "0.1"} });
-	set("dist", { {"type","set"}, {"value",2},{"min","0"},{"max",10},{"interval", "0.1"} });
+	set("pointradiance", { {"type","set"}, {"value",1},{"min",0.1},{"max",100},{"interval", "0.1"} });
+	set("dirradiance", { {"type","set"}, {"value",1},{"min",0.1},{"max",100},{"interval", "0.1"} });
+	set("dist", { {"type","set"}, {"value",2},{"min",0},{"max",10},{"interval", "0.1"} });
 
 
 	set("lightRange", { {"value", 1000}, {"min", 0}, {"max", 3000}, {"interval", 1}, {"type","set"} });
@@ -203,15 +200,15 @@ void Framework::initScene()
 	{
 		Parameters params;
 		//params["file"] = "tiny.x";
-		params["file"] = "media/sponza/sponza.obj";
-		//params["file"] = "media/terrain.obj";
+		//params["file"] = "media/sponza/sponza.obj";
+		params["file"] = "media/terrain.obj";
 
 		auto model = mScene->createModel("test", params, [this](const Parameters& p) {
 			return Mesh::Ptr(new Mesh(p, mRenderer));
 		});
 
 		model->setCastShadow(true);
-		model->attach(mScene->getRoot());
+		//model->attach(mScene->getRoot());
 		model->getNode()->setPosition(0.0f, 0.f, 0.0f);
 		//Matrix mat = Matrix::CreateFromYawPitchRoll(0, -3.14 / 2, 0);
 		//model->getNode()->setOrientation(Quaternion::CreateFromRotationMatrix(mat));
@@ -342,6 +339,14 @@ void Framework::initInput()
 
 
 }
+
+void Framework::initUI()
+{
+	auto mmb = ImguiObject::root()->createChild<ImguiMenuBar>(true);
+	mmb->createChild<ImguiMenuItem>("aaa", [](ImguiMenuItem*) {
+		});
+}
+
 
 void Framework::showFPS()
 {

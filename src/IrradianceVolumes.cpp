@@ -21,7 +21,7 @@ void IrradianceVolumes::init(const Vector3 & size, const std::string& sky)
 {
 	mName = "irradiance volumes";
 
-	set("IVintensity", { {"type","set"}, {"value",1},{"min","0"},{"max","10"},{"interval", "0.1"} });
+	set("IVintensity", { {"type","set"}, {"value",1},{"min",0},{"max",10},{"interval", "0.1"} });
 
 	auto scene = getScene();
 	auto renderer = getRenderer();

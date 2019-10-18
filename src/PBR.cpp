@@ -10,9 +10,9 @@ PBR::PBR(
 	Pipeline::Stage(r, s, q,set, p)
 {
 	mName = "pbr lighting";
-	this->set("roughness", { {"type","set"}, {"value",1},{"min","0.01"},{"max",1.0f},{"interval", "0.01"} });
-	this->set("metallic", { {"type","set"}, {"value",1},{"min","0"},{"max",1.0f},{"interval", "0.01"} });
-	this->set("ambient", { {"type","set"}, {"value",0},{"min","0"},{"max","1"},{"interval", "0.001"} });
+	this->set("roughness", { {"type","set"}, {"value",1},{"min",0.01},{"max",1.0f},{"interval", "0.01"} });
+	this->set("metallic", { {"type","set"}, {"value",1},{"min",0},{"max",1.0f},{"interval", "0.01"} });
+	this->set("ambient", { {"type","set"}, {"value",0},{"min",0},{"max",1},{"interval", "0.001"} });
 
 	const std::vector<const char*> definitions = { "POINT", "DIR", "SPOT", "TILED", "CLUSTERED" };
 	for (int i = 0; i < definitions.size(); ++i)

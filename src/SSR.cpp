@@ -3,11 +3,11 @@
 void SSR::init()
 {
 
-	set("raylength", { {"value", 50}, {"min", "1"}, {"max", "1000"}, {"interval", "1"}, {"type","set"} });
-	set("stepstride", { {"value", 4}, {"min", "1"}, {"max", "32"}, {"interval", "1"}, {"type","set"} });
+	set("raylength", { {"value", 50}, {"min", 1}, {"max", 1000}, {"interval", "1"}, {"type","set"} });
+	set("stepstride", { {"value", 4}, {"min", 1}, {"max", 32}, {"interval", "1"}, {"type","set"} });
 	//set("stridescale", { {"value", 1}, {"min", "0"}, {"max", "0.1"}, {"interval", "0.0001"}, {"type","set"} });
-	set("reflection", { {"value", 1}, {"min", "0"}, {"max", "1"}, {"interval", "1"}, {"type","set"} });
-	set("jitter", { {"value", 1}, {"min", "0"}, {"max", "1"}, {"interval", "0.001"}, {"type","set"} });
+	set("reflection", { {"value", 1}, {"min", 0}, {"max", 1}, {"interval", "1"}, {"type","set"} });
+	set("jitter", { {"value", 1}, {"min", 0}, {"max", 1}, {"interval", "0.001"}, {"type","set"} });
 	//set("brdfBias", { {"value", 0}, {"min", "0"}, {"max", "1"}, {"interval", "0.01"}, {"type","set"} });
 
 	setValue("ssr", true);

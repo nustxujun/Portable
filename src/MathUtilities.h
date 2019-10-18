@@ -60,8 +60,8 @@ public :
 		}
 		else
 		{
-			halfW = width * 0.5;
-			halfH = height * 0.5;
+			halfW = width * 0.5f;
+			halfH = height * 0.5f;
 		}
 
 		std::array<Vector3,8> ret;
